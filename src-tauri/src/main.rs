@@ -158,7 +158,42 @@ fn start_hotkey_listener(app: AppHandle) -> HotkeyManager {
     })
 }
 
+/// Application version from Cargo.toml
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 fn main() {
+    // Handle command line arguments
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 {
+        match args[1].as_str() {
+            "--version" | "-v" | "-V" => {
+                println!("win11-clipboard-history {}", VERSION);
+                return;
+            }
+            "--help" | "-h" => {
+                println!("Windows 11 Clipboard History for Linux v{}", VERSION);
+                println!();
+                println!("USAGE:");
+                println!("    win11-clipboard-history [OPTIONS]");
+                println!();
+                println!("OPTIONS:");
+                println!("    -h, --help       Print help information");
+                println!("    -v, --version    Print version information");
+                println!();
+                println!("HOTKEYS:");
+                println!("    Super+V          Open clipboard history");
+                println!("    Ctrl+Alt+V       Alternative hotkey");
+                println!("    Esc              Close window");
+                return;
+            }
+            _ => {
+                eprintln!("Unknown option: {}", args[1]);
+                eprintln!("Use --help for usage information");
+                std::process::exit(1);
+            }
+        }
+    }
+
     let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new()));
 
     tauri::Builder::default()
