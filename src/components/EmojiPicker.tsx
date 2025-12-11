@@ -179,11 +179,7 @@ export function EmojiPicker() {
             padding: 4,
           }}
         >
-          <EmojiCell
-            emoji={emoji}
-            onSelect={handleSelect}
-            onHover={setHoveredEmoji}
-          />
+          <EmojiCell emoji={emoji} onSelect={handleSelect} onHover={setHoveredEmoji} />
         </div>
       )
     },
