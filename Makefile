@@ -217,7 +217,10 @@ build: node_modules
 
 install: build
 	@echo -e "$(CYAN)Installing $(APP_NAME)...$(RESET)"
-	install -Dm755 src-tauri/target/release/$(APP_NAME) $(DESTDIR)$(BINDIR)/$(APP_NAME)
+	@# Install binary to lib directory and wrapper to bin
+	@mkdir -p $(DESTDIR)/usr/lib/$(APP_NAME)
+	install -Dm755 src-tauri/target/release/$(APP_NAME) $(DESTDIR)/usr/lib/$(APP_NAME)/$(APP_NAME)-bin
+	install -Dm755 src-tauri/bundle/linux/wrapper.sh $(DESTDIR)$(BINDIR)/$(APP_NAME)
 	install -Dm644 src-tauri/icons/128x128.png $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
 	install -Dm644 src-tauri/icons/icon.png $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/$(APP_NAME).png
 	@# Create comprehensive udev rules for input devices and uinput
@@ -260,6 +263,7 @@ install: build
 uninstall:
 	@echo -e "$(CYAN)Uninstalling $(APP_NAME)...$(RESET)"
 	rm -f $(DESTDIR)$(BINDIR)/$(APP_NAME)
+	rm -rf $(DESTDIR)/usr/lib/$(APP_NAME)
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/$(APP_NAME).png
 	rm -f $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop

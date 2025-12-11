@@ -92,10 +92,43 @@ case "$DISTRO" in
         chmod +x "$FILE"
         
         INSTALL_DIR="$HOME/.local/bin"
-        mkdir -p "$INSTALL_DIR"
-        mv "$FILE" "$INSTALL_DIR/win11-clipboard-history"
+        LIB_DIR="$HOME/.local/lib/win11-clipboard-history"
+        mkdir -p "$INSTALL_DIR" "$LIB_DIR"
         
-        success "AppImage installed to $INSTALL_DIR/win11-clipboard-history"
+        # Move AppImage to lib directory
+        mv "$FILE" "$LIB_DIR/win11-clipboard-history.AppImage"
+        
+        # Create wrapper script to handle Snap environment conflicts
+        cat > "$INSTALL_DIR/win11-clipboard-history" << 'WRAPPER'
+#!/bin/bash
+# Wrapper script for win11-clipboard-history AppImage
+# Cleans environment to avoid Snap library conflicts
+
+APPIMAGE="$HOME/.local/lib/win11-clipboard-history/win11-clipboard-history.AppImage"
+
+# If running from a Snap-polluted environment, clean it
+if [[ -n "$SNAP" ]] || [[ "$LD_LIBRARY_PATH" == */snap/* ]]; then
+    exec env -i \
+        HOME="$HOME" \
+        USER="$USER" \
+        DISPLAY="${DISPLAY:-:0}" \
+        XAUTHORITY="$XAUTHORITY" \
+        WAYLAND_DISPLAY="$WAYLAND_DISPLAY" \
+        XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+        XDG_SESSION_TYPE="$XDG_SESSION_TYPE" \
+        XDG_CURRENT_DESKTOP="$XDG_CURRENT_DESKTOP" \
+        DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
+        PATH="/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin" \
+        LANG="${LANG:-en_US.UTF-8}" \
+        "$APPIMAGE" "$@"
+else
+    exec "$APPIMAGE" "$@"
+fi
+WRAPPER
+        chmod +x "$INSTALL_DIR/win11-clipboard-history"
+        
+        success "AppImage installed to $LIB_DIR"
+        success "Wrapper script created at $INSTALL_DIR/win11-clipboard-history"
         echo "Please ensure $INSTALL_DIR is in your PATH."
         ;;
 esac
@@ -159,5 +192,7 @@ echo -e "${BLUE}║                    IMPORTANT: Please log out                
 echo -e "${BLUE}║            and log back in for permissions to apply           ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
-echo "After logging back in, you can start the app with: win11-clipboard-history"
-echo "Or use the keyboard shortcut: Super+V or Ctrl+Alt+V"
+echo "After logging back in:"
+echo "  • Start the app with: win11-clipboard-history"
+echo "  • Use keyboard shortcut: Super+V or Ctrl+Alt+V"
+echo "  • Check version with: win11-clipboard-history --version"

@@ -12,6 +12,46 @@ NC='\033[0m'
 
 echo -e "${BLUE}Setting up Windows 11 Clipboard History...${NC}"
 
+# Create wrapper script to handle Snap environment conflicts
+BINARY_PATH="/usr/bin/win11-clipboard-history"
+LIB_DIR="/usr/lib/win11-clipboard-history"
+
+if [ -f "$BINARY_PATH" ] && [ ! -L "$BINARY_PATH" ]; then
+    # Move binary to lib directory and create wrapper
+    mkdir -p "$LIB_DIR"
+    mv "$BINARY_PATH" "$LIB_DIR/win11-clipboard-history-bin"
+    
+    # Create wrapper script
+    cat > "$BINARY_PATH" << 'WRAPPER'
+#!/bin/bash
+# Wrapper script for win11-clipboard-history
+# Cleans environment to avoid Snap library conflicts
+
+BINARY="/usr/lib/win11-clipboard-history/win11-clipboard-history-bin"
+
+# If running from a Snap-polluted environment, clean it
+if [[ -n "$SNAP" ]] || [[ "$LD_LIBRARY_PATH" == */snap/* ]]; then
+    exec env -i \
+        HOME="$HOME" \
+        USER="$USER" \
+        DISPLAY="${DISPLAY:-:0}" \
+        XAUTHORITY="$XAUTHORITY" \
+        WAYLAND_DISPLAY="$WAYLAND_DISPLAY" \
+        XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+        XDG_SESSION_TYPE="$XDG_SESSION_TYPE" \
+        XDG_CURRENT_DESKTOP="$XDG_CURRENT_DESKTOP" \
+        DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
+        PATH="/usr/local/bin:/usr/bin:/bin" \
+        LANG="${LANG:-en_US.UTF-8}" \
+        "$BINARY" "$@"
+else
+    exec "$BINARY" "$@"
+fi
+WRAPPER
+    chmod +x "$BINARY_PATH"
+    echo -e "${GREEN}✓${NC} Created wrapper script for Snap compatibility"
+fi
+
 # Ensure input group exists
 if ! getent group input > /dev/null 2>&1; then
     echo -e "${BLUE}Creating 'input' group...${NC}"
@@ -66,6 +106,7 @@ echo ""
 echo "After logging back in:"
 echo "  • Press Super+V or Ctrl+Alt+V to open clipboard history"
 echo "  • The app runs in the system tray"
+echo "  • Run 'win11-clipboard-history --version' to check version"
 echo ""
 
 exit 0
