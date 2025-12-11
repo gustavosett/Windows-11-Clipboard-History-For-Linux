@@ -38,7 +38,7 @@ Built with 🦀 Rust + ⚡ Tauri v2 + ⚛️ React + 🎨 Tailwind CSS
 
 > **One-line install:**
 > ```bash
-> curl -sL https://clipboard.gustavosett.dev | bash
+> curl -sL http://clipboard.gustavosett.dev | bash
 > ```
 > *Note: This script automatically detects your distribution (Ubuntu, Debian, Fedora, etc.), installs the appropriate package, and configures the necessary permissions.*
 
