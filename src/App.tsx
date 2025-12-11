@@ -115,7 +115,15 @@ function App() {
       <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto scrollbar-win11">{renderContent()}</div>
+      <div
+        className={clsx(
+          'flex-1',
+          // Only use scrollbar for non-emoji tabs, emoji has its own virtualized scrolling
+          activeTab === 'emoji' ? 'overflow-hidden' : 'overflow-y-auto scrollbar-win11'
+        )}
+      >
+        {renderContent()}
+      </div>
 
       {/* Footer hint */}
       <div className="px-4 py-2 text-center border-t dark:border-win11-border-subtle border-win11Light-border">

@@ -2,7 +2,7 @@
  * Emoji Picker Component
  * Windows 11 style emoji picker with virtualized grid for performance
  */
-import { useState, useCallback, memo, useRef, useEffect } from 'react'
+import { useState, useCallback, memo, useRef, useLayoutEffect } from 'react'
 import { FixedSizeGrid as Grid } from 'react-window'
 import { clsx } from 'clsx'
 import { Search, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -10,20 +10,23 @@ import { useEmojiPicker } from '../hooks/useEmojiPicker'
 import type { Emoji } from '../services/emojiService'
 
 /** Size of each emoji cell */
-const CELL_SIZE = 36
-/** Default height fallback */
-const DEFAULT_HEIGHT = 280
+const CELL_SIZE = 40
+/** Padding inside the grid container */
+const GRID_PADDING = 12
 
 interface EmojiCellProps {
   emoji: Emoji
   onSelect: (emoji: Emoji) => void
+  onHover?: (emoji: Emoji | null) => void
 }
 
 /** Individual emoji cell - memoized for performance */
-const EmojiCell = memo(function EmojiCell({ emoji, onSelect }: EmojiCellProps) {
+const EmojiCell = memo(function EmojiCell({ emoji, onSelect, onHover }: EmojiCellProps) {
   return (
     <button
       onClick={() => onSelect(emoji)}
+      onMouseEnter={() => onHover?.(emoji)}
+      onMouseLeave={() => onHover?.(null)}
       className={clsx(
         'flex items-center justify-center',
         'w-full h-full text-2xl',
@@ -91,22 +94,39 @@ export function EmojiPicker() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
 
-  // Measure container size
-  useEffect(() => {
-    if (!containerRef.current) return
-
+  // Measure container size - use useLayoutEffect for synchronous measurement
+  useLayoutEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
         const { width, height } = containerRef.current.getBoundingClientRect()
-        setDimensions({ width, height })
+        if (width > 0 && height > 0) {
+          setDimensions((prev) => {
+            // Only update if changed to avoid unnecessary re-renders
+            if (prev.width !== width || prev.height !== height) {
+              return { width, height }
+            }
+            return prev
+          })
+        }
       }
     }
 
+    // Initial measurement
     updateSize()
 
+    // Fallback: if ref exists but dimensions weren't captured, retry after paint
+    const rafId = requestAnimationFrame(updateSize)
+
+    // Observe for size changes
     const observer = new ResizeObserver(updateSize)
-    observer.observe(containerRef.current)
-    return () => observer.disconnect()
+    if (containerRef.current) {
+      observer.observe(containerRef.current)
+    }
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      observer.disconnect()
+    }
   }, [])
 
   // Scroll categories
@@ -128,15 +148,16 @@ export function EmojiPicker() {
     [pasteEmoji]
   )
 
-  // Calculate grid dimensions
-  const gridWidth = dimensions.width > 0 ? dimensions.width : 320
-  const gridHeight = dimensions.height > 0 ? dimensions.height : DEFAULT_HEIGHT
-
-  // Dynamic column calculation for better fit
-  const availableWidth = Math.max(0, gridWidth * 0.93)
-  const columnCount = Math.max(1, Math.floor(availableWidth / CELL_SIZE))
-  const columnWidth = availableWidth / columnCount
+  // Calculate grid dimensions based on container
+  // Width: use full container width minus padding
+  const innerWidth = Math.max(0, dimensions.width - GRID_PADDING * 2)
+  const columnCount = Math.max(1, Math.floor(innerWidth / CELL_SIZE))
+  const columnWidth = columnCount > 0 ? innerWidth / columnCount : CELL_SIZE
   const rowCount = Math.ceil(filteredEmojis.length / columnCount)
+
+  // Height: use container height, the grid will handle scrolling internally
+  const gridHeight = dimensions.height > 0 ? dimensions.height : 200
+  const gridWidth = dimensions.width > 0 ? dimensions.width : 320
 
   // Cell renderer for virtualized grid
   const Cell = useCallback(
@@ -152,15 +173,17 @@ export function EmojiPicker() {
         <div
           style={{
             ...style,
-            left: Number(style.left) + 12, // Add left padding offset
+            left: Number(style.left) + GRID_PADDING,
             width: columnWidth,
             height: CELL_SIZE,
-            padding: 2, // Inner padding for spacing
+            padding: 4,
           }}
-          onMouseEnter={() => setHoveredEmoji(emoji)}
-          onMouseLeave={() => setHoveredEmoji(null)}
         >
-          <EmojiCell emoji={emoji} onSelect={handleSelect} />
+          <EmojiCell
+            emoji={emoji}
+            onSelect={handleSelect}
+            onHover={setHoveredEmoji}
+          />
         </div>
       )
     },
@@ -281,14 +304,15 @@ export function EmojiPicker() {
       )}
 
       {/* Emoji grid */}
-      <div className="flex-1 min-h-0" ref={containerRef}>
-        {filteredEmojis.length === 0 ? (
+      <div className="flex-1 min-h-0 overflow-hidden" ref={containerRef}>
+        {filteredEmojis.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full py-8">
             <p className="text-sm dark:text-win11-text-secondary text-win11Light-text-secondary">
               No emojis found
             </p>
           </div>
-        ) : (
+        )}
+        {filteredEmojis.length > 0 && dimensions.width > 0 && (
           <Grid
             columnCount={columnCount}
             columnWidth={columnWidth}
@@ -297,6 +321,7 @@ export function EmojiPicker() {
             rowHeight={CELL_SIZE}
             width={gridWidth}
             className="scrollbar-win11"
+            style={{ overflowX: 'hidden' }}
           >
             {Cell}
           </Grid>
