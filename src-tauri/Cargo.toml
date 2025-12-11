@@ -49,7 +49,7 @@ uuid = { version = "1.10", features = ["v4", "serde"] }
 
 # X11 Simulation for paste injection (Linux)
 [target.'cfg(target_os = "linux")'.dependencies]
-enigo = "0.2"
+enigo = "0.6"
 
 [features]
 default = ["custom-protocol"]
