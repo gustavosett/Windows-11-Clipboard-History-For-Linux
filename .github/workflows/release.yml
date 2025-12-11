@@ -58,6 +58,18 @@ jobs:
             ./win11-clipboard-history_${{ steps.get_version.outputs.VERSION }}_amd64.AppImage
             ```
             
+            ### ⚠️ Important: Post-Installation Steps
+            
+            This app requires access to input devices for global hotkeys. After installation:
+            
+            1. Add your user to the `input` group:
+               ```bash
+               sudo usermod -aG input $USER
+               ```
+            2. **Log out and log back in** for permissions to take effect
+            
+            The `.deb` and `.rpm` packages do this automatically during installation.
+            
             ### Changelog
             See the [commit history](https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/commits/${{ github.ref_name }}) for changes.
           draft: false

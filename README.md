@@ -40,13 +40,49 @@ Built with 🦀 Rust + ⚡ Tauri v2 + ⚛️ React + 🎨 Tailwind CSS
 > ```bash
 > curl -sL https://clipboard.gustavosett.dev | bash
 > ```
-> *Note: This script automatically detects your distribution (Ubuntu, Debian, Fedora, etc.) and installs the appropriate package.*
+> *Note: This script automatically detects your distribution (Ubuntu, Debian, Fedora, etc.), installs the appropriate package, and configures the necessary permissions.*
 
 Or
 
 ### Using package managers
 
 > Download the latest release from GitHub and follow the installation instructions for your distribution in [RELEASES](https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/releases)
+
+### ⚠️ Important: Permissions Required
+
+This application requires access to input devices for:
+- **Global hotkeys** (Super+V / Ctrl+Alt+V) - uses `rdev` to capture keyboard events
+- **Paste simulation** (Ctrl+V injection) - uses `enigo` with uinput
+- **Window positioning** - cursor position detection
+
+After installation:
+
+1. **Log out and log back in** for the permissions to take effect
+2. The installer automatically:
+   - Adds your user to the `input` group
+   - Creates udev rules for input device access
+   - Loads the `uinput` kernel module
+
+If you installed manually, run:
+```bash
+# Add user to input group
+sudo usermod -aG input $USER
+
+# Create udev rules
+sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules << 'EOF'
+KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+EOF
+
+# Load uinput module
+sudo modprobe uinput
+echo "uinput" | sudo tee /etc/modules-load.d/uinput.conf
+
+# Reload udev rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# Then log out and log back in
+```
 
 
 ## 📦 Installation (For devs)

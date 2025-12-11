@@ -97,8 +97,67 @@ case "$DISTRO" in
         
         success "AppImage installed to $INSTALL_DIR/win11-clipboard-history"
         echo "Please ensure $INSTALL_DIR is in your PATH."
-        exit 0
         ;;
 esac
 
+# Setup input group permissions for global hotkeys and keyboard simulation
+setup_input_permissions() {
+    log "Setting up input device permissions for global hotkeys..."
+    
+    # Check if input group exists
+    if ! getent group input > /dev/null 2>&1; then
+        log "Creating 'input' group..."
+        sudo groupadd input
+    fi
+    
+    # Add current user to input group
+    if ! groups "$USER" | grep -q '\binput\b'; then
+        log "Adding $USER to 'input' group..."
+        sudo usermod -aG input "$USER"
+        echo -e "${GREEN}✓${NC} Added $USER to 'input' group"
+    else
+        log "User $USER is already in 'input' group"
+    fi
+    
+    # Create comprehensive udev rules for input devices and uinput
+    UDEV_RULE="/etc/udev/rules.d/99-win11-clipboard-input.rules"
+    log "Creating udev rules for input devices..."
+    sudo tee "$UDEV_RULE" > /dev/null << 'EOF'
+# udev rules for Windows 11 Clipboard History
+# Input devices (keyboards, mice) - needed for rdev global hotkeys
+KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"
+# uinput device - needed for enigo keyboard simulation (paste injection)
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+EOF
+    echo -e "${GREEN}✓${NC} Created udev rules for input devices"
+    
+    # Load uinput module if not loaded
+    if ! lsmod | grep -q uinput; then
+        log "Loading uinput kernel module..."
+        sudo modprobe uinput 2>/dev/null || true
+    fi
+    
+    # Ensure uinput is loaded on boot
+    if [ ! -f /etc/modules-load.d/uinput.conf ]; then
+        log "Configuring uinput module to load on boot..."
+        echo "uinput" | sudo tee /etc/modules-load.d/uinput.conf > /dev/null
+        echo -e "${GREEN}✓${NC} Configured uinput module to load on boot"
+    fi
+    
+    # Reload udev rules and trigger for misc subsystem (for uinput)
+    sudo udevadm control --reload-rules
+    sudo udevadm trigger
+    sudo udevadm trigger --subsystem-match=misc --action=change
+}
+
+setup_input_permissions
+
 success "Installation completed successfully!"
+echo ""
+echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║                    IMPORTANT: Please log out                   ║${NC}"
+echo -e "${BLUE}║            and log back in for permissions to apply           ║${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo "After logging back in, you can start the app with: win11-clipboard-history"
+echo "Or use the keyboard shortcut: Super+V or Ctrl+Alt+V"

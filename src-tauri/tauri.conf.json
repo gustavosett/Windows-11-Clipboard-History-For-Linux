@@ -46,6 +46,20 @@
     ],
     "category": "Utility",
     "shortDescription": "Windows 11-style Clipboard History Manager",
-    "longDescription": "A modern, beautiful clipboard history manager for Linux that mimics the Windows 11 Win+V clipboard experience. Built with Tauri, React, and Rust."
+    "longDescription": "A modern, beautiful clipboard history manager for Linux that mimics the Windows 11 Win+V clipboard experience. Built with Tauri, React, and Rust.",
+    "linux": {
+      "deb": {
+        "files": {
+          "/etc/udev/rules.d/99-win11-clipboard-input.rules": "bundle/linux/99-win11-clipboard-input.rules"
+        },
+        "postInstallScript": "bundle/linux/postinst.sh"
+      },
+      "rpm": {
+        "postInstallScript": "bundle/linux/postinst.sh"
+      }
+    },
+    "resources": [
+      "bundle/linux/99-win11-clipboard-input.rules"
+    ]
   }
 }

@@ -220,6 +220,24 @@ install: build
 	install -Dm755 src-tauri/target/release/$(APP_NAME) $(DESTDIR)$(BINDIR)/$(APP_NAME)
 	install -Dm644 src-tauri/icons/128x128.png $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
 	install -Dm644 src-tauri/icons/icon.png $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/$(APP_NAME).png
+	@# Create comprehensive udev rules for input devices and uinput
+	@mkdir -p /etc/udev/rules.d
+	@echo '# udev rules for Windows 11 Clipboard History' > /etc/udev/rules.d/99-win11-clipboard-input.rules
+	@echo '# Input devices - needed for rdev global hotkeys' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
+	@echo 'KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
+	@echo '# uinput device - needed for enigo keyboard simulation' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
+	@echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
+	@# Load uinput module
+	@modprobe uinput 2>/dev/null || true
+	@# Ensure uinput loads on boot
+	@mkdir -p /etc/modules-load.d
+	@echo "uinput" > /etc/modules-load.d/uinput.conf
+	@udevadm control --reload-rules 2>/dev/null || true
+	@udevadm trigger 2>/dev/null || true
+	@udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true
+	@# Ensure input group exists and add user
+	@getent group input >/dev/null 2>&1 || groupadd input
+	@if [ -n "$$SUDO_USER" ]; then usermod -aG input $$SUDO_USER; fi
 	@# Create desktop entry
 	@mkdir -p $(DESTDIR)$(DATADIR)/applications
 	@echo "[Desktop Entry]" > $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
@@ -233,7 +251,11 @@ install: build
 	@echo "Keywords=clipboard;history;paste;copy;" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
 	@echo "StartupWMClass=$(APP_NAME)" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
 	@echo -e "$(GREEN)✓ Installed successfully$(RESET)"
-	@echo -e "$(YELLOW)You may need to log out and back in for the desktop entry to appear$(RESET)"
+	@echo ""
+	@echo -e "$(YELLOW)╔════════════════════════════════════════════════════════════════╗$(RESET)"
+	@echo -e "$(YELLOW)║     IMPORTANT: Log out and log back in for permissions         ║$(RESET)"
+	@echo -e "$(YELLOW)╚════════════════════════════════════════════════════════════════╝$(RESET)"
+	@echo ""
 
 uninstall:
 	@echo -e "$(CYAN)Uninstalling $(APP_NAME)...$(RESET)"
@@ -241,6 +263,8 @@ uninstall:
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/$(APP_NAME).png
 	rm -f $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
+	rm -f /etc/udev/rules.d/99-win11-clipboard-input.rules
+	rm -f /etc/modules-load.d/uinput.conf
 	@echo -e "$(GREEN)✓ Uninstalled successfully$(RESET)"
 
 # ============================================================================

@@ -1,0 +1,8 @@
+# udev rules for Windows 11 Clipboard History
+# Allows non-root users in the 'input' group to access input devices for global hotkeys
+
+# Input devices (keyboards, mice) - needed for rdev global hotkeys
+KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"
+
+# uinput device - needed for enigo keyboard simulation (paste injection)
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
