@@ -51,9 +51,9 @@ Or
 ### ⚠️ Important: Permissions Required
 
 This application requires access to input devices for:
-- **Global hotkeys** (Super+V / Ctrl+Alt+V) - uses `rdev` to capture keyboard events
-- **Paste simulation** (Ctrl+V injection) - uses `enigo` with uinput
-- **Window positioning** - cursor position detection
+- **Global hotkeys** (Super+V / Ctrl+Alt+V) - uses `evdev` to capture keyboard events directly from `/dev/input/event*`
+- **Paste simulation** (Ctrl+V injection) - uses `uinput` for kernel-level keyboard simulation
+- **Window positioning** - cursor position detection via X11
 
 After installation:
 
@@ -261,6 +261,7 @@ make dev
 win11-clipboard-history/
 ├── src/                      # React frontend
 │   ├── components/           # UI components
+│   │   ├── DragHandle.tsx    # Window drag handle
 │   │   ├── EmptyState.tsx    # Empty history state
 │   │   ├── Header.tsx        # App header with actions
 │   │   ├── HistoryItem.tsx   # Clipboard item card
@@ -278,7 +279,8 @@ win11-clipboard-history/
 │   │   ├── main.rs           # App setup, tray, commands
 │   │   ├── lib.rs            # Library exports
 │   │   ├── clipboard_manager.rs  # Clipboard operations
-│   │   └── hotkey_manager.rs     # Global shortcuts
+│   │   ├── focus_manager.rs      # Window focus tracking for paste
+│   │   └── hotkey_manager.rs     # Global shortcuts (evdev)
 │   ├── capabilities/         # Tauri permissions
 │   ├── icons/                # App icons
 │   ├── Cargo.toml            # Rust dependencies
@@ -293,14 +295,14 @@ win11-clipboard-history/
 
 ### Global Hotkey Permissions
 
-On Linux with X11, global keyboard capture may require the user to be in the `input` group:
+Global keyboard capture requires the user to be in the `input` group to access `/dev/input/event*` devices:
 
 ```bash
 sudo usermod -aG input $USER
 # Log out and back in for changes to take effect
 ```
 
-On Wayland, permissions are typically handled automatically by the compositor.
+This works on both X11 and Wayland as it reads keyboard events directly from the kernel.
 
 ## 🐧 Platform Support
 
@@ -308,8 +310,8 @@ On Wayland, permissions are typically handled automatically by the compositor.
 
 | Display Server | Status | Notes |
 |----------------|--------|-------|
-| X11 | ✅ Full support | Global hotkeys work via rdev |
-| Wayland | ✅ Full support | Uses wl-clipboard for clipboard access |
+| X11 | ✅ Full support | Full native support |
+| Wayland | ✅ Full support | Uses evdev for hotkeys, wayland-data-control for clipboard |
 
 ### Tested Distributions
 
@@ -357,18 +359,25 @@ colors: {
 ### Application won't start
 
 1. **Check dependencies**: Run `make check-deps` to verify all dependencies are installed
-2. **Wayland clipboard issues**: Ensure `wl-clipboard` is installed for Wayland support
+2. **Wayland clipboard issues**: The app uses `wayland-data-control` protocol for Wayland clipboard access
 3. **VS Code Snap conflict**: Use `make dev` or `./scripts/run-dev.sh` instead of `npm run tauri:dev`
 
 ### Global hotkey not working
 
-1. **X11**: Add user to input group: `sudo usermod -aG input $USER`
-2. **Wayland**: Some compositors may require additional permissions
-3. Try alternative hotkey `Ctrl+Alt+V` instead of `Super+V`
+1. **Add user to input group**: `sudo usermod -aG input $USER` then log out/in
+2. **Check udev rules exist**: `cat /etc/udev/rules.d/99-win11-clipboard-input.rules`
+3. **Reload udev**: `sudo udevadm control --reload-rules && sudo udevadm trigger`
+4. Try alternative hotkey `Ctrl+Alt+V` instead of `Super+V`
+
+### Paste not working in some apps
+
+1. **Install xdotool** (optional fallback): `sudo apt install xdotool`
+2. **Check uinput module**: `lsmod | grep uinput` - if not loaded, run `sudo modprobe uinput`
+3. **Check /dev/uinput permissions**: `ls -la /dev/uinput` should show group `input`
 
 ### Window not showing at cursor position
 
-This may occur on some Wayland compositors. The window will fallback to a default position.
+This may occur on some Wayland compositors. The app forces XWayland mode via `GDK_BACKEND=x11` for better positioning support.
 
 ## 🤝 Contributing
 
@@ -396,9 +405,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Tauri](https://tauri.app/) - For the amazing Rust-based framework
 - [Windows 11](https://www.microsoft.com/windows/windows-11) - For the beautiful design inspiration
-- [rdev](https://github.com/Narsil/rdev) - For global keyboard capture
+- [evdev](https://github.com/emberian/evdev) - For kernel-level global keyboard capture
 - [arboard](https://github.com/1Password/arboard) - For cross-platform clipboard access
-- [wl-clipboard-rs](https://github.com/YaLTeR/wl-clipboard-rs) - For Wayland clipboard support
+- [x11rb](https://github.com/psychon/x11rb) - For X11 window focus management
 
 ---
 

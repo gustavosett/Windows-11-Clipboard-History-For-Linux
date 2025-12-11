@@ -156,9 +156,9 @@ setup_input_permissions() {
     log "Creating udev rules for input devices..."
     sudo tee "$UDEV_RULE" > /dev/null << 'EOF'
 # udev rules for Windows 11 Clipboard History
-# Input devices (keyboards, mice) - needed for rdev global hotkeys
+# Input devices (keyboards) - needed for evdev global hotkey detection
 KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"
-# uinput device - needed for enigo keyboard simulation (paste injection)
+# uinput device - needed for kernel-level keyboard simulation (paste injection)
 KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
 EOF
     echo -e "${GREEN}✓${NC} Created udev rules for input devices"
