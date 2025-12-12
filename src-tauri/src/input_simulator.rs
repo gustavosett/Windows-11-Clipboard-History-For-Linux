@@ -7,13 +7,21 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
 
     eprintln!("[SimulatePaste] Sending Ctrl+V...");
 
-    // On X11, use XTest extension because it's fast
+    // On X11, try multiple methods
     if session::is_x11() {
+        // Try XTest first (fastest, no process spawn)
         if let Ok(()) = simulate_paste_xtest() {
             eprintln!("[SimulatePaste] Ctrl+V sent via XTest");
             return Ok(());
         }
-        eprintln!("[SimulatePaste] XTest failed, trying fallbacks...");
+        eprintln!("[SimulatePaste] XTest failed, trying xdotool...");
+
+        // Try xdotool with window targeting
+        if let Ok(()) = simulate_paste_xdotool() {
+            eprintln!("[SimulatePaste] Ctrl+V sent via xdotool");
+            return Ok(());
+        }
+        eprintln!("[SimulatePaste] xdotool failed, trying other fallbacks...");
     }
 
     // Try enigo (works on both X11 and Wayland)
@@ -36,16 +44,53 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
     Ok(())
 }
 
+/// Simulate Ctrl+V using xdotool with the focused window
+#[cfg(target_os = "linux")]
+fn simulate_paste_xdotool() -> Result<(), String> {
+    // Get the currently focused window
+    let window_output = std::process::Command::new("xdotool")
+        .arg("getwindowfocus")
+        .output()
+        .map_err(|e| format!("Failed to run xdotool getwindowfocus: {}", e))?;
+
+    if !window_output.status.success() {
+        return Err("xdotool getwindowfocus failed".to_string());
+    }
+
+    let window_id = String::from_utf8_lossy(&window_output.stdout)
+        .trim()
+        .to_string();
+
+    eprintln!("[SimulatePaste] xdotool targeting window: {}", window_id);
+
+    // Send key to the specific window
+    let output = std::process::Command::new("xdotool")
+        .args(["key", "--window", &window_id, "--clearmodifiers", "ctrl+v"])
+        .output()
+        .map_err(|e| format!("Failed to run xdotool key: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("xdotool key failed: {}", stderr))
+    }
+}
+
 /// Simulate Ctrl+V using X11 XTest extension
 #[cfg(target_os = "linux")]
 fn simulate_paste_xtest() -> Result<(), String> {
     use x11rb::connection::Connection;
     use x11rb::protocol::xtest::ConnectionExt as XtestConnectionExt;
+    use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
 
-    let (conn, _) = x11rb::connect(None).map_err(|e| format!("X11 connect failed: {}", e))?;
+    let (conn, screen_num) =
+        x11rb::connect(None).map_err(|e| format!("X11 connect failed: {}", e))?;
+
+    let screen = &conn.setup().roots[screen_num];
+    let root_window = screen.root;
 
     // Get keycode for Control_L and V
-    // These are standard keycodes on most X11 systems
     let ctrl_keycode = 37u8; // Control_L
     let v_keycode = 55u8; // V
 
@@ -55,26 +100,38 @@ fn simulate_paste_xtest() -> Result<(), String> {
         .reply()
         .map_err(|e| format!("XTest version query failed: {}", e))?;
 
-    // Press Ctrl
-    conn.xtest_fake_input(2, ctrl_keycode, 0, x11rb::NONE, 0, 0, 0)
+    conn.sync()
+        .map_err(|e| format!("Sync setup failed: {}", e))?;
+
+    // Press Ctrl (type=2 is KeyPress)
+    conn.xtest_fake_input(2, ctrl_keycode, 0, root_window, 0, 0, 0)
         .map_err(|e| format!("Failed to press Ctrl: {}", e))?;
-
-    // Press V
-    conn.xtest_fake_input(2, v_keycode, 0, x11rb::NONE, 0, 0, 0)
-        .map_err(|e| format!("Failed to press V: {}", e))?;
-
-    // Release V
-    conn.xtest_fake_input(3, v_keycode, 0, x11rb::NONE, 0, 0, 0)
-        .map_err(|e| format!("Failed to release V: {}", e))?;
-
-    // Release Ctrl
-    conn.xtest_fake_input(3, ctrl_keycode, 0, x11rb::NONE, 0, 0, 0)
-        .map_err(|e| format!("Failed to release Ctrl: {}", e))?;
-
     conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
 
-    // Small delay to ensure events are processed
+    // Small delay between key events
     std::thread::sleep(std::time::Duration::from_millis(10));
+
+    // Press V
+    conn.xtest_fake_input(2, v_keycode, 0, root_window, 0, 0, 0)
+        .map_err(|e| format!("Failed to press V: {}", e))?;
+    conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
+
+    std::thread::sleep(std::time::Duration::from_millis(10));
+
+    // Release V (type=3 is KeyRelease)
+    conn.xtest_fake_input(3, v_keycode, 0, root_window, 0, 0, 0)
+        .map_err(|e| format!("Failed to release V: {}", e))?;
+    conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
+
+    std::thread::sleep(std::time::Duration::from_millis(5));
+
+    // Release Ctrl
+    conn.xtest_fake_input(3, ctrl_keycode, 0, root_window, 0, 0, 0)
+        .map_err(|e| format!("Failed to release Ctrl: {}", e))?;
+    conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
+
+    // Sync to ensure all events are processed
+    conn.sync().map_err(|e| format!("Sync failed: {}", e))?;
 
     Ok(())
 }

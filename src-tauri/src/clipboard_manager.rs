@@ -369,8 +369,13 @@ impl ClipboardManager {
             }
         }
 
+        std::thread::sleep(std::time::Duration::from_millis(30));
+
         // Simulate Ctrl+V to paste
         crate::input_simulator::simulate_paste_keystroke()?;
+
+        #[cfg(target_os = "linux")]
+        std::thread::sleep(std::time::Duration::from_millis(150));
 
         Ok(())
     }

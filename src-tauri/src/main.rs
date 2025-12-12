@@ -49,6 +49,8 @@ fn toggle_pin(state: State<AppState>, id: String) -> Option<ClipboardItem> {
 /// Paste an item from history
 #[tauri::command]
 async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> Result<(), String> {
+    eprintln!("[PasteItem] Starting paste for id: {}", id);
+
     // First hide the window
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.hide();
@@ -61,19 +63,32 @@ async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> R
     };
 
     if let Some(item) = item {
+        eprintln!(
+            "[PasteItem] Found item, content type: {:?}",
+            match &item.content {
+                win11_clipboard_history_lib::ClipboardContent::Text(t) =>
+                    format!("Text({}...)", &t[..t.len().min(20)]),
+                win11_clipboard_history_lib::ClipboardContent::Image { .. } => "Image".to_string(),
+            }
+        );
+
         // Restore focus to the previously active window
         if let Err(e) = restore_focused_window() {
-            eprintln!("Failed to restore focus: {}", e);
+            eprintln!("[PasteItem] Failed to restore focus: {}", e);
         }
 
         // Wait for focus to be restored
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         // Write to clipboard and simulate paste
+        eprintln!("[PasteItem] About to call paste_item on manager");
         let mut manager = state.clipboard_manager.lock();
         manager
             .paste_item(&item)
             .map_err(|e| format!("Failed to paste: {}", e))?;
+        eprintln!("[PasteItem] Paste complete");
+    } else {
+        eprintln!("[PasteItem] Item not found!");
     }
 
     Ok(())
