@@ -98,6 +98,9 @@ fn copy_gif_to_clipboard_wayland(gif_path: &Path) -> Result<(), String> {
 
     let file_uri = format!("file://{}\n", gif_path.to_string_lossy());
 
+    // Use wl-copy to set clipboard
+    // Note: wl-copy forks to background by default to serve paste requests
+    // We write to stdin and then let it run in background
     let mut child = Command::new("wl-copy")
         .env("WAYLAND_DISPLAY", &wayland_display)
         .env("XDG_RUNTIME_DIR", &xdg_runtime_dir)
@@ -111,19 +114,38 @@ fn copy_gif_to_clipboard_wayland(gif_path: &Path) -> Result<(), String> {
             format!("Failed to spawn wl-copy: {e}. Make sure wl-clipboard is installed.")
         })?;
 
+    // Write to stdin and close it
     if let Some(mut stdin) = child.stdin.take() {
         stdin
             .write_all(file_uri.as_bytes())
             .map_err(|e| format!("Failed to write to wl-copy: {e}"))?;
+        // stdin is dropped here, closing it
     }
 
-    let output = child
-        .wait_with_output()
-        .map_err(|e| format!("Failed to wait for wl-copy: {e}"))?;
+    // Give wl-copy time to read stdin and set up the clipboard
+    // We don't wait for it to finish because it stays running to serve paste requests
+    std::thread::sleep(std::time::Duration::from_millis(150));
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("wl-copy failed: {stderr}"));
+    // Check if the process is still running (good) or exited with error (bad)
+    match child.try_wait() {
+        Ok(Some(status)) => {
+            if !status.success() {
+                // Process exited with error
+                if let Ok(output) = child.wait_with_output() {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Err(format!("wl-copy failed: {stderr}"));
+                }
+                return Err("wl-copy failed with unknown error".to_string());
+            }
+            // Process exited successfully (unusual but ok)
+        }
+        Ok(None) => {
+            // Process still running - this is expected, wl-copy stays alive to serve paste requests
+            eprintln!("[GifManager] wl-copy running in background to serve paste requests");
+        }
+        Err(e) => {
+            return Err(format!("Failed to check wl-copy status: {e}"));
+        }
     }
 
     eprintln!("[GifManager] Successfully set Wayland clipboard to text/uri-list");
@@ -202,6 +224,12 @@ fn set_gif_clipboard_from_file(path: &Path, is_wayland: bool) -> Result<(), Stri
 
 /// Main function: Download GIF and prepare for pasting
 pub fn paste_gif_to_clipboard(url: &str) -> Result<(), String> {
+    paste_gif_to_clipboard_with_uri(url).map(|_| ())
+}
+
+/// Main function: Download GIF and prepare for pasting
+/// Returns the file URI that was set to clipboard (for marking as pasted)
+pub fn paste_gif_to_clipboard_with_uri(url: &str) -> Result<Option<String>, String> {
     let is_wayland = is_wayland_session();
     eprintln!(
         "[GifManager] Session type: {}",
@@ -210,18 +238,21 @@ pub fn paste_gif_to_clipboard(url: &str) -> Result<(), String> {
 
     // Try to download and set clipboard
     let result = download_gif_to_file(url).and_then(|gif_path| {
+        let file_uri = format!("file://{}", gif_path.to_string_lossy());
         let res = set_gif_clipboard_from_file(&gif_path, is_wayland);
         if res.is_ok() {
             eprintln!("[GifManager] Successfully set clipboard to GIF");
         }
-        res
+        res.map(|_| file_uri)
     });
 
     match result {
-        Ok(()) => Ok(()),
+        Ok(uri) => Ok(Some(uri)),
         Err(e) => {
             eprintln!("[GifManager] GIF clipboard failed ({e}), falling back to URL");
-            copy_url_to_clipboard(url)
+            copy_url_to_clipboard(url)?;
+            // URL fallback - mark the URL as well
+            Ok(Some(url.to_string()))
         }
     }
 }

@@ -156,6 +156,12 @@ impl ClipboardManager {
             return None;
         }
 
+        // Skip file:// URIs pointing to our GIF cache (these are from GIF paste operations)
+        if text.contains("file://") && text.contains("win11-clipboard-history/gifs/") {
+            eprintln!("[ClipboardManager] Skipping GIF cache URI from history");
+            return None;
+        }
+
         // Compute hash for this text
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
@@ -172,6 +178,11 @@ impl ClipboardManager {
         if let Some(ref pasted) = self.last_pasted_text {
             if pasted == &text {
                 // Clear it so future copies of same text are allowed
+                self.last_pasted_text = None;
+                return None;
+            }
+            // Also check if the clipboard text contains the pasted text (for duplicated URIs)
+            if text.contains(pasted) {
                 self.last_pasted_text = None;
                 return None;
             }

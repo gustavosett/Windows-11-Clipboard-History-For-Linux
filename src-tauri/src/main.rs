@@ -12,7 +12,6 @@ use tauri::{
 use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardManager};
 use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
 use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
-use win11_clipboard_history_lib::gif_manager::paste_gif_to_clipboard;
 use win11_clipboard_history_lib::hotkey_manager::{HotkeyAction, HotkeyManager};
 use win11_clipboard_history_lib::input_simulator::simulate_paste_keystroke;
 
@@ -152,15 +151,32 @@ async fn paste_emoji(
 
 /// Paste a GIF from URL
 #[tauri::command]
-async fn paste_gif_from_url(_app: AppHandle, url: String) -> Result<(), String> {
+async fn paste_gif_from_url(_app: AppHandle, state: State<'_, AppState>, url: String) -> Result<(), String> {
     eprintln!("[PasteGif] Starting paste for URL: {}", url);
 
     // Step 1: Download and copy to clipboard (blocking operation, run in spawn_blocking)
     let url_clone = url.clone();
-    tokio::task::spawn_blocking(move || paste_gif_to_clipboard(&url_clone))
+    let file_uri = tokio::task::spawn_blocking(move || {
+        win11_clipboard_history_lib::gif_manager::paste_gif_to_clipboard_with_uri(&url_clone)
+    })
         .await
         .map_err(|e| format!("Task join error: {}", e))?
         .map_err(|e| format!("Failed to paste GIF: {}", e))?;
+
+    // Step 2: Mark the file URI as pasted so clipboard watcher ignores it
+    if let Some(uri) = file_uri {
+        eprintln!("[PasteGif] Marking URI as pasted: {}", uri);
+        let mut clipboard_manager = state.clipboard_manager.lock();
+        clipboard_manager.mark_text_as_pasted(&uri);
+        // Also mark without trailing newline in case wl-copy strips it
+        let uri_trimmed = uri.trim();
+        if uri_trimmed != uri {
+            clipboard_manager.mark_text_as_pasted(uri_trimmed);
+        }
+    }
+
+    // Step 3: Small delay to ensure clipboard is fully ready
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     Ok(())
 }
