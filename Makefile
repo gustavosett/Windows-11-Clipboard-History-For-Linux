@@ -244,9 +244,18 @@ install:
 	@udevadm control --reload-rules 2>/dev/null || true
 	@udevadm trigger 2>/dev/null || true
 	@udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true
-	@# Ensure input group exists and add user
+	@# Ensure input group exists and check/add user
 	@getent group input >/dev/null 2>&1 || groupadd input
-	@if [ -n "$$SUDO_USER" ]; then usermod -aG input $$SUDO_USER; fi
+	@USER_IN_GROUP=false; \
+	if [ -n "$$SUDO_USER" ]; then \
+		if groups $$SUDO_USER 2>/dev/null | grep -q '\binput\b'; then \
+			USER_IN_GROUP=true; \
+			echo -e "$(GREEN)✓ User $$SUDO_USER already in input group$(RESET)"; \
+		else \
+			usermod -aG input $$SUDO_USER; \
+			echo -e "$(GREEN)✓ Added $$SUDO_USER to input group$(RESET)"; \
+		fi; \
+	fi
 	@# Create desktop entry
 	@mkdir -p $(DESTDIR)$(DATADIR)/applications
 	@echo "[Desktop Entry]" > $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
@@ -259,15 +268,76 @@ install:
 	@echo "Categories=Utility;" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
 	@echo "Keywords=clipboard;history;paste;copy;" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
 	@echo "StartupWMClass=$(APP_NAME)" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo -e "$(GREEN)✓ Installed successfully$(RESET)"
-	@echo ""
-	@echo -e "$(YELLOW)╔════════════════════════════════════════════════════════════════╗$(RESET)"
-	@echo -e "$(YELLOW)║     IMPORTANT: Log out and log back in for permissions         ║$(RESET)"
-	@echo -e "$(YELLOW)╚════════════════════════════════════════════════════════════════╝$(RESET)"
+	@# Ask user about autostart and create entry if desired
+	@if [ -n "$$SUDO_USER" ]; then \
+		AUTOSTART_DIR=$$(getent passwd $$SUDO_USER | cut -d: -f6)/.config/autostart; \
+		AUTOSTART_FILE="$$AUTOSTART_DIR/$(APP_NAME).desktop"; \
+		if [ -f "$$AUTOSTART_FILE" ]; then \
+			echo -e "$(GREEN)✓ Autostart already configured$(RESET)"; \
+		else \
+			echo ""; \
+			echo -e "$(CYAN)Would you like the app to start automatically on login? [Y/n]$(RESET)"; \
+			read -r AUTOSTART_RESPONSE; \
+			case "$$AUTOSTART_RESPONSE" in \
+				[nN]|[nN][oO]) \
+					echo -e "$(YELLOW)! Autostart skipped$(RESET)"; \
+					;; \
+				*) \
+					mkdir -p "$$AUTOSTART_DIR"; \
+					cp $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop "$$AUTOSTART_FILE"; \
+					echo "X-GNOME-Autostart-enabled=true" >> "$$AUTOSTART_FILE"; \
+					echo "X-GNOME-Autostart-Delay=2" >> "$$AUTOSTART_FILE"; \
+					chown -R $$SUDO_USER:$$SUDO_USER "$$AUTOSTART_DIR"; \
+					echo -e "$(GREEN)✓ Autostart enabled$(RESET)"; \
+					;; \
+			esac; \
+		fi; \
+	fi
+	@# Grant immediate access with ACLs and determine if logout is needed
+	@NEEDS_LOGOUT=false; \
+	if [ -n "$$SUDO_USER" ]; then \
+		if groups $$SUDO_USER 2>/dev/null | grep -q '\binput\b'; then \
+			NEEDS_LOGOUT=false; \
+		elif command -v setfacl >/dev/null 2>&1; then \
+			for dev in /dev/input/event*; do \
+				setfacl -m "u:$$SUDO_USER:rw" "$$dev" 2>/dev/null || true; \
+			done; \
+			setfacl -m "u:$$SUDO_USER:rw" /dev/uinput 2>/dev/null || true; \
+			echo -e "$(GREEN)✓ Granted immediate access$(RESET)"; \
+			NEEDS_LOGOUT=false; \
+		else \
+			NEEDS_LOGOUT=true; \
+		fi; \
+	fi; \
+	echo -e "$(GREEN)✓ Installed successfully$(RESET)"; \
+	echo ""; \
+	if [ "$$NEEDS_LOGOUT" = true ]; then \
+		echo -e "$(YELLOW)╔════════════════════════════════════════════════════════════════╗$(RESET)"; \
+		echo -e "$(YELLOW)║     IMPORTANT: Log out and log back in for permissions         ║$(RESET)"; \
+		echo -e "$(YELLOW)╚════════════════════════════════════════════════════════════════╝$(RESET)"; \
+	else \
+		echo -e "$(GREEN)╔════════════════════════════════════════════════════════════════╗$(RESET)"; \
+		echo -e "$(GREEN)║     ✓ Ready to use! Press Super+V to open clipboard history    ║$(RESET)"; \
+		echo -e "$(GREEN)╚════════════════════════════════════════════════════════════════╝$(RESET)"; \
+		if [ -n "$$DISPLAY" ] || [ -n "$$WAYLAND_DISPLAY" ]; then \
+			echo ""; \
+			echo -e "$(CYAN)Starting app...$(RESET)"; \
+			su - $$SUDO_USER -c "nohup $(APP_NAME) > /dev/null 2>&1 &" 2>/dev/null || true; \
+			sleep 1; \
+			if pgrep -u $$SUDO_USER -x "$(APP_NAME)" > /dev/null 2>&1; then \
+				echo -e "$(GREEN)✓ App started$(RESET)"; \
+			fi; \
+		fi; \
+	fi
 	@echo ""
 
 uninstall:
 	@echo -e "$(CYAN)Uninstalling $(APP_NAME)...$(RESET)"
+	@# Stop any running instances first
+	@if [ -n "$$SUDO_USER" ]; then \
+		pkill -u $$SUDO_USER -x "$(APP_NAME)" 2>/dev/null || true; \
+	fi
+	@pkill -x "$(APP_NAME)" 2>/dev/null || true
 	rm -f $(DESTDIR)$(BINDIR)/$(APP_NAME)
 	rm -rf $(DESTDIR)/usr/lib/$(APP_NAME)
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
@@ -275,6 +345,17 @@ uninstall:
 	rm -f $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
 	rm -f /etc/udev/rules.d/99-win11-clipboard-input.rules
 	rm -f /etc/modules-load.d/uinput.conf
+	@# Remove autostart entry for the user
+	@if [ -n "$$SUDO_USER" ]; then \
+		AUTOSTART_FILE=$$(getent passwd $$SUDO_USER | cut -d: -f6)/.config/autostart/$(APP_NAME).desktop; \
+		rm -f "$$AUTOSTART_FILE" 2>/dev/null || true; \
+	fi
+	@# Also remove for all users
+	@for user_home in /home/*; do \
+		if [ -d "$$user_home" ]; then \
+			rm -f "$$user_home/.config/autostart/$(APP_NAME).desktop" 2>/dev/null || true; \
+		fi; \
+	done
 	@echo -e "$(GREEN)✓ Uninstalled successfully$(RESET)"
 
 # ============================================================================

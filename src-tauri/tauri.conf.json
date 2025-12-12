@@ -52,10 +52,12 @@
         "files": {
           "/etc/udev/rules.d/99-win11-clipboard-input.rules": "bundle/linux/99-win11-clipboard-input.rules"
         },
-        "postInstallScript": "bundle/linux/postinst.sh"
+        "postInstallScript": "bundle/linux/postinst.sh",
+        "preRemoveScript": "bundle/linux/postrm.sh"
       },
       "rpm": {
-        "postInstallScript": "bundle/linux/postinst.sh"
+        "postInstallScript": "bundle/linux/postinst.sh",
+        "preRemoveScript": "bundle/linux/postrm.sh"
       }
     },
     "resources": [

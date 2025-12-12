@@ -115,9 +115,13 @@ udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true
 # Get the actual user (not root when using sudo)
 ACTUAL_USER="${SUDO_USER:-$USER}"
 
-# Add user to input group if running interactively
+# Check if user already has input group membership (from previous install or manual setup)
+USER_ALREADY_IN_INPUT_GROUP=false
 if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
-    if ! groups "$ACTUAL_USER" 2>/dev/null | grep -q '\binput\b'; then
+    if groups "$ACTUAL_USER" 2>/dev/null | grep -q '\binput\b'; then
+        USER_ALREADY_IN_INPUT_GROUP=true
+        echo -e "${GREEN}✓${NC} User $ACTUAL_USER is already in 'input' group"
+    else
         usermod -aG input "$ACTUAL_USER"
         echo -e "${GREEN}✓${NC} Added $ACTUAL_USER to 'input' group"
     fi
@@ -170,10 +174,133 @@ grant_immediate_access() {
     fi
 }
 
-NEEDS_LOGOUT=true
-if grant_immediate_access "$ACTUAL_USER"; then
+# Determine if logout is needed:
+# - If user was already in input group, no logout needed
+# - If ACLs were granted successfully, no logout needed
+# - Otherwise, logout is needed for new group membership to take effect
+NEEDS_LOGOUT=false
+if [ "$USER_ALREADY_IN_INPUT_GROUP" = true ]; then
+    # User already has permissions from previous session
     NEEDS_LOGOUT=false
+elif grant_immediate_access "$ACTUAL_USER"; then
+    # ACLs granted immediate access
+    NEEDS_LOGOUT=false
+else
+    # Neither condition met, logout required
+    NEEDS_LOGOUT=true
 fi
+
+# Setup autostart for the application (only if user agrees)
+setup_autostart() {
+    local user="$1"
+    
+    if [ -z "$user" ] || [ "$user" = "root" ]; then
+        return
+    fi
+    
+    # Get user's home directory
+    local user_home
+    user_home=$(getent passwd "$user" | cut -d: -f6)
+    
+    if [ -z "$user_home" ]; then
+        return
+    fi
+    
+    local autostart_dir="$user_home/.config/autostart"
+    local desktop_file="$autostart_dir/win11-clipboard-history.desktop"
+    
+    # Check if autostart is already configured
+    if [ -f "$desktop_file" ]; then
+        echo -e "${GREEN}✓${NC} Autostart already configured"
+        return
+    fi
+    
+    # Ask user if they want to enable autostart
+    echo ""
+    echo -e "${BLUE}Would you like the app to start automatically on login? [Y/n]${NC}"
+    
+    # Read user input with a timeout (default to Yes if no response or non-interactive)
+    local response="y"
+    if [ -t 0 ]; then
+        read -r -t 30 response 2>/dev/null || response="y"
+    fi
+    
+    case "$response" in
+        [nN]|[nN][oO])
+            echo -e "${YELLOW}!${NC} Autostart skipped. You can enable it later in your desktop's Startup Applications."
+            return
+            ;;
+    esac
+    
+    # Create autostart directory if it doesn't exist
+    mkdir -p "$autostart_dir"
+    
+    # Create the autostart desktop entry
+    cat > "$desktop_file" << 'EOF'
+[Desktop Entry]
+Name=Clipboard History
+Comment=Windows 11-style Clipboard History Manager
+GenericName=Clipboard Manager
+Exec=win11-clipboard-history
+Icon=win11-clipboard-history
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=clipboard;history;paste;copy;
+StartupWMClass=win11-clipboard-history
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=2
+EOF
+    
+    # Fix ownership to the actual user
+    chown "$user:$user" "$autostart_dir" 2>/dev/null || true
+    chown "$user:$user" "$desktop_file" 2>/dev/null || true
+    
+    echo -e "${GREEN}✓${NC} Autostart enabled - app will start automatically on login"
+}
+
+setup_autostart "$ACTUAL_USER"
+
+# Launch the app for the user (in background, as the actual user)
+launch_app() {
+    local user="$1"
+    
+    if [ -z "$user" ] || [ "$user" = "root" ]; then
+        return
+    fi
+    
+    # Only launch if we have permissions ready (no logout needed)
+    if [ "$NEEDS_LOGOUT" = true ]; then
+        return
+    fi
+    
+    # Get user's home directory and display info
+    local user_home
+    user_home=$(getent passwd "$user" | cut -d: -f6)
+    
+    if [ -z "$user_home" ]; then
+        return
+    fi
+    
+    echo -e "${BLUE}Starting Clipboard History...${NC}"
+    
+    # Launch the app as the actual user with proper environment
+    if [ -n "$DISPLAY" ] || [ -n "$WAYLAND_DISPLAY" ]; then
+        # We have a display, try to launch
+        su - "$user" -c "nohup win11-clipboard-history > /dev/null 2>&1 &" 2>/dev/null || true
+        sleep 1
+        
+        if pgrep -u "$user" -x "win11-clipboard-history" > /dev/null 2>&1; then
+            echo -e "${GREEN}✓${NC} App started successfully"
+        else
+            echo -e "${YELLOW}!${NC} Could not start app automatically. Please run 'win11-clipboard-history' manually."
+        fi
+    else
+        echo -e "${YELLOW}!${NC} No display detected. The app will start on next login."
+    fi
+}
+
+launch_app "$ACTUAL_USER"
 
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
@@ -184,15 +311,15 @@ echo ""
 if [ "$NEEDS_LOGOUT" = true ]; then
     echo -e "${YELLOW}IMPORTANT: Please log out and log back in for permissions to apply.${NC}"
     echo ""
-    echo "After logging back in:"
+    echo "After logging back in, the app will start automatically."
 else
-    echo -e "${GREEN}✓ Ready to use immediately! No logout required.${NC}"
-    echo ""
-    echo "To get started:"
+    echo -e "${GREEN}✓ Ready to use! Press Super+V or Ctrl+Alt+V to open clipboard history.${NC}"
 fi
 
-echo "  • Press Super+V or Ctrl+Alt+V to open clipboard history"
+echo ""
+echo "Tips:"
 echo "  • The app runs in the system tray"
+echo "  • Use Super+V or Ctrl+Alt+V to open clipboard history"
 echo "  • Run 'win11-clipboard-history --version' to check version"
 echo ""
 
