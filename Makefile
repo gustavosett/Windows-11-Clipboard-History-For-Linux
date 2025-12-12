@@ -110,6 +110,8 @@ deps-ubuntu deps-debian:
 		libxdo-dev \
 		libgtk-3-dev \
 		libglib2.0-dev \
+		xclip \
+		wl-clipboard \
 		pkg-config
 	@echo -e "$(GREEN)✓ Dependencies installed successfully$(RESET)"
 
@@ -126,6 +128,8 @@ deps-fedora:
 		libxdo-devel \
 		gtk3-devel \
 		glib2-devel \
+		xclip \
+		wl-clipboard \
 		pkg-config \
 		@development-tools
 	@echo -e "$(GREEN)✓ Dependencies installed successfully$(RESET)"
@@ -144,6 +148,8 @@ deps-arch:
 		xdotool \
 		gtk3 \
 		glib2 \
+		xclip \
+		wl-clipboard \
 		pkgconf
 	@echo -e "$(GREEN)✓ Dependencies installed successfully$(RESET)"
 
@@ -215,7 +221,7 @@ build: node_modules
 # Install / Uninstall
 # ============================================================================
 
-install: build
+install:
 	@echo -e "$(CYAN)Installing $(APP_NAME)...$(RESET)"
 	@# Install binary to lib directory and wrapper to bin
 	@mkdir -p $(DESTDIR)/usr/lib/$(APP_NAME)

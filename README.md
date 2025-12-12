@@ -26,6 +26,8 @@ Built with 🦀 Rust + ⚡ Tauri v2 + ⚛️ React + 🎨 Tailwind CSS
 - ⌨️ **Global Hotkey** - Press `Super+V` or `Ctrl+Alt+V` to open from anywhere
 - 📌 **Pin Items** - Keep important clipboard entries at the top
 - 🖼️ **Image Support** - Copy and paste images with preview thumbnails
+- 🎬 **GIF Picker** - Search and paste GIFs from Tenor directly into any app
+- 🤩 **Emoji Picker** - Quick access to emojis with search functionality
 - 🚀 **Blazing Fast** - Written in Rust for maximum performance
 - 🔒 **Privacy First** - All data stays local on your machine
 - 🖱️ **Smart Positioning** - Window appears at your cursor position
@@ -124,6 +126,8 @@ sudo apt install -y \
     libxdo-dev \
     libgtk-3-dev \
     libglib2.0-dev \
+    xclip \
+    wl-clipboard \
     pkg-config
 ```
 
@@ -144,6 +148,8 @@ sudo dnf install -y \
     libxdo-devel \
     gtk3-devel \
     glib2-devel \
+    xclip \
+    wl-clipboard \
     pkg-config \
     @development-tools
 ```
@@ -166,6 +172,8 @@ sudo pacman -Syu --needed \
     xdotool \
     gtk3 \
     glib2 \
+    xclip \
+    wl-clipboard \
     pkgconf
 ```
 

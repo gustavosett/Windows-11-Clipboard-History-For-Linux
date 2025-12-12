@@ -12,6 +12,7 @@ use tauri::{
 use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardManager};
 use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
 use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
+use win11_clipboard_history_lib::gif_manager::paste_gif_to_clipboard;
 use win11_clipboard_history_lib::hotkey_manager::{HotkeyAction, HotkeyManager};
 use win11_clipboard_history_lib::input_simulator::simulate_paste_keystroke;
 
@@ -146,6 +147,44 @@ async fn paste_emoji(
     paste_text_via_clipboard(&app, &state, &char).await?;
 
     eprintln!("[PasteEmoji] Paste complete");
+    Ok(())
+}
+
+/// Paste a GIF from URL
+#[tauri::command]
+async fn paste_gif_from_url(_app: AppHandle, url: String) -> Result<(), String> {
+    eprintln!("[PasteGif] Starting paste for URL: {}", url);
+
+    // Step 1: Download and copy to clipboard (blocking operation, run in spawn_blocking)
+    let url_clone = url.clone();
+    tokio::task::spawn_blocking(move || paste_gif_to_clipboard(&url_clone))
+        .await
+        .map_err(|e| format!("Task join error: {}", e))?
+        .map_err(|e| format!("Failed to paste GIF: {}", e))?;
+
+    Ok(())
+}
+
+/// Finish the paste sequence: Hide window -> Restore focus -> Simulate Ctrl+V
+#[tauri::command]
+async fn finish_paste(app: AppHandle) -> Result<(), String> {
+    // Step 2: Hide window
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.hide();
+    }
+
+    // Step 3: Restore focus
+    if let Err(e) = restore_focused_window() {
+        eprintln!("Warning: Failed to restore focus: {}", e);
+    }
+
+    // Step 4: Wait for focus to be fully restored
+    tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
+    // Step 5: Simulate Ctrl+V
+    simulate_paste_keystroke()?;
+
+    eprintln!("[PasteGif] Paste sequence complete");
     Ok(())
 }
 
@@ -481,6 +520,8 @@ fn main() {
             paste_item,
             get_recent_emojis,
             paste_emoji,
+            paste_gif_from_url,
+            finish_paste,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

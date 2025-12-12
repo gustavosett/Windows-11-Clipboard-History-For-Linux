@@ -69,18 +69,50 @@ download_and_install() {
 
 BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
 
+# Install clipboard tools based on distro
+install_clipboard_tools() {
+    log "Installing clipboard tools (xclip, wl-clipboard)..."
+    local installed=false
+    case "$DISTRO" in
+        ubuntu|debian|linuxmint|pop|kali|neon)
+            sudo apt-get install -y xclip wl-clipboard 2>/dev/null && installed=true || true
+            ;;
+        fedora|rhel|centos|almalinux|rocky)
+            sudo dnf install -y xclip wl-clipboard 2>/dev/null && installed=true || true
+            ;;
+        arch|manjaro|endeavouros)
+            sudo pacman -S --needed --noconfirm xclip wl-clipboard 2>/dev/null && installed=true || true
+            ;;
+        opensuse*)
+            sudo zypper install -y xclip wl-clipboard 2>/dev/null && installed=true || true
+            ;;
+        *)
+            log "Please install xclip and wl-clipboard manually for GIF paste support"
+            return
+            ;;
+    esac
+
+    if [ "$installed" = true ]; then
+        success "Clipboard tools installed"
+    else
+        log "Could not install clipboard tools automatically. Please install 'xclip' and 'wl-clipboard' manually."
+    fi
+}
+
 case "$DISTRO" in
     ubuntu|debian|linuxmint|pop|kali|neon)
         FILE="win11-clipboard-history_${CLEAN_VERSION}_amd64.deb"
         URL="$BASE_URL/$FILE"
         CMD="sudo dpkg -i $FILE || sudo apt-get install -f -y"
         download_and_install "$URL" "$FILE" "$CMD"
+        install_clipboard_tools
         ;;
     fedora|rhel|centos|almalinux|rocky)
         FILE="win11-clipboard-history-${CLEAN_VERSION}-1.x86_64.rpm"
         URL="$BASE_URL/$FILE"
         CMD="sudo rpm -i $FILE || sudo dnf install -y ./$FILE"
         download_and_install "$URL" "$FILE" "$CMD"
+        install_clipboard_tools
         ;;
     *)
         log "Distribution '$DISTRO' not officially supported for native package. Installing AppImage..."
@@ -129,6 +161,9 @@ WRAPPER
         success "AppImage installed to $LIB_DIR"
         success "Wrapper script created at $INSTALL_DIR/win11-clipboard-history"
         echo "Please ensure $INSTALL_DIR is in your PATH."
+        
+        # Try to install clipboard tools for AppImage users
+        install_clipboard_tools
         ;;
 esac
 
