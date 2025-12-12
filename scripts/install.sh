@@ -72,23 +72,31 @@ BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_T
 # Install clipboard tools based on distro
 install_clipboard_tools() {
     log "Installing clipboard tools (xclip, wl-clipboard)..."
+    local installed=false
     case "$DISTRO" in
         ubuntu|debian|linuxmint|pop|kali|neon)
-            sudo apt-get install -y xclip wl-clipboard 2>/dev/null || true
+            sudo apt-get install -y xclip wl-clipboard 2>/dev/null && installed=true || true
             ;;
         fedora|rhel|centos|almalinux|rocky)
-            sudo dnf install -y xclip wl-clipboard 2>/dev/null || true
+            sudo dnf install -y xclip wl-clipboard 2>/dev/null && installed=true || true
             ;;
         arch|manjaro|endeavouros)
-            sudo pacman -S --needed --noconfirm xclip wl-clipboard 2>/dev/null || true
+            sudo pacman -S --needed --noconfirm xclip wl-clipboard 2>/dev/null && installed=true || true
             ;;
         opensuse*)
-            sudo zypper install -y xclip wl-clipboard 2>/dev/null || true
+            sudo zypper install -y xclip wl-clipboard 2>/dev/null && installed=true || true
             ;;
         *)
             log "Please install xclip and wl-clipboard manually for GIF paste support"
+            return
             ;;
     esac
+
+    if [ "$installed" = true ]; then
+        success "Clipboard tools installed"
+    else
+        log "Could not install clipboard tools automatically. Please install 'xclip' and 'wl-clipboard' manually."
+    fi
 }
 
 case "$DISTRO" in
