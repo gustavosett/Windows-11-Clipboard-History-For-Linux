@@ -63,14 +63,7 @@ async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> R
     };
 
     if let Some(item) = item {
-        eprintln!(
-            "[PasteItem] Found item, content type: {:?}",
-            match &item.content {
-                win11_clipboard_history_lib::ClipboardContent::Text(t) =>
-                    format!("Text({}...)", &t[..t.len().min(20)]),
-                win11_clipboard_history_lib::ClipboardContent::Image { .. } => "Image".to_string(),
-            }
-        );
+        eprintln!("[PasteItem] Found item");
 
         // Restore focus to the previously active window
         if let Err(e) = restore_focused_window() {
