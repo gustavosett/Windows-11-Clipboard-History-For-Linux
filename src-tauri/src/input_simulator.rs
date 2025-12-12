@@ -1,3 +1,5 @@
+use crate::session;
+
 #[cfg(target_os = "linux")]
 pub fn simulate_paste_keystroke() -> Result<(), String> {
     // Small delay before paste
@@ -5,29 +7,25 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
 
     eprintln!("[SimulatePaste] Sending Ctrl+V...");
 
-    // Try uinput first
-    if let Ok(()) = simulate_paste_uinput() {
-        eprintln!("[SimulatePaste] Ctrl+V sent via uinput");
-        return Ok(());
+    // On X11, use XTest extension because it's fast
+    if session::is_x11() {
+        if let Ok(()) = simulate_paste_xtest() {
+            eprintln!("[SimulatePaste] Ctrl+V sent via XTest");
+            return Ok(());
+        }
+        eprintln!("[SimulatePaste] XTest failed, trying fallbacks...");
     }
 
-    // Fallback to enigo
+    // Try enigo (works on both X11 and Wayland)
     if let Ok(()) = simulate_paste_enigo() {
         eprintln!("[SimulatePaste] Ctrl+V sent via enigo");
         return Ok(());
     }
 
-    // Last fallback to xdotool
-    if std::env::var("DISPLAY").is_ok() {
-        if let Ok(output) = std::process::Command::new("xdotool")
-            .args(["key", "--clearmodifiers", "ctrl+v"])
-            .output()
-        {
-            if output.status.success() {
-                eprintln!("[SimulatePaste] Ctrl+V sent via xdotool");
-                return Ok(());
-            }
-        }
+    // Fallback to uinput method
+    if let Ok(()) = simulate_paste_uinput() {
+        eprintln!("[SimulatePaste] Ctrl+V sent via uinput");
+        return Ok(());
     }
 
     Err("All paste methods failed".to_string())
@@ -35,6 +33,49 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
 
 #[cfg(not(target_os = "linux"))]
 pub fn simulate_paste_keystroke() -> Result<(), String> {
+    Ok(())
+}
+
+/// Simulate Ctrl+V using X11 XTest extension
+#[cfg(target_os = "linux")]
+fn simulate_paste_xtest() -> Result<(), String> {
+    use x11rb::connection::Connection;
+    use x11rb::protocol::xtest::ConnectionExt as XtestConnectionExt;
+
+    let (conn, _) = x11rb::connect(None).map_err(|e| format!("X11 connect failed: {}", e))?;
+
+    // Get keycode for Control_L and V
+    // These are standard keycodes on most X11 systems
+    let ctrl_keycode = 37u8; // Control_L
+    let v_keycode = 55u8; // V
+
+    // Verify XTest extension is available
+    conn.xtest_get_version(2, 1)
+        .map_err(|e| format!("XTest not available: {}", e))?
+        .reply()
+        .map_err(|e| format!("XTest version query failed: {}", e))?;
+
+    // Press Ctrl
+    conn.xtest_fake_input(2, ctrl_keycode, 0, x11rb::NONE, 0, 0, 0)
+        .map_err(|e| format!("Failed to press Ctrl: {}", e))?;
+
+    // Press V
+    conn.xtest_fake_input(2, v_keycode, 0, x11rb::NONE, 0, 0, 0)
+        .map_err(|e| format!("Failed to press V: {}", e))?;
+
+    // Release V
+    conn.xtest_fake_input(3, v_keycode, 0, x11rb::NONE, 0, 0, 0)
+        .map_err(|e| format!("Failed to release V: {}", e))?;
+
+    // Release Ctrl
+    conn.xtest_fake_input(3, ctrl_keycode, 0, x11rb::NONE, 0, 0, 0)
+        .map_err(|e| format!("Failed to release Ctrl: {}", e))?;
+
+    conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
+
+    // Small delay to ensure events are processed
+    std::thread::sleep(std::time::Duration::from_millis(10));
+
     Ok(())
 }
 
@@ -108,7 +149,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         }
     }
 
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_millis(50));
 
     // Press Ctrl
     uinput
@@ -118,7 +159,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(30));
+    std::thread::sleep(std::time::Duration::from_millis(10));
 
     // Press V
     uinput
@@ -128,7 +169,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(30));
+    std::thread::sleep(std::time::Duration::from_millis(10));
 
     // Release V
     uinput
@@ -138,7 +179,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(30));
+    std::thread::sleep(std::time::Duration::from_millis(10));
 
     // Release Ctrl
     uinput
@@ -148,7 +189,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_millis(50));
 
     unsafe {
         libc::ioctl(uinput.as_raw_fd(), UI_DEV_DESTROY);

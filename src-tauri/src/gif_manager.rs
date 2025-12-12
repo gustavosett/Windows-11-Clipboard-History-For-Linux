@@ -6,19 +6,12 @@
 //! Therefore, we MUST use wl-copy (Wayland clipboard) for GIF paste to work.
 //! For X11 sessions, we fall back to xclip.
 
+use crate::session;
 use arboard::Clipboard;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-
-/// Check if we're running on a Wayland session
-fn is_wayland_session() -> bool {
-    std::env::var("XDG_SESSION_TYPE")
-        .map(|t| t == "wayland")
-        .unwrap_or(false)
-        || std::env::var("WAYLAND_DISPLAY").is_ok()
-}
 
 /// Get the temp directory for storing downloaded GIFs
 fn get_gif_cache_dir() -> Result<PathBuf, String> {
@@ -230,7 +223,7 @@ pub fn paste_gif_to_clipboard(url: &str) -> Result<(), String> {
 /// Main function: Download GIF and prepare for pasting
 /// Returns the file URI that was set to clipboard (for marking as pasted)
 pub fn paste_gif_to_clipboard_with_uri(url: &str) -> Result<Option<String>, String> {
-    let is_wayland = is_wayland_session();
+    let is_wayland = session::is_wayland();
     eprintln!(
         "[GifManager] Session type: {}",
         if is_wayland { "Wayland" } else { "X11" }
@@ -270,8 +263,8 @@ mod tests {
     }
 
     #[test]
-    fn test_is_wayland_session() {
+    fn test_session_detection() {
         // This test just ensures the function doesn't panic
-        let _ = is_wayland_session();
+        let _ = session::is_wayland();
     }
 }

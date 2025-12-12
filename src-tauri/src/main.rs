@@ -67,7 +67,7 @@ async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> R
         }
 
         // Wait for focus to be restored
-        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         // Write to clipboard and simulate paste
         let mut manager = state.clipboard_manager.lock();
@@ -118,7 +118,7 @@ async fn paste_text_via_clipboard(
     }
 
     // Step 5: Wait for focus to be fully restored
-    tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     // Step 6: Simulate Ctrl+V
     simulate_paste_keystroke()?;
@@ -199,7 +199,7 @@ async fn finish_paste(app: AppHandle) -> Result<(), String> {
     }
 
     // Step 4: Wait for focus to be fully restored
-    tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     // Step 5: Simulate Ctrl+V
     simulate_paste_keystroke()?;
@@ -446,6 +446,9 @@ fn main() {
             }
         }
     }
+
+    // Initialize session detection early (caches Wayland/X11 detection)
+    win11_clipboard_history_lib::session::init();
 
     let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new()));
 
