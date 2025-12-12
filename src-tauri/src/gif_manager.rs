@@ -182,9 +182,19 @@ pub fn copy_url_to_clipboard(url: &str) -> Result<(), String> {
 }
 
 /// Set clipboard from a local GIF file path
+/// Tries Wayland first if detected, then falls back to X11
 fn set_gif_clipboard_from_file(path: &Path, is_wayland: bool) -> Result<(), String> {
     if is_wayland {
-        copy_gif_to_clipboard_wayland(path)
+        // Try Wayland first, fall back to X11 if it fails
+        match copy_gif_to_clipboard_wayland(path) {
+            Ok(()) => Ok(()),
+            Err(wayland_err) => {
+                eprintln!(
+                    "[GifManager] Wayland clipboard failed ({wayland_err}), trying X11 fallback..."
+                );
+                copy_gif_to_clipboard_x11(path)
+            }
+        }
     } else {
         copy_gif_to_clipboard_x11(path)
     }
