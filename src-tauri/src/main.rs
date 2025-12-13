@@ -3,11 +3,12 @@
 
 use parking_lot::Mutex;
 use std::sync::Arc;
+use std::time::Duration;
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, State, WebviewWindow,
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Emitter, Manager, Monitor, PhysicalPosition, PhysicalSize, State, WebviewWindow,
 };
 use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardManager};
 use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
@@ -22,438 +23,353 @@ pub struct AppState {
     hotkey_manager: Arc<Mutex<Option<HotkeyManager>>>,
 }
 
-/// Get clipboard history
+// --- Commands ---
+
 #[tauri::command]
 fn get_history(state: State<AppState>) -> Vec<ClipboardItem> {
     state.clipboard_manager.lock().get_history()
 }
 
-/// Clear all clipboard history
 #[tauri::command]
 fn clear_history(state: State<AppState>) {
     state.clipboard_manager.lock().clear();
 }
 
-/// Delete a specific item from history
 #[tauri::command]
 fn delete_item(state: State<AppState>, id: String) {
     state.clipboard_manager.lock().remove_item(&id);
 }
 
-/// Pin/unpin an item
 #[tauri::command]
 fn toggle_pin(state: State<AppState>, id: String) -> Option<ClipboardItem> {
     state.clipboard_manager.lock().toggle_pin(&id)
 }
 
-/// Paste an item from history
+#[tauri::command]
+fn get_recent_emojis(state: State<AppState>) -> Vec<EmojiUsage> {
+    state.emoji_manager.lock().get_recent()
+}
+
 #[tauri::command]
 async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> Result<(), String> {
-    // First hide the window
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.hide();
-    }
-
-    // Get the item and paste it
+    // 1. Get Item (Scope lock tightly)
     let item = {
         let manager = state.clipboard_manager.lock();
         manager.get_item(&id).cloned()
     };
 
     if let Some(item) = item {
-        // Restore focus to the previously active window
-        if let Err(e) = restore_focused_window() {
-            eprintln!("Failed to restore focus: {}", e);
+        // 2. Prepare Clipboard (Mark as pasted to avoid loop)
+        {
+            let mut manager = state.clipboard_manager.lock();
+            manager.mark_as_pasted(&item);
+            // The manager handles setting the OS clipboard content internally via paste_item
+            // But we do it manually here to ensure order before the pipeline runs
+            // Actually, the existing lib `paste_item` does both.
+            // Let's rely on the library to set the content, but we handle the UI/Input simulation.
+            manager.paste_item(&item).map_err(|e| e.to_string())?;
         }
 
-        // Wait for focus to be restored
-        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-
-        // Write to clipboard and simulate paste
-        let mut manager = state.clipboard_manager.lock();
-        manager
-            .paste_item(&item)
-            .map_err(|e| format!("Failed to paste: {}", e))?;
+        // 3. Run UI/Input Sequence
+        PastePipeline::finish(&app).await?;
     }
-
     Ok(())
 }
 
-/// Get recent emojis from LRU cache
-#[tauri::command]
-fn get_recent_emojis(state: State<AppState>) -> Vec<EmojiUsage> {
-    state.emoji_manager.lock().get_recent()
-}
-
-/// Helper to paste text via clipboard pipeline
-/// Pipeline: Mark as pasted -> Write to clipboard -> Hide window -> Restore focus -> Simulate Ctrl+V
-async fn paste_text_via_clipboard(
-    app: &AppHandle,
-    state: &State<'_, AppState>,
-    text: &str,
-) -> Result<(), String> {
-    // Step 1: Mark text as "pasted by us" so clipboard watcher ignores it
-    {
-        let mut clipboard_manager = state.clipboard_manager.lock();
-        clipboard_manager.mark_text_as_pasted(text);
-    }
-
-    // Step 2: Write to system clipboard (transport only)
-    {
-        use arboard::Clipboard;
-        let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
-        clipboard
-            .set_text(text)
-            .map_err(|e| format!("Failed to set clipboard: {}", e))?;
-    }
-
-    // Step 3: Hide window
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.hide();
-    }
-
-    // Step 4: Restore focus
-    if let Err(e) = restore_focused_window() {
-        eprintln!("Warning: Failed to restore focus: {}", e);
-    }
-
-    // Step 5: Wait for focus to be fully restored
-    tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-
-    // Step 6: Simulate Ctrl+V
-    simulate_paste_keystroke()?;
-
-    Ok(())
-}
-
-/// Paste an emoji character
-/// Pipeline: Record usage -> Delegate to paste_text_via_clipboard
 #[tauri::command]
 async fn paste_emoji(
     app: AppHandle,
     state: State<'_, AppState>,
     char: String,
 ) -> Result<(), String> {
-    eprintln!("[PasteEmoji] Starting paste for emoji: {}", char);
+    // 1. Record Usage
+    state.emoji_manager.lock().record_usage(&char);
 
-    // Record usage in LRU cache
+    // 2. Set Clipboard & Mark
     {
-        let mut emoji_manager = state.emoji_manager.lock();
-        emoji_manager.record_usage(&char);
+        let mut manager = state.clipboard_manager.lock();
+        manager.mark_text_as_pasted(&char);
+
+        use arboard::Clipboard;
+        Clipboard::new()
+            .map_err(|e| e.to_string())?
+            .set_text(&char)
+            .map_err(|e| e.to_string())?;
     }
 
-    // Delegate to shared pipeline
-    paste_text_via_clipboard(&app, &state, &char).await?;
-
-    eprintln!("[PasteEmoji] Paste complete");
+    // 3. Run UI/Input Sequence
+    PastePipeline::finish(&app).await?;
     Ok(())
 }
 
-/// Paste a GIF from URL
 #[tauri::command]
 async fn paste_gif_from_url(
-    _app: AppHandle,
+    app: AppHandle,
     state: State<'_, AppState>,
     url: String,
 ) -> Result<(), String> {
-    eprintln!("[PasteGif] Starting paste for URL: {}", url);
-
-    // Step 1: Download and copy to clipboard (blocking operation, run in spawn_blocking)
+    // 1. Download & Set Clipboard (Blocking)
     let url_clone = url.clone();
     let file_uri = tokio::task::spawn_blocking(move || {
         win11_clipboard_history_lib::gif_manager::paste_gif_to_clipboard_with_uri(&url_clone)
     })
     .await
-    .map_err(|e| format!("Task join error: {}", e))?
-    .map_err(|e| format!("Failed to paste GIF: {}", e))?;
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
 
-    // Step 2: Mark the file URI as pasted so clipboard watcher ignores it
+    // 2. Mark as pasted
     if let Some(uri) = file_uri {
-        eprintln!("[PasteGif] Marking URI as pasted: {}", uri);
-        let mut clipboard_manager = state.clipboard_manager.lock();
-        clipboard_manager.mark_text_as_pasted(&uri);
-        // Also mark without trailing newline in case wl-copy strips it
-        let uri_trimmed = uri.trim();
-        if uri_trimmed != uri {
-            clipboard_manager.mark_text_as_pasted(uri_trimmed);
+        let mut manager = state.clipboard_manager.lock();
+        manager.mark_text_as_pasted(&uri);
+        if let Some(trimmed) = uri.strip_suffix('\n') {
+            manager.mark_text_as_pasted(trimmed);
         }
     }
 
-    // Step 3: Small delay to ensure clipboard is fully ready
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
+    // 3. Run UI/Input Sequence
+    PastePipeline::finish(&app).await?;
     Ok(())
 }
 
-/// Finish the paste sequence: Hide window -> Restore focus -> Simulate Ctrl+V
 #[tauri::command]
 async fn finish_paste(app: AppHandle) -> Result<(), String> {
-    // Step 2: Hide window
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.hide();
-    }
-
-    // Step 3: Restore focus
-    if let Err(e) = restore_focused_window() {
-        eprintln!("Warning: Failed to restore focus: {}", e);
-    }
-
-    // Step 4: Wait for focus to be fully restored
-    tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-
-    // Step 5: Simulate Ctrl+V
-    simulate_paste_keystroke()?;
-
-    eprintln!("[PasteGif] Paste sequence complete");
-    Ok(())
+    PastePipeline::finish(&app).await
 }
 
-/// Show the clipboard window at cursor position
-fn show_window_at_cursor(window: &WebviewWindow) {
-    use tauri::{PhysicalPosition, PhysicalSize};
+// --- Window Logic ---
 
-    // Try multiple methods to get cursor position
-    let cursor_pos = get_cursor_position_multi(window);
+struct WindowController;
 
-    match cursor_pos {
-        Some((x, y)) => {
-            // We got cursor position - position window near cursor
-            if let Ok(Some(monitor)) = window.current_monitor() {
-                let monitor_size = monitor.size();
-                let window_size = window.outer_size().unwrap_or(PhysicalSize::new(360, 480));
-
-                // Calculate position, keeping window within screen bounds
-                let mut pos_x = x;
-                let mut pos_y = y;
-
-                // Adjust if window would go off-screen
-                if pos_x + window_size.width as i32 > monitor_size.width as i32 {
-                    pos_x = monitor_size.width as i32 - window_size.width as i32 - 10;
-                }
-                if pos_y + window_size.height as i32 > monitor_size.height as i32 {
-                    pos_y = monitor_size.height as i32 - window_size.height as i32 - 10;
-                }
-
-                // Ensure not negative
-                pos_x = pos_x.max(10);
-                pos_y = pos_y.max(10);
-
-                eprintln!("[Window] Positioning at ({}, {})", pos_x, pos_y);
-                if let Err(e) = window.set_position(PhysicalPosition::new(pos_x, pos_y)) {
-                    eprintln!("[Window] Failed to set position: {:?}", e);
-                    let _ = window.center();
-                }
-            }
-        }
-        None => {
-            // No cursor position available, center the window
-            eprintln!("[Window] Cursor position not available, centering");
-            if let Err(e) = window.center() {
-                eprintln!("[Window] Failed to center: {:?}", e);
+impl WindowController {
+    /// Toggles visibility: If visible -> Hide. If hidden -> Save Focus & Show.
+    pub fn toggle(app: &AppHandle) {
+        if let Some(window) = app.get_webview_window("main") {
+            if window.is_visible().unwrap_or(false) {
+                let _ = window.hide();
+            } else {
+                save_focused_window();
+                Self::position_and_show(&window);
             }
         }
     }
 
-    let _ = window.show();
-    let _ = window.set_focus();
-}
-
-/// Try multiple methods to get cursor position
-fn get_cursor_position_multi(window: &WebviewWindow) -> Option<(i32, i32)> {
-    // Method 1: Tauri's cursor_position (works in X11 mode)
-    if let Ok(pos) = window.cursor_position() {
-        eprintln!("[Cursor] Got position via Tauri: ({}, {})", pos.x, pos.y);
-        return Some((pos.x as i32, pos.y as i32));
-    }
-
-    // Method 2: Use xdotool (X11)
-    if let Some(pos) = get_cursor_via_xdotool() {
-        return Some(pos);
-    }
-
-    // Method 3: Query X11 directly via x11rb
-    #[cfg(target_os = "linux")]
-    if let Some(pos) = get_cursor_via_x11() {
-        return Some(pos);
-    }
-
-    None
-}
-
-/// Get cursor position using xdotool
-fn get_cursor_via_xdotool() -> Option<(i32, i32)> {
-    let output = std::process::Command::new("xdotool")
-        .args(["getmouselocation", "--shell"])
-        .output()
-        .ok()?;
-
-    if !output.status.success() {
-        return None;
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut x: Option<i32> = None;
-    let mut y: Option<i32> = None;
-
-    for line in stdout.lines() {
-        if let Some(val) = line.strip_prefix("X=") {
-            x = val.parse().ok();
-        } else if let Some(val) = line.strip_prefix("Y=") {
-            y = val.parse().ok();
-        }
-    }
-
-    if let (Some(x), Some(y)) = (x, y) {
-        eprintln!("[Cursor] Got position via xdotool: ({}, {})", x, y);
-        return Some((x, y));
-    }
-
-    None
-}
-
-/// Get cursor position via X11 directly
-#[cfg(target_os = "linux")]
-fn get_cursor_via_x11() -> Option<(i32, i32)> {
-    use x11rb::connection::Connection;
-    use x11rb::protocol::xproto::ConnectionExt;
-
-    let (conn, screen_num) = x11rb::connect(None).ok()?;
-    let screen = &conn.setup().roots[screen_num];
-    let root = screen.root;
-
-    let reply = conn.query_pointer(root).ok()?.reply().ok()?;
-    let x = reply.root_x as i32;
-    let y = reply.root_y as i32;
-
-    eprintln!("[Cursor] Got position via x11rb: ({}, {})", x, y);
-    Some((x, y))
-}
-
-/// Toggle window visibility
-fn toggle_window(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        if window.is_visible().unwrap_or(false) {
-            let _ = window.hide();
-        } else {
-            // Save the currently focused window before showing our window
+    /// Force show window at cursor
+    pub fn show(app: &AppHandle) {
+        if let Some(window) = app.get_webview_window("main") {
             save_focused_window();
-            show_window_at_cursor(&window);
+            Self::position_and_show(&window);
         }
+    }
+
+    /// Force hide window
+    pub fn hide(app: &AppHandle) {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.hide();
+        }
+    }
+
+    fn position_and_show(window: &WebviewWindow) {
+        let (cursor_x, cursor_y) = match Self::get_cursor_position(window) {
+            Some(pos) => pos,
+            None => {
+                let _ = window.center();
+                let _ = window.show();
+                let _ = window.set_focus();
+                return;
+            }
+        };
+
+        // Find the monitor that actually contains the cursor
+        let target_monitor = Self::find_monitor_containing(window, cursor_x, cursor_y)
+            .or_else(|| window.current_monitor().ok().flatten())
+            .or_else(|| window.primary_monitor().ok().flatten());
+
+        if let Some(monitor) = target_monitor {
+            let pos = Self::clamp_window_to_monitor(window, &monitor, cursor_x, cursor_y);
+            // Move *then* show prevents flickering on wrong monitor
+            let _ = window.set_position(pos);
+        }
+
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+
+    fn find_monitor_containing(window: &WebviewWindow, x: i32, y: i32) -> Option<Monitor> {
+        window.available_monitors().ok()?.into_iter().find(|m| {
+            let p = m.position();
+            let s = m.size();
+            x >= p.x && x < (p.x + s.width as i32) && y >= p.y && y < (p.y + s.height as i32)
+        })
+    }
+
+    fn clamp_window_to_monitor(
+        window: &WebviewWindow,
+        monitor: &Monitor,
+        x: i32,
+        y: i32,
+    ) -> PhysicalPosition<i32> {
+        let win_size = window.outer_size().unwrap_or(PhysicalSize::new(360, 480));
+        let m_pos = monitor.position();
+        let m_size = monitor.size();
+
+        // Calculate max allowed X/Y (Monitor TopLeft + Width - Window Width)
+        let max_x = m_pos.x + m_size.width as i32 - win_size.width as i32;
+        let max_y = m_pos.y + m_size.height as i32 - win_size.height as i32;
+
+        // Clamp logic: Ensure x is between min_x and max_x
+        // We add a slight padding (10px) to keep it off the strict edge
+        let safe_x = x.clamp(m_pos.x + 10, max_x - 10);
+        let safe_y = y.clamp(m_pos.y + 10, max_y - 10);
+
+        PhysicalPosition::new(safe_x, safe_y)
+    }
+
+    fn get_cursor_position(window: &WebviewWindow) -> Option<(i32, i32)> {
+        // 1. Tauri (Cross-platform, best if working)
+        if let Ok(pos) = window.cursor_position() {
+            return Some((pos.x as i32, pos.y as i32));
+        }
+
+        // 2. Linux Fallbacks
+        #[cfg(target_os = "linux")]
+        {
+            if let Some(p) = Self::get_cursor_xdotool() {
+                return Some(p);
+            }
+            if let Some(p) = Self::get_cursor_x11() {
+                return Some(p);
+            }
+        }
+
+        None
+    }
+
+    #[cfg(target_os = "linux")]
+    fn get_cursor_xdotool() -> Option<(i32, i32)> {
+        let output = std::process::Command::new("xdotool")
+            .args(["getmouselocation", "--shell"])
+            .output()
+            .ok()?;
+
+        if !output.status.success() {
+            return None;
+        }
+
+        let s = String::from_utf8_lossy(&output.stdout);
+        let (mut x, mut y) = (None, None);
+        for line in s.lines() {
+            if let Some(v) = line.strip_prefix("X=") {
+                x = v.parse().ok();
+            }
+            if let Some(v) = line.strip_prefix("Y=") {
+                y = v.parse().ok();
+            }
+        }
+        x.zip(y)
+    }
+
+    #[cfg(target_os = "linux")]
+    fn get_cursor_x11() -> Option<(i32, i32)> {
+        use x11rb::connection::Connection;
+        use x11rb::protocol::xproto::ConnectionExt;
+        let (conn, n) = x11rb::connect(None).ok()?;
+        let root = conn.setup().roots.get(n)?.root;
+        let r = conn.query_pointer(root).ok()?.reply().ok()?;
+        Some((r.root_x as i32, r.root_y as i32))
     }
 }
 
-/// Start clipboard monitoring in background thread
+// --- Logic Helpers ---
+
+/// Centralizes the "cleanup and paste" sequence to ensure consistency
+struct PastePipeline;
+
+impl PastePipeline {
+    async fn finish(app: &AppHandle) -> Result<(), String> {
+        // 1. Hide UI immediately
+        WindowController::hide(app);
+
+        // 2. Restore Focus
+        if let Err(e) = restore_focused_window() {
+            eprintln!("[PastePipeline] Focus restore warning: {}", e);
+        }
+
+        // 3. Wait for Window Manager to settle focus
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // 4. Trigger Keystroke
+        simulate_paste_keystroke()?;
+
+        Ok(())
+    }
+}
+
 fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<ClipboardManager>>) {
     std::thread::spawn(move || {
         let mut last_text_hash: Option<u64> = None;
         let mut last_image_hash: Option<u64> = None;
 
         loop {
-            std::thread::sleep(std::time::Duration::from_millis(500));
-
+            std::thread::sleep(Duration::from_millis(500));
             let mut manager = clipboard_manager.lock();
 
-            // Check for text changes using hash to detect duplicates reliably
+            // Text
             if let Ok(text) = manager.get_current_text() {
                 if !text.is_empty() {
-                    // Hash the text for comparison
-                    use std::collections::hash_map::DefaultHasher;
-                    use std::hash::{Hash, Hasher};
-                    let mut hasher = DefaultHasher::new();
-                    text.hash(&mut hasher);
-                    let text_hash = hasher.finish();
+                    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                    std::hash::Hash::hash(&text, &mut hasher);
+                    let text_hash = std::hash::Hasher::finish(&hasher);
 
                     if Some(text_hash) != last_text_hash {
                         last_text_hash = Some(text_hash);
-                        // Clear image hash when text is copied
                         last_image_hash = None;
-
-                        // add_text handles duplicate detection internally
                         if let Some(item) = manager.add_text(text) {
-                            // Emit event to frontend
                             let _ = app.emit("clipboard-changed", &item);
                         }
                     }
                 }
             }
 
-            // Check for image changes
+            // Image
             if let Ok(Some((image_data, hash))) = manager.get_current_image() {
                 if Some(hash) != last_image_hash {
                     last_image_hash = Some(hash);
-                    // Clear text hash when image is copied
                     last_text_hash = None;
                     if let Some(item) = manager.add_image(image_data, hash) {
                         let _ = app.emit("clipboard-changed", &item);
                     }
                 }
             }
-
-            // Release the lock before sleeping
-            drop(manager);
         }
     });
 }
 
-/// Start global hotkey listener
 fn start_hotkey_listener(app: AppHandle) -> HotkeyManager {
     let app_clone = app.clone();
-
     HotkeyManager::new(move |action| match action {
-        HotkeyAction::Toggle => toggle_window(&app_clone),
-        HotkeyAction::Close => {
-            if let Some(window) = app_clone.get_webview_window("main") {
-                if window.is_visible().unwrap_or(false) {
-                    let _ = window.hide();
-                }
-            }
-        }
+        HotkeyAction::Toggle => WindowController::toggle(&app_clone),
+        HotkeyAction::Close => WindowController::hide(&app_clone),
     })
 }
 
-/// Application version from Cargo.toml
+// --- Main ---
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
-    // Handle command line arguments
     let args: Vec<String> = std::env::args().collect();
-    if args.len() > 1 {
-        match args[1].as_str() {
-            "--version" | "-v" | "-V" => {
-                println!("win11-clipboard-history {}", VERSION);
-                return;
-            }
-            "--help" | "-h" => {
-                println!("Windows 11 Clipboard History for Linux v{}", VERSION);
-                println!();
-                println!("USAGE:");
-                println!("    win11-clipboard-history [OPTIONS]");
-                println!();
-                println!("OPTIONS:");
-                println!("    -h, --help       Print help information");
-                println!("    -v, --version    Print version information");
-                println!();
-                println!("HOTKEYS:");
-                println!("    Super+V          Open clipboard history");
-                println!("    Ctrl+Alt+V       Alternative hotkey");
-                println!("    Esc              Close window");
-                return;
-            }
-            _ => {
-                eprintln!("Unknown option: {}", args[1]);
-                eprintln!("Use --help for usage information");
-                std::process::exit(1);
-            }
-        }
+    if args.len() > 1 && (args[1] == "--version" || args[1] == "-v") {
+        println!("win11-clipboard-history {}", VERSION);
+        return;
     }
 
-    let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new()));
+    win11_clipboard_history_lib::session::init();
 
-    // Initialize emoji manager with app data directory
-    let emoji_data_dir = dirs::data_local_dir()
+    let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new()));
+    let emoji_dir = dirs::data_local_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("win11-clipboard-history");
-    let emoji_manager = Arc::new(Mutex::new(EmojiManager::new(emoji_data_dir)));
+    let emoji_manager = Arc::new(Mutex::new(EmojiManager::new(emoji_dir)));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -465,69 +381,46 @@ fn main() {
         .setup(move |app| {
             let app_handle = app.handle().clone();
 
-            // Setup system tray
-            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let show_item = MenuItem::with_id(app, "show", "Show Clipboard", true, None::<&str>)?;
-            let clear_item = MenuItem::with_id(app, "clear", "Clear History", true, None::<&str>)?;
+            // Tray
+            let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show, &quit])?;
 
-            let menu = Menu::with_items(app, &[&show_item, &clear_item, &quit_item])?;
-
-            // Load tray icon
-            let icon =
-                Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap_or_else(|_| {
-                    Image::from_bytes(include_bytes!("../icons/32x32.png")).unwrap()
-                });
+            let icon = Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap();
 
             let _tray = TrayIconBuilder::new()
                 .icon(icon)
                 .menu(&menu)
-                .tooltip("Clipboard History (Super+V)")
                 .on_menu_event(move |app, event| match event.id.as_ref() {
-                    "quit" => {
-                        app.exit(0);
-                    }
-                    "show" => {
-                        toggle_window(app);
-                    }
-                    "clear" => {
-                        if let Some(state) = app.try_state::<AppState>() {
-                            state.clipboard_manager.lock().clear();
-                            let _ = app.emit("history-cleared", ());
-                        }
-                    }
+                    "quit" => app.exit(0),
+                    "show" => WindowController::show(app),
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
                         ..
                     } = event
                     {
-                        toggle_window(tray.app_handle());
+                        WindowController::toggle(tray.app_handle());
                     }
                 })
                 .build(app)?;
 
-            // Setup window blur handler (close on focus loss)
+            // Blur Handler
             let main_window = app.get_webview_window("main").unwrap();
-            let window_clone = main_window.clone();
-
+            let w_clone = main_window.clone();
             main_window.on_window_event(move |event| {
                 if let tauri::WindowEvent::Focused(false) = event {
-                    let _ = window_clone.hide();
+                    let _ = w_clone.hide();
                 }
             });
 
-            // Start clipboard watcher
-            start_clipboard_watcher(app_handle.clone(), clipboard_manager.clone());
+            start_clipboard_watcher(app_handle.clone(), clipboard_manager);
 
-            // Start global hotkey listener
-            let hotkey_manager = start_hotkey_listener(app_handle.clone());
-
-            // Store hotkey manager in state
+            let hk = start_hotkey_listener(app_handle.clone());
             if let Some(state) = app_handle.try_state::<AppState>() {
-                *state.hotkey_manager.lock() = Some(hotkey_manager);
+                *state.hotkey_manager.lock() = Some(hk);
             }
 
             Ok(())

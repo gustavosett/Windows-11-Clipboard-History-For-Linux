@@ -51,7 +51,7 @@ dirs = "5.0"
 # X11 Simulation for paste injection (Linux)
 [target.'cfg(target_os = "linux")'.dependencies]
 enigo = "0.6"
-x11rb = { version = "0.13", features = ["allow-unsafe-code"] }
+x11rb = { version = "0.13", features = ["allow-unsafe-code", "xtest"] }
 evdev = "0.12"
 libc = "0.2"
 
