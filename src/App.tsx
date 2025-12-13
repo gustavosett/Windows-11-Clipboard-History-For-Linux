@@ -11,6 +11,7 @@ import { DragHandle } from './components/DragHandle'
 import { EmojiPicker } from './components/EmojiPicker'
 import { GifPicker } from './components/GifPicker'
 import type { ActiveTab } from './types/clipboard'
+import { invoke } from '@tauri-apps/api/core'
 
 /**
  * Main App Component - Windows 11 Clipboard History Manager
@@ -43,6 +44,14 @@ function App() {
   const handleTabChange = useCallback((tab: ActiveTab) => {
     setActiveTab(tab)
   }, [])
+
+  const handleMouseEnter = () => {
+    invoke('set_mouse_state', { inside: true }).catch(console.error)
+  }
+
+  const handleMouseLeave = () => {
+    invoke('set_mouse_state', { inside: false }).catch(console.error)
+  }
 
   // Render content based on active tab
   const renderContent = () => {
@@ -105,6 +114,8 @@ function App() {
         // Text color based on theme
         isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
       )}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Drag Handle */}
       <DragHandle />

@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use parking_lot::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{
@@ -21,6 +22,7 @@ pub struct AppState {
     clipboard_manager: Arc<Mutex<ClipboardManager>>,
     emoji_manager: Arc<Mutex<EmojiManager>>,
     hotkey_manager: Arc<Mutex<Option<HotkeyManager>>>,
+    is_mouse_inside: Arc<AtomicBool>,
 }
 
 // --- Commands ---
@@ -48,6 +50,11 @@ fn toggle_pin(state: State<AppState>, id: String) -> Option<ClipboardItem> {
 #[tauri::command]
 fn get_recent_emojis(state: State<AppState>) -> Vec<EmojiUsage> {
     state.emoji_manager.lock().get_recent()
+}
+
+#[tauri::command]
+fn set_mouse_state(state: State<AppState>, inside: bool) {
+    state.is_mouse_inside.store(inside, Ordering::Relaxed);
 }
 
 #[tauri::command]
@@ -354,6 +361,7 @@ fn main() {
 
     win11_clipboard_history_lib::session::init();
 
+    let is_mouse_inside = Arc::new(AtomicBool::new(false));
     let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new()));
     let emoji_dir = dirs::data_local_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
@@ -366,6 +374,7 @@ fn main() {
             clipboard_manager: clipboard_manager.clone(),
             emoji_manager: emoji_manager.clone(),
             hotkey_manager: Arc::new(Mutex::new(None)),
+            is_mouse_inside: is_mouse_inside.clone(),
         })
         .setup(move |app| {
             let app_handle = app.handle().clone();
@@ -400,6 +409,12 @@ fn main() {
             let w_clone = main_window.clone();
             main_window.on_window_event(move |event| {
                 if let tauri::WindowEvent::Focused(false) = event {
+                    let state = w_clone.state::<AppState>();
+
+                    if state.is_mouse_inside.load(Ordering::Relaxed) {
+                        return;
+                    }
+
                     let _ = w_clone.hide();
                 }
             });
@@ -423,6 +438,7 @@ fn main() {
             paste_emoji,
             paste_gif_from_url,
             finish_paste,
+            set_mouse_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
