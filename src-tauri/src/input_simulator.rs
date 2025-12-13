@@ -7,7 +7,7 @@ type PasteStrategy = (&'static str, fn() -> Result<(), String>);
 #[cfg(target_os = "linux")]
 pub fn simulate_paste_keystroke() -> Result<(), String> {
     // Small delay before paste
-    thread::sleep(Duration::from_millis(10));
+    thread::sleep(Duration::from_millis(30));
 
     eprintln!("[SimulatePaste] Sending Ctrl+V...");
 
@@ -126,13 +126,13 @@ fn simulate_paste_xtest() -> Result<(), String> {
         root_window,
         "Failed to press Ctrl",
     )?;
-    thread::sleep(Duration::from_millis(10));
+    thread::sleep(Duration::from_millis(30));
 
     send_xtest_key(&conn, 2, V_KEYCODE, root_window, "Failed to press V")?;
-    thread::sleep(Duration::from_millis(10));
+    thread::sleep(Duration::from_millis(30));
 
     send_xtest_key(&conn, 3, V_KEYCODE, root_window, "Failed to release V")?;
-    thread::sleep(Duration::from_millis(5));
+    thread::sleep(Duration::from_millis(30));
 
     send_xtest_key(
         &conn,
@@ -226,7 +226,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(10));
+    std::thread::sleep(std::time::Duration::from_millis(30));
 
     // Press V
     uinput
@@ -236,7 +236,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(10));
+    std::thread::sleep(std::time::Duration::from_millis(30));
 
     // Release V
     uinput
@@ -246,7 +246,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(10));
+    std::thread::sleep(std::time::Duration::from_millis(30));
 
     // Release Ctrl
     uinput
@@ -261,6 +261,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
     unsafe {
         libc::ioctl(uinput.as_raw_fd(), UI_DEV_DESTROY);
     }
+    std::thread::sleep(std::time::Duration::from_millis(20));
 
     Ok(())
 }

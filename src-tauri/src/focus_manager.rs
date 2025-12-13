@@ -47,7 +47,7 @@ pub fn restore_focused_window() -> Result<(), String> {
     conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
 
     // Small delay to ensure focus is set
-    std::thread::sleep(std::time::Duration::from_millis(50));
+    std::thread::sleep(std::time::Duration::from_millis(100));
 
     Ok(())
 }
