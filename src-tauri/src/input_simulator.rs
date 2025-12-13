@@ -11,16 +11,23 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
 
     eprintln!("[SimulatePaste] Sending Ctrl+V...");
 
-    // try methods in order depending on session
-    let mut strategies: Vec<PasteStrategy> = Vec::new();
+    const X11_STRATEGIES: &[PasteStrategy] = &[
+        ("XTest", simulate_paste_xtest),
+        ("xdotool", simulate_paste_xdotool),
+        ("enigo", simulate_paste_enigo),
+        ("uinput", simulate_paste_uinput),
+    ];
 
-    if session::is_x11() {
-        strategies.push(("XTest", simulate_paste_xtest));
-        strategies.push(("xdotool", simulate_paste_xdotool));
-    }
+    const NON_X11_STRATEGIES: &[PasteStrategy] = &[
+        ("enigo", simulate_paste_enigo),
+        ("uinput", simulate_paste_uinput),
+    ];
 
-    strategies.push(("enigo", simulate_paste_enigo));
-    strategies.push(("uinput", simulate_paste_uinput));
+    let strategies = if session::is_x11() {
+        X11_STRATEGIES
+    } else {
+        NON_X11_STRATEGIES
+    };
 
     for (name, func) in strategies {
         match func() {
@@ -35,6 +42,75 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
     }
 
     Err("All paste methods failed".to_string())
+}
+
+/// Helper for XTest input generation
+#[cfg(target_os = "linux")]
+fn fake_key<C: x11rb::connection::Connection + x11rb::protocol::xtest::ConnectionExt>(
+    conn: &C,
+    key_type: u8,
+    keycode: u8,
+    root_window: u32,
+    ctx: &str,
+) -> Result<(), String> {
+    conn.xtest_fake_input(key_type, keycode, 0, root_window, 0, 0, 0)
+        .map_err(|e| format!("{}: {}", ctx, e))?;
+    conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
+    Ok(())
+}
+
+/// Simulate Ctrl+V using X11 XTest extension
+#[cfg(target_os = "linux")]
+fn simulate_paste_xtest() -> Result<(), String> {
+    use x11rb::connection::Connection;
+    use x11rb::protocol::xtest::ConnectionExt as XtestConnectionExt;
+    use x11rb::wrapper::ConnectionExt as WrapperConnectionExt; // Imported for sync()
+
+    const CTRL_L_KEYCODE: u8 = 37;
+    const V_KEYCODE: u8 = 55;
+
+    let (conn, screen_num) =
+        x11rb::connect(None).map_err(|e| format!("X11 connect failed: {}", e))?;
+    let screen = &conn.setup().roots[screen_num];
+    let root_window = screen.root;
+
+    conn.xtest_get_version(2, 1)
+        .map_err(|e| format!("XTest version query failed: {}", e))?
+        .reply()
+        .map_err(|e| format!("XTest version query failed: {}", e))?;
+
+    conn.sync()
+        .map_err(|e| format!("Sync setup failed: {}", e))?;
+
+    // Press Ctrl
+    fake_key(
+        &conn,
+        2,
+        CTRL_L_KEYCODE,
+        root_window,
+        "Failed to press Ctrl",
+    )?;
+    thread::sleep(Duration::from_millis(30));
+
+    // Press V
+    fake_key(&conn, 2, V_KEYCODE, root_window, "Failed to press V")?;
+    thread::sleep(Duration::from_millis(30));
+
+    // Release V
+    fake_key(&conn, 3, V_KEYCODE, root_window, "Failed to release V")?;
+    thread::sleep(Duration::from_millis(30));
+
+    // Release Ctrl
+    fake_key(
+        &conn,
+        3,
+        CTRL_L_KEYCODE,
+        root_window,
+        "Failed to release Ctrl",
+    )?;
+
+    conn.sync().map_err(|e| format!("Sync failed: {}", e))?;
+    Ok(())
 }
 
 /// Simulate Ctrl+V using xdotool with the focused window
@@ -68,82 +144,6 @@ fn simulate_paste_xdotool() -> Result<(), String> {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("xdotool key failed: {}", stderr))
     }
-}
-
-#[cfg(target_os = "linux")]
-fn map_xtest_err<T, E: std::fmt::Display>(ctx: &str, res: Result<T, E>) -> Result<T, String> {
-    res.map_err(|e| format!("{}: {}", ctx, e))
-}
-
-#[cfg(target_os = "linux")]
-fn send_xtest_key<C>(
-    conn: &C,
-    key_type: u8,
-    keycode: u8,
-    root_window: u32,
-    ctx: &str,
-) -> Result<(), String>
-where
-    C: x11rb::protocol::xtest::ConnectionExt + x11rb::connection::Connection,
-{
-    map_xtest_err(
-        ctx,
-        conn.xtest_fake_input(key_type, keycode, 0, root_window, 0, 0, 0),
-    )?;
-    map_xtest_err("Flush failed", conn.flush())?;
-    Ok(())
-}
-
-/// Simulate Ctrl+V using X11 XTest extension
-#[cfg(target_os = "linux")]
-fn simulate_paste_xtest() -> Result<(), String> {
-    use std::thread;
-    use std::time::Duration;
-    use x11rb::connection::Connection as X11ConnectionTrait;
-    use x11rb::protocol::xtest::ConnectionExt as XtestConnectionExt;
-    use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
-
-    const CTRL_L_KEYCODE: u8 = 37;
-    const V_KEYCODE: u8 = 55;
-
-    let (conn, screen_num) = map_xtest_err("X11 connect failed", x11rb::connect(None))?;
-    let screen = &conn.setup().roots[screen_num];
-    let root_window = screen.root;
-
-    map_xtest_err(
-        "XTest version query failed",
-        conn.xtest_get_version(2, 1)
-            .map_err(|e| format!("XTest error: {}", e))?
-            .reply(),
-    )?;
-
-    map_xtest_err("Sync setup failed", conn.sync())?;
-
-    send_xtest_key(
-        &conn,
-        2,
-        CTRL_L_KEYCODE,
-        root_window,
-        "Failed to press Ctrl",
-    )?;
-    thread::sleep(Duration::from_millis(30));
-
-    send_xtest_key(&conn, 2, V_KEYCODE, root_window, "Failed to press V")?;
-    thread::sleep(Duration::from_millis(30));
-
-    send_xtest_key(&conn, 3, V_KEYCODE, root_window, "Failed to release V")?;
-    thread::sleep(Duration::from_millis(30));
-
-    send_xtest_key(
-        &conn,
-        3,
-        CTRL_L_KEYCODE,
-        root_window,
-        "Failed to release Ctrl",
-    )?;
-
-    map_xtest_err("Sync failed", conn.sync())?;
-    Ok(())
 }
 
 #[cfg(target_os = "linux")]
@@ -216,7 +216,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         }
     }
 
-    std::thread::sleep(std::time::Duration::from_millis(50));
+    thread::sleep(Duration::from_millis(50));
 
     // Press Ctrl
     uinput
@@ -226,7 +226,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(30));
+    thread::sleep(Duration::from_millis(30));
 
     // Press V
     uinput
@@ -236,7 +236,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(30));
+    thread::sleep(Duration::from_millis(30));
 
     // Release V
     uinput
@@ -246,7 +246,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(30));
+    thread::sleep(Duration::from_millis(30));
 
     // Release Ctrl
     uinput
@@ -256,12 +256,12 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(50));
+    thread::sleep(Duration::from_millis(50));
 
     unsafe {
         libc::ioctl(uinput.as_raw_fd(), UI_DEV_DESTROY);
     }
-    std::thread::sleep(std::time::Duration::from_millis(20));
+    thread::sleep(Duration::from_millis(20));
 
     Ok(())
 }
