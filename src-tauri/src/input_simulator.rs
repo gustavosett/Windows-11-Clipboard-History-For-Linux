@@ -2,6 +2,8 @@ use crate::session;
 use std::thread;
 use std::time::Duration;
 
+type PasteStrategy = (&'static str, fn() -> Result<(), String>);
+
 #[cfg(target_os = "linux")]
 pub fn simulate_paste_keystroke() -> Result<(), String> {
     // Small delay before paste
@@ -10,7 +12,7 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
     eprintln!("[SimulatePaste] Sending Ctrl+V...");
 
     // try methods in order depending on session
-    let mut strategies: Vec<(&str, fn() -> Result<(), String>)> = Vec::new();
+    let mut strategies: Vec<PasteStrategy> = Vec::new();
 
     if session::is_x11() {
         strategies.push(("XTest", simulate_paste_xtest));
@@ -79,11 +81,20 @@ fn map_xtest_err<T, E: std::fmt::Display>(ctx: &str, res: Result<T, E>) -> Resul
 }
 
 #[cfg(target_os = "linux")]
-fn send_xtest_key<C>(conn: &C, key_type: u8, keycode: u8, root_window: u32, ctx: &str) -> Result<(), String>
+fn send_xtest_key<C>(
+    conn: &C,
+    key_type: u8,
+    keycode: u8,
+    root_window: u32,
+    ctx: &str,
+) -> Result<(), String>
 where
     C: x11rb::protocol::xtest::ConnectionExt + x11rb::connection::Connection,
 {
-    map_xtest_err(ctx, conn.xtest_fake_input(key_type, keycode, 0, root_window, 0, 0, 0))?;
+    map_xtest_err(
+        ctx,
+        conn.xtest_fake_input(key_type, keycode, 0, root_window, 0, 0, 0),
+    )?;
     map_xtest_err("Flush failed", conn.flush())?;
     Ok(())
 }
@@ -91,11 +102,11 @@ where
 /// Simulate Ctrl+V using X11 XTest extension
 #[cfg(target_os = "linux")]
 fn simulate_paste_xtest() -> Result<(), String> {
+    use std::thread;
+    use std::time::Duration;
     use x11rb::connection::Connection as X11ConnectionTrait;
     use x11rb::protocol::xtest::ConnectionExt as XtestConnectionExt;
     use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
-    use std::thread;
-    use std::time::Duration;
 
     const CTRL_L_KEYCODE: u8 = 37;
     const V_KEYCODE: u8 = 55;
@@ -106,12 +117,20 @@ fn simulate_paste_xtest() -> Result<(), String> {
 
     map_xtest_err(
         "XTest version query failed",
-        conn.xtest_get_version(2, 1).map_err(|e| format!("XTest error: {}", e))?.reply(),
+        conn.xtest_get_version(2, 1)
+            .map_err(|e| format!("XTest error: {}", e))?
+            .reply(),
     )?;
 
     map_xtest_err("Sync setup failed", conn.sync())?;
 
-    send_xtest_key(&conn, 2, CTRL_L_KEYCODE, root_window, "Failed to press Ctrl")?;
+    send_xtest_key(
+        &conn,
+        2,
+        CTRL_L_KEYCODE,
+        root_window,
+        "Failed to press Ctrl",
+    )?;
     thread::sleep(Duration::from_millis(10));
 
     send_xtest_key(&conn, 2, V_KEYCODE, root_window, "Failed to press V")?;
@@ -120,7 +139,13 @@ fn simulate_paste_xtest() -> Result<(), String> {
     send_xtest_key(&conn, 3, V_KEYCODE, root_window, "Failed to release V")?;
     thread::sleep(Duration::from_millis(5));
 
-    send_xtest_key(&conn, 3, CTRL_L_KEYCODE, root_window, "Failed to release Ctrl")?;
+    send_xtest_key(
+        &conn,
+        3,
+        CTRL_L_KEYCODE,
+        root_window,
+        "Failed to release Ctrl",
+    )?;
 
     map_xtest_err("Sync failed", conn.sync())?;
     Ok(())
