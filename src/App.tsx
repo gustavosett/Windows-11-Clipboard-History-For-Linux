@@ -18,7 +18,7 @@ import { invoke } from '@tauri-apps/api/core'
  */
 function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('clipboard')
-  const isDark = useDarkMode()
+  useDarkMode()
 
   const { history, isLoading, clearHistory, deleteItem, togglePin, pasteItem } =
     useClipboardHistory()
@@ -104,15 +104,10 @@ function App() {
   return (
     <div
       className={clsx(
-        // Container styles
-        'h-screen w-screen overflow-hidden flex flex-col',
-        'rounded-win11-lg',
-        // Glassmorphism effect
-        isDark ? 'glass-effect' : 'glass-effect-light',
-        // Background fallback
-        isDark ? 'bg-win11-acrylic-bg' : 'bg-win11Light-acrylic-bg',
-        // Text color based on theme
-        isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
+        'h-screen w-screen overflow-hidden flex flex-col rounded-win11-lg',
+        'glass-effect-light dark:glass-effect',
+        'bg-win11Light-acrylic-bg dark:bg-win11-acrylic-bg',
+        'text-win11Light-text-primary dark:text-win11-text-primary'
       )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
