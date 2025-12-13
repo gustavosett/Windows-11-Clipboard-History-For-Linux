@@ -1,10 +1,11 @@
 //! Session Detection Module
-//! Detects whether we're running on Wayland or X11 session
-//! This is evaluated once at startup and cached for performance
+//! Detects whether we're running on Wayland or X11 session.
+//! Evaluated lazily once and cached for performance.
 
+use std::env;
 use std::sync::OnceLock;
 
-/// Cached session type - evaluated once at first access
+/// Cached session type singleton
 static SESSION_TYPE: OnceLock<SessionType> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -14,42 +15,40 @@ pub enum SessionType {
     Unknown,
 }
 
-/// Detect the session type from environment variables
-fn detect_session_type() -> SessionType {
-    // Check XDG_SESSION_TYPE first (most reliable)
-    if let Ok(session_type) = std::env::var("XDG_SESSION_TYPE") {
-        match session_type.to_lowercase().as_str() {
-            "wayland" => {
-                eprintln!("[Session] Detected Wayland session via XDG_SESSION_TYPE");
-                return SessionType::Wayland;
+impl SessionType {
+    /// heuristic detection of the current session
+    fn detect() -> (Self, &'static str) {
+        // 1. Check XDG_SESSION_TYPE (Most reliable source)
+        if let Ok(val) = env::var("XDG_SESSION_TYPE") {
+            match val.trim().to_lowercase().as_str() {
+                "wayland" => return (Self::Wayland, "XDG_SESSION_TYPE"),
+                "x11" => return (Self::X11, "XDG_SESSION_TYPE"),
+                _ => {} // Continue to fallbacks for unknown values
             }
-            "x11" => {
-                eprintln!("[Session] Detected X11 session via XDG_SESSION_TYPE");
-                return SessionType::X11;
-            }
-            _ => {}
         }
-    }
 
-    // Fallback: Check for WAYLAND_DISPLAY
-    if std::env::var("WAYLAND_DISPLAY").is_ok() {
-        eprintln!("[Session] Detected Wayland session via WAYLAND_DISPLAY");
-        return SessionType::Wayland;
-    }
+        // 2. Check WAYLAND_DISPLAY (Standard Wayland indicator)
+        if env::var_os("WAYLAND_DISPLAY").is_some() {
+            return (Self::Wayland, "WAYLAND_DISPLAY");
+        }
 
-    // Fallback: Check for DISPLAY (X11)
-    if std::env::var("DISPLAY").is_ok() {
-        eprintln!("[Session] Detected X11 session via DISPLAY");
-        return SessionType::X11;
-    }
+        // 3. Check DISPLAY (Standard X11 indicator)
+        if env::var_os("DISPLAY").is_some() {
+            return (Self::X11, "DISPLAY");
+        }
 
-    eprintln!("[Session] Could not detect session type");
-    SessionType::Unknown
+        (Self::Unknown, "None")
+    }
 }
 
-/// Get the cached session type (detected once on first call)
+/// Get the cached session type.
+/// Detects the session if it hasn't been initialized yet.
 pub fn get_session_type() -> SessionType {
-    *SESSION_TYPE.get_or_init(detect_session_type)
+    *SESSION_TYPE.get_or_init(|| {
+        let (session, source) = SessionType::detect();
+        eprintln!("[Session] Detected {:?} via {}", session, source);
+        session
+    })
 }
 
 /// Check if running on Wayland
@@ -64,8 +63,21 @@ pub fn is_x11() -> bool {
     get_session_type() == SessionType::X11
 }
 
-/// Initialize session detection (call this early in main to cache the value)
+/// Explicitly initialize session detection.
+/// Useful to ensure the log message appears early in the application startup.
 pub fn init() {
-    let session = get_session_type();
-    eprintln!("[Session] Initialized: {:?}", session);
+    get_session_type();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_session_cache() {
+        // Ensure subsequent calls return the same value without re-evaluating
+        let first = get_session_type();
+        let second = get_session_type();
+        assert_eq!(first, second);
+    }
 }
