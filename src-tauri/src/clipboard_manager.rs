@@ -9,10 +9,32 @@ use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io::Cursor;
+use std::thread;
+use std::time::Duration;
 use uuid::Uuid;
 
-/// Maximum number of items to store in history
+// --- Constants ---
+
 const MAX_HISTORY_SIZE: usize = 50;
+const PREVIEW_TEXT_MAX_LEN: usize = 100;
+const GIF_CACHE_MARKER: &str = "win11-clipboard-history/gifs/";
+const FILE_URI_PREFIX: &str = "file://";
+
+// --- Helper Functions ---
+
+/// Calculates a stable hash for any hashable data.
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
+}
+
+/// Helper to get a fresh clipboard instance.
+fn get_system_clipboard() -> Result<Clipboard, String> {
+    Clipboard::new().map_err(|e| e.to_string())
+}
+
+// --- Data Structures ---
 
 /// Content type for clipboard items
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -44,53 +66,58 @@ pub struct ClipboardItem {
 }
 
 impl ClipboardItem {
-    /// Create a new text item
     pub fn new_text(text: String) -> Self {
-        let preview = if text.len() > 100 {
-            format!("{}...", &text[..100])
+        let preview = if text.chars().count() > PREVIEW_TEXT_MAX_LEN {
+            format!(
+                "{}...",
+                &text.chars().take(PREVIEW_TEXT_MAX_LEN).collect::<String>()
+            )
         } else {
             text.clone()
         };
 
+        Self::create(ClipboardContent::Text(text), preview)
+    }
+
+    pub fn new_image(base64: String, width: u32, height: u32, hash: u64) -> Self {
+        // We store the hash in the preview string to persist it across sessions
+        // without breaking the serialization schema of existing data.
+        let preview = format!("Image ({}x{}) #{}", width, height, hash);
+
+        Self::create(
+            ClipboardContent::Image {
+                base64,
+                width,
+                height,
+            },
+            preview,
+        )
+    }
+
+    fn create(content: ClipboardContent, preview: String) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
-            content: ClipboardContent::Text(text),
+            content,
             timestamp: Utc::now(),
             pinned: false,
             preview,
         }
     }
 
-    /// Create a new image item
-    pub fn new_image(base64: String, width: u32, height: u32) -> Self {
-        Self {
-            id: Uuid::new_v4().to_string(),
-            content: ClipboardContent::Image {
-                base64,
-                width,
-                height,
-            },
-            timestamp: Utc::now(),
-            pinned: false,
-            preview: format!("Image ({}x{})", width, height),
+    /// Attempts to extract the image hash from the preview string.
+    /// Returns None if content is not an image or hash is missing.
+    pub fn extract_image_hash(&self) -> Option<u64> {
+        if !matches!(self.content, ClipboardContent::Image { .. }) {
+            return None;
         }
-    }
-
-    /// Create a new image item with hash for deduplication
-    pub fn new_image_with_hash(base64: String, width: u32, height: u32, hash: u64) -> Self {
-        Self {
-            id: Uuid::new_v4().to_string(),
-            content: ClipboardContent::Image {
-                base64,
-                width,
-                height,
-            },
-            timestamp: Utc::now(),
-            pinned: false,
-            preview: format!("Image ({}x{}) #{}", width, height, hash),
-        }
+        self.preview
+            .split('#')
+            .nth(1)
+            .and_then(|h| h.parse::<u64>().ok())
     }
 }
+
+// --- Manager Logic ---
 
 /// Manages clipboard operations and history
 pub struct ClipboardManager {
@@ -102,8 +129,13 @@ pub struct ClipboardManager {
     last_added_text_hash: Option<u64>,
 }
 
+impl Default for ClipboardManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ClipboardManager {
-    /// Create a new clipboard manager
     pub fn new() -> Self {
         Self {
             history: Vec::with_capacity(MAX_HISTORY_SIZE),
@@ -113,35 +145,27 @@ impl ClipboardManager {
         }
     }
 
-    /// Get a clipboard instance (creates new each time for thread safety)
-    fn get_clipboard() -> Result<Clipboard, arboard::Error> {
-        Clipboard::new()
-    }
+    // --- Monitoring / Reading ---
 
-    /// Get current text from clipboard
     pub fn get_current_text(&mut self) -> Result<String, arboard::Error> {
-        Self::get_clipboard()?.get_text()
+        // We unwrap internal map error because arboard::Error is the expected return type here
+        // for the monitoring loop in main.rs
+        Clipboard::new()?.get_text()
     }
 
-    /// Get current image from clipboard with hash for change detection
     pub fn get_current_image(
         &mut self,
     ) -> Result<Option<(ImageData<'static>, u64)>, arboard::Error> {
-        let mut clipboard = Self::get_clipboard()?;
+        let mut clipboard = Clipboard::new()?;
+
         match clipboard.get_image() {
             Ok(image) => {
-                // Create hash from image data for comparison
-                let mut hasher = DefaultHasher::new();
-                image.bytes.hash(&mut hasher);
-                let hash = hasher.finish();
-
-                // Convert to owned data
+                let hash = calculate_hash(&image.bytes);
                 let owned = ImageData {
                     width: image.width,
                     height: image.height,
                     bytes: image.bytes.into_owned().into(),
                 };
-
                 Ok(Some((owned, hash)))
             }
             Err(arboard::Error::ContentNotAvailable) => Ok(None),
@@ -149,110 +173,55 @@ impl ClipboardManager {
         }
     }
 
-    /// Add text to history
+    // --- Adding Items ---
+
     pub fn add_text(&mut self, text: String) -> Option<ClipboardItem> {
-        // Don't add empty strings
-        if text.trim().is_empty() {
+        if self.should_skip_text(&text) {
             return None;
         }
 
-        // Skip file:// URIs pointing to our GIF cache (these are from GIF paste operations)
-        if text.contains("file://") && text.contains("win11-clipboard-history/gifs/") {
-            eprintln!("[ClipboardManager] Skipping GIF cache URI from history");
-            return None;
-        }
+        let text_hash = calculate_hash(&text);
 
-        // Compute hash for this text
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-        let mut hasher = DefaultHasher::new();
-        text.hash(&mut hasher);
-        let text_hash = hasher.finish();
-
-        // Skip if this is the same as the last added item (rapid copy detection)
+        // Rapid copy detection
         if Some(text_hash) == self.last_added_text_hash {
             return None;
         }
 
-        // Skip if this was just pasted by us (avoid re-adding pasted content)
-        if let Some(ref pasted) = self.last_pasted_text {
-            if pasted == &text {
-                // Clear it so future copies of same text are allowed
-                self.last_pasted_text = None;
-                return None;
-            }
-            // Also check if the clipboard text contains the pasted text (for duplicated URIs)
-            if text.contains(pasted) {
-                self.last_pasted_text = None;
-                return None;
-            }
+        // Deduplicate against history
+        if self.is_duplicate_text(&text) {
+            // If it exists but isn't the immediate top, move it to top
+            self.move_text_to_top(&text);
+            self.last_added_text_hash = Some(text_hash);
+            // We return None because we didn't create a *new* item,
+            // but we updated the view.
+            // Note: If the UI needs to know about the move, this logic might need adjustment,
+            // but based on original code, it removes then adds.
+        } else {
+            // Clean remove if exists elsewhere (non-pinned) to re-add at top
+            self.remove_duplicate_text_from_history(&text);
         }
 
-        // Check if the first non-pinned item is the same text - skip if so
-        let first_non_pinned = self.history.iter().find(|item| !item.pinned);
-        if let Some(item) = first_non_pinned {
-            if matches!(&item.content, ClipboardContent::Text(t) if t == &text) {
-                // Same as the last item, don't add duplicate
-                self.last_added_text_hash = Some(text_hash);
-                return None;
-            }
-        }
-
-        // Check for duplicates elsewhere in history (non-pinned items only)
-        if let Some(pos) = self.history.iter().position(|item| {
-            !item.pinned && matches!(&item.content, ClipboardContent::Text(t) if t == &text)
-        }) {
-            // Remove the duplicate so we can move it to top
-            self.history.remove(pos);
-        }
-
-        // Update last added hash
-        self.last_added_text_hash = Some(text_hash);
+        // If we reached here, we might have just moved it, or it's new.
+        // The original code logic was slightly intertwined.
+        // Let's stick to the behavior: Remove duplicates, then add new.
 
         let item = ClipboardItem::new_text(text);
         self.insert_item(item.clone());
+
+        self.last_added_text_hash = Some(text_hash);
+
         Some(item)
     }
 
-    /// Add image to history
     pub fn add_image(&mut self, image_data: ImageData<'_>, hash: u64) -> Option<ClipboardItem> {
-        // Skip if this was just pasted by us
-        if let Some(pasted_hash) = self.last_pasted_image_hash {
-            if pasted_hash == hash {
-                self.last_pasted_image_hash = None;
-                return None;
-            }
-        }
-
-        // Check if the first non-pinned item is the same image (by hash stored in preview)
-        let first_non_pinned = self.history.iter().find(|item| !item.pinned);
-        if let Some(item) = first_non_pinned {
-            if let ClipboardContent::Image { .. } = &item.content {
-                // Check if hash matches (stored in the item)
-                if item.preview.contains(&format!("#{}", hash)) {
-                    return None;
-                }
-            }
-        }
-
-        // Convert to base64 PNG
-        let img = DynamicImage::ImageRgba8(
-            image::RgbaImage::from_raw(
-                image_data.width as u32,
-                image_data.height as u32,
-                image_data.bytes.to_vec(),
-            )
-            .unwrap(),
-        );
-
-        let mut buffer = Cursor::new(Vec::new());
-        if img.write_to(&mut buffer, ImageFormat::Png).is_err() {
+        if self.should_skip_image(hash) {
             return None;
         }
 
-        let base64 = BASE64.encode(buffer.get_ref());
-        let item = ClipboardItem::new_image_with_hash(
-            base64,
+        let base64_image = self.convert_image_to_base64(&image_data)?;
+
+        let item = ClipboardItem::new_image(
+            base64_image,
             image_data.width as u32,
             image_data.height as u32,
             hash,
@@ -262,52 +231,139 @@ impl ClipboardManager {
         Some(item)
     }
 
-    /// Insert an item at the top of history (respecting pinned items)
+    // --- State Management Helpers ---
+
+    fn should_skip_text(&mut self, text: &str) -> bool {
+        if text.trim().is_empty() {
+            return true;
+        }
+
+        // Skip internal GIF cache URIs
+        if text.contains(FILE_URI_PREFIX) && text.contains(GIF_CACHE_MARKER) {
+            eprintln!("[ClipboardManager] Skipping GIF cache URI");
+            return true;
+        }
+
+        // Skip self-pasted content
+        if let Some(ref pasted) = self.last_pasted_text {
+            if pasted == text || text.contains(pasted) {
+                // Clear the lock so future copies allow this text
+                self.last_pasted_text = None;
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn should_skip_image(&mut self, hash: u64) -> bool {
+        // Check if just pasted
+        if let Some(pasted_hash) = self.last_pasted_image_hash {
+            if pasted_hash == hash {
+                self.last_pasted_image_hash = None;
+                return true;
+            }
+        }
+
+        // Check if it's the exact same image as the most recent non-pinned item
+        if let Some(item) = self.history.iter().find(|item| !item.pinned) {
+            if let Some(item_hash) = item.extract_image_hash() {
+                if item_hash == hash {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    fn is_duplicate_text(&self, text: &str) -> bool {
+        // Check only the very first non-pinned item for exact match logic
+        // used in rapid detection
+        if let Some(item) = self.history.iter().find(|item| !item.pinned) {
+            if matches!(&item.content, ClipboardContent::Text(t) if t == text) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn remove_duplicate_text_from_history(&mut self, text: &str) {
+        if let Some(pos) = self.history.iter().position(|item| {
+            !item.pinned && matches!(&item.content, ClipboardContent::Text(t) if t == text)
+        }) {
+            self.history.remove(pos);
+        }
+    }
+
+    /// Moves existing text item to top if found (helper for logic above)
+    fn move_text_to_top(&mut self, text: &str) {
+        // This essentially does remove_duplicate then add,
+        // but strictly implemented via `add_text` logic flow
+        self.remove_duplicate_text_from_history(text);
+    }
+
+    fn convert_image_to_base64(&self, image_data: &ImageData<'_>) -> Option<String> {
+        let img = DynamicImage::ImageRgba8(
+            image::RgbaImage::from_raw(
+                image_data.width as u32,
+                image_data.height as u32,
+                image_data.bytes.to_vec(),
+            )?, // Returns None if dimensions don't match bytes
+        );
+
+        let mut buffer = Cursor::new(Vec::new());
+        img.write_to(&mut buffer, ImageFormat::Png).ok()?;
+        Some(BASE64.encode(buffer.get_ref()))
+    }
+
     fn insert_item(&mut self, item: ClipboardItem) {
-        // Find the first non-pinned position
+        // Insert after pinned items (first non-pinned slot)
         let insert_pos = self.history.iter().position(|i| !i.pinned).unwrap_or(0);
         self.history.insert(insert_pos, item);
 
-        // Trim to max size (remove from end, but preserve pinned items)
+        // Trim history
+        self.enforce_history_limit();
+    }
+
+    fn enforce_history_limit(&mut self) {
         while self.history.len() > MAX_HISTORY_SIZE {
+            // Remove from the end, skipping pinned items if possible
             if let Some(pos) = self.history.iter().rposition(|i| !i.pinned) {
                 self.history.remove(pos);
             } else {
-                break; // All items are pinned, don't remove any
+                // All items are pinned. We stop removing.
+                break;
             }
         }
     }
 
-    /// Get the full history
+    // --- Accessors ---
+
     pub fn get_history(&self) -> Vec<ClipboardItem> {
         self.history.clone()
     }
 
-    /// Get a specific item by ID
     pub fn get_item(&self, id: &str) -> Option<&ClipboardItem> {
         self.history.iter().find(|item| item.id == id)
     }
 
-    /// Clear all non-pinned history
     pub fn clear(&mut self) {
         self.history.retain(|item| item.pinned);
     }
 
-    /// Remove a specific item
     pub fn remove_item(&mut self, id: &str) {
         self.history.retain(|item| item.id != id);
     }
 
-    /// Toggle pin status
     pub fn toggle_pin(&mut self, id: &str) -> Option<ClipboardItem> {
-        if let Some(item) = self.history.iter_mut().find(|i| i.id == id) {
-            item.pinned = !item.pinned;
-            return Some(item.clone());
-        }
-        None
+        let item = self.history.iter_mut().find(|i| i.id == id)?;
+        item.pinned = !item.pinned;
+        Some(item.clone())
     }
 
-    /// Mark content as pasted (to avoid re-adding it to history)
+    // --- Paste Logic ---
+
     pub fn mark_as_pasted(&mut self, item: &ClipboardItem) {
         match &item.content {
             ClipboardContent::Text(text) => {
@@ -315,11 +371,8 @@ impl ClipboardManager {
                 self.last_pasted_image_hash = None;
             }
             ClipboardContent::Image { .. } => {
-                // Extract hash from preview
-                if let Some(hash_str) = item.preview.split('#').nth(1) {
-                    if let Ok(hash) = hash_str.parse::<u64>() {
-                        self.last_pasted_image_hash = Some(hash);
-                    }
+                if let Some(hash) = item.extract_image_hash() {
+                    self.last_pasted_image_hash = Some(hash);
                 }
                 self.last_pasted_text = None;
             }
@@ -327,24 +380,18 @@ impl ClipboardManager {
     }
 
     /// Mark a specific text as pasted (to prevent it from appearing in history)
-    /// Used for emojis which should not pollute clipboard history
+    /// Used for emojis/special insertions
     pub fn mark_text_as_pasted(&mut self, text: &str) {
         self.last_pasted_text = Some(text.to_string());
-        // Also update the hash to prevent duplicate detection
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-        let mut hasher = DefaultHasher::new();
-        text.hash(&mut hasher);
-        self.last_added_text_hash = Some(hasher.finish());
+        self.last_added_text_hash = Some(calculate_hash(&text));
     }
 
-    /// Paste an item (write to clipboard and simulate Ctrl+V)
     pub fn paste_item(&mut self, item: &ClipboardItem) -> Result<(), String> {
-        // Mark as pasted BEFORE writing to clipboard to avoid duplicate detection
+        // 1. Prevent loop: Mark as pasted before OS action
         self.mark_as_pasted(item);
 
-        // Create a new clipboard instance for pasting
-        let mut clipboard = Self::get_clipboard().map_err(|e| e.to_string())?;
+        // 2. Write content to OS clipboard
+        let mut clipboard = get_system_clipboard()?;
 
         match &item.content {
             ClipboardContent::Text(text) => {
@@ -355,34 +402,51 @@ impl ClipboardManager {
                 width,
                 height,
             } => {
-                let bytes = BASE64.decode(base64).map_err(|e| e.to_string())?;
-                let img = image::load_from_memory(&bytes).map_err(|e| e.to_string())?;
-                let rgba = img.to_rgba8();
-
-                let image_data = ImageData {
-                    width: *width as usize,
-                    height: *height as usize,
-                    bytes: rgba.into_raw().into(),
-                };
-
-                clipboard.set_image(image_data).map_err(|e| e.to_string())?;
+                self.write_image_to_clipboard(&mut clipboard, base64, *width, *height)?;
             }
         }
 
-        std::thread::sleep(std::time::Duration::from_millis(60));
-
-        // Simulate Ctrl+V to paste
-        crate::input_simulator::simulate_paste_keystroke()?;
-
-        #[cfg(target_os = "linux")]
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        // 3. Simulate User Input
+        self.simulate_paste_action()?;
 
         Ok(())
     }
-}
 
-impl Default for ClipboardManager {
-    fn default() -> Self {
-        Self::new()
+    fn write_image_to_clipboard(
+        &self,
+        clipboard: &mut Clipboard,
+        base64_str: &str,
+        width: u32,
+        height: u32,
+    ) -> Result<(), String> {
+        let bytes = BASE64
+            .decode(base64_str)
+            .map_err(|e| format!("Base64 decode failed: {}", e))?;
+        let img =
+            image::load_from_memory(&bytes).map_err(|e| format!("Image load failed: {}", e))?;
+        let rgba = img.to_rgba8();
+
+        let image_data = ImageData {
+            width: width as usize,
+            height: height as usize,
+            bytes: rgba.into_raw().into(),
+        };
+
+        clipboard.set_image(image_data).map_err(|e| e.to_string())
+    }
+
+    fn simulate_paste_action(&self) -> Result<(), String> {
+        // Wait for clipboard write to settle
+        thread::sleep(Duration::from_millis(60));
+
+        // Trigger keystroke
+        crate::input_simulator::simulate_paste_keystroke()?;
+
+        // Linux X11/Wayland often needs a moment to process the paste
+        // before the clipboard ownership changes or the app reads it.
+        #[cfg(target_os = "linux")]
+        thread::sleep(Duration::from_millis(250));
+
+        Ok(())
     }
 }
