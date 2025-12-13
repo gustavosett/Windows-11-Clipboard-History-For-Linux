@@ -37,11 +37,6 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
     Err("All paste methods failed".to_string())
 }
 
-#[cfg(not(target_os = "linux"))]
-pub fn simulate_paste_keystroke() -> Result<(), String> {
-    Ok(())
-}
-
 /// Simulate Ctrl+V using xdotool with the focused window
 #[cfg(target_os = "linux")]
 fn simulate_paste_xdotool() -> Result<(), String> {
