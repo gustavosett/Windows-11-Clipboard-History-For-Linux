@@ -4,7 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'media', // Use system preference
+  darkMode: 'class', // Use system preference
   theme: {
     extend: {
       colors: {
