@@ -123,7 +123,7 @@ impl EmojiManager {
             serde_json::from_str(&content).map_err(|e| format!("Parse error: {}", e))?;
 
         self.recent = wrapper.emojis;
-        
+
         // Ensure we respect limits even if disk file was modified manually
         if self.recent.len() > MAX_RECENT_EMOJIS {
             self.recent.truncate(MAX_RECENT_EMOJIS);
@@ -189,10 +189,10 @@ mod tests {
 
         let recent = manager.get_recent();
         assert_eq!(recent.len(), 2);
-        
+
         assert_eq!(recent[0].char, "A");
         assert_eq!(recent[0].use_count, 2);
-        
+
         assert_eq!(recent[1].char, "B");
         assert_eq!(recent[1].use_count, 1);
     }
