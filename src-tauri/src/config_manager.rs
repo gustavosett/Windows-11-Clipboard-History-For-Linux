@@ -55,69 +55,6 @@ impl ConfigManager {
         }
     }
 
-    pub fn get_valid_position(
-        &self,
-        available_monitors: &[Monitor],
-        window_size: PhysicalSize<u32>,
-    ) -> PhysicalPosition<i32> {
-        // 1. Try to restore saved position
-        if let Some(saved_monitor_name) = &self.state.monitor_name {
-            // Find the monitor by name
-            if let Some(monitor) = available_monitors.iter().find(|m| {
-                m.name()
-                    .is_some_and(|n| n.as_str() == saved_monitor_name.as_str())
-            }) {
-                // Check if the saved (x, y) is still inside this monitor
-                if self.is_position_valid(self.state.x, self.state.y, monitor, window_size) {
-                    return PhysicalPosition::new(self.state.x, self.state.y);
-                }
-            }
-        }
-
-        // 2. Fallback: Default to Bottom-Center of Primary (or first available)
-        let target_monitor = available_monitors
-            .iter()
-            .find(|m| m.scale_factor() > 0.0) // Just a check to get first valid one
-            .unwrap_or(&available_monitors[0]);
-
-        Self::calculate_bottom_center(target_monitor, window_size)
-    }
-
-    fn is_position_valid(
-        &self,
-        x: i32,
-        y: i32,
-        monitor: &Monitor,
-        window_size: PhysicalSize<u32>,
-    ) -> bool {
-        let m_pos = monitor.position();
-        let m_size = monitor.size();
-
-        x >= m_pos.x
-            && x < (m_pos.x + m_size.width as i32)
-            && y >= m_pos.y
-            && y < (m_pos.y + m_size.height as i32 - (window_size.height as i32 / 2))
-    }
-
-    fn calculate_bottom_center(
-        monitor: &Monitor,
-        window_size: PhysicalSize<u32>,
-    ) -> PhysicalPosition<i32> {
-        let m_pos = monitor.position();
-        let m_size = monitor.size();
-
-        // Padding from bottom to avoid covering taskbars entirely
-        let padding = 45;
-
-        // X = center horizontally using the actual window width in physical pixels
-        let x = m_pos.x + (m_size.width as i32 / 2) - (window_size.width as i32 / 2);
-
-        // Y = bottom - window height - padding
-        let y = m_pos.y + m_size.height as i32 - window_size.height as i32 - padding;
-
-        PhysicalPosition::new(x, y)
-    }
-
     // --- IO ---
 
     fn config_path(&self) -> PathBuf {
@@ -142,4 +79,76 @@ impl ConfigManager {
         fs::write(self.config_path(), content).map_err(|e| e.to_string())?;
         Ok(())
     }
+}
+
+/// Determines where the window should be placed based on saved state and available monitors.
+pub fn resolve_window_position(
+    state: &WindowState,
+    available_monitors: &[Monitor],
+    window_size: PhysicalSize<u32>,
+) -> PhysicalPosition<i32> {
+    // 1. Try to restore saved position if monitor exists and position is valid
+    if let Some(saved_monitor_name) = &state.monitor_name {
+        if let Some(monitor) = available_monitors.iter().find(|m| {
+            m.name()
+                .is_some_and(|n| n.as_str() == saved_monitor_name.as_str())
+        }) {
+            if is_position_valid(state.x, state.y, monitor, window_size) {
+                return PhysicalPosition::new(state.x, state.y);
+            }
+        }
+    }
+
+    // 2. Fallback: Default to Bottom-Center of Primary (or first available)
+    let target_monitor = available_monitors
+        .iter()
+        .find(|m| m.scale_factor() > 0.0) // Just a check to get first valid one
+        .unwrap_or(&available_monitors[0]);
+
+    calculate_bottom_center(target_monitor, window_size)
+}
+
+/// Checks if a coordinate is "valid" based on bounds and visibility heuristics.
+fn is_position_valid(x: i32, y: i32, monitor: &Monitor, window_size: PhysicalSize<u32>) -> bool {
+    is_top_left_within_monitor(x, y, monitor)
+        && has_min_vertical_visibility(y, monitor, window_size)
+}
+
+/// Ensures the window's top-left corner is strictly inside the monitor bounds.
+fn is_top_left_within_monitor(x: i32, y: i32, monitor: &Monitor) -> bool {
+    let m_pos = monitor.position();
+    let m_size = monitor.size();
+
+    x >= m_pos.x
+        && x < (m_pos.x + m_size.width as i32)
+        && y >= m_pos.y
+        && y < (m_pos.y + m_size.height as i32)
+}
+
+/// Ensures at least the top half of the window remains visible on the monitor.
+fn has_min_vertical_visibility(y: i32, monitor: &Monitor, window_size: PhysicalSize<u32>) -> bool {
+    let m_pos = monitor.position();
+    let m_size = monitor.size();
+    // Ensure y is not so low that the window falls off the bottom entirely.
+    // We require the top half (height/2) to be above the bottom edge of the monitor.
+    y < (m_pos.y + m_size.height as i32 - (window_size.height as i32 / 2))
+}
+
+/// Calculates a centered position at the bottom of the screen.
+fn calculate_bottom_center(
+    monitor: &Monitor,
+    window_size: PhysicalSize<u32>,
+) -> PhysicalPosition<i32> {
+    const PADDING_BOTTOM: i32 = 45;
+
+    let m_pos = monitor.position();
+    let m_size = monitor.size();
+
+    // X = center horizontally
+    let x = m_pos.x + (m_size.width as i32 / 2) - (window_size.width as i32 / 2);
+
+    // Y = bottom - window height - padding
+    let y = m_pos.y + m_size.height as i32 - window_size.height as i32 - PADDING_BOTTOM;
+
+    PhysicalPosition::new(x, y)
 }

@@ -13,7 +13,7 @@ use tauri::{
     WindowEvent,
 };
 use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardManager};
-use win11_clipboard_history_lib::config_manager::ConfigManager;
+use win11_clipboard_history_lib::config_manager::{resolve_window_position, ConfigManager};
 use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
 use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
 use win11_clipboard_history_lib::hotkey_manager::{HotkeyAction, HotkeyManager};
@@ -218,7 +218,9 @@ impl WindowController {
             if !monitors.is_empty() {
                 let win_size = window.outer_size().unwrap_or(PhysicalSize::new(360, 480));
 
-                let pos = config.get_valid_position(&monitors, win_size);
+                let window_state = config.get_state();
+                let pos = resolve_window_position(&window_state, &monitors, win_size);
+
                 let _ = window.set_position(pos);
             }
         }
