@@ -202,47 +202,47 @@ impl WindowController {
         let state = app.state::<AppState>();
 
         if is_wayland() {
-            let config: parking_lot::lock_api::MutexGuard<
-                '_,
-                parking_lot::RawMutex,
-                ConfigManager,
-            > = state.config_manager.lock();
-
-            if let Ok(monitors) = window.available_monitors() {
-                if !monitors.is_empty() {
-                    let win_size = window.outer_size().unwrap_or(PhysicalSize::new(360, 480));
-
-                    let pos = config.get_valid_position(&monitors, win_size);
-
-                    let _ = window.set_position(pos);
-                }
-            }
+            Self::position_for_wayland(window, &state);
         } else {
-            // 1. Get Cursor
-            let (cursor_x, cursor_y) = match Self::get_cursor_position(window) {
-                Some(pos) => pos,
-                None => {
-                    let _ = window.center();
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                    return;
-                }
-            };
-
-            // 2. Identify correct monitor
-            let target_monitor = Self::find_monitor_containing(window, cursor_x, cursor_y)
-                .or_else(|| window.current_monitor().ok().flatten())
-                .or_else(|| window.primary_monitor().ok().flatten());
-
-            // 3. Calculate position relative to that monitor
-            if let Some(monitor) = target_monitor {
-                let pos = Self::clamp_window_to_monitor(window, &monitor, cursor_x, cursor_y);
-                let _ = window.set_position(pos);
-            }
+            Self::position_for_non_wayland(window);
         }
 
         let _ = window.show();
         let _ = window.set_focus();
+    }
+
+    fn position_for_wayland(window: &WebviewWindow, state: &State<AppState>) {
+        let config = state.config_manager.lock();
+
+        if let Ok(monitors) = window.available_monitors() {
+            if !monitors.is_empty() {
+                let win_size = window.outer_size().unwrap_or(PhysicalSize::new(360, 480));
+
+                let pos = config.get_valid_position(&monitors, win_size);
+                let _ = window.set_position(pos);
+            }
+        }
+    }
+
+    fn position_for_non_wayland(window: &WebviewWindow) {
+        let (cursor_x, cursor_y) = match Self::get_cursor_position(window) {
+            Some(pos) => pos,
+            None => {
+                let _ = window.center();
+                let _ = window.show();
+                let _ = window.set_focus();
+                return;
+            }
+        };
+
+        let target_monitor = Self::find_monitor_containing(window, cursor_x, cursor_y)
+            .or_else(|| window.current_monitor().ok().flatten())
+            .or_else(|| window.primary_monitor().ok().flatten());
+
+        if let Some(monitor) = target_monitor {
+            let pos = Self::clamp_window_to_monitor(window, &monitor, cursor_x, cursor_y);
+            let _ = window.set_position(pos);
+        }
     }
 
     fn find_monitor_containing(window: &WebviewWindow, x: i32, y: i32) -> Option<Monitor> {
@@ -324,6 +324,28 @@ impl WindowController {
         let r = conn.query_pointer(root).ok()?.reply().ok()?;
         Some((r.root_x as i32, r.root_y as i32))
     }
+}
+
+// --- Window Event Helper ---
+
+fn handle_window_moved_for_wayland(
+    window: &WebviewWindow,
+    state: &State<AppState>,
+    pos: &PhysicalPosition<i32>,
+) {
+    if !is_wayland() || !window.is_visible().unwrap_or(false) {
+        return;
+    }
+
+    let monitor_name = window
+        .current_monitor()
+        .ok()
+        .flatten()
+        .and_then(|m| m.name().map(|n| n.to_string()));
+
+    let mut config = state.config_manager.lock();
+    // UPDATE MEMORY ONLY (No Disk I/O here)
+    config.update_state(monitor_name, pos.x, pos.y);
 }
 
 // --- Background Listeners ---
@@ -441,38 +463,25 @@ fn main() {
             let main_window = app.get_webview_window("main").unwrap();
             let w_clone = main_window.clone();
 
-            main_window.on_window_event(move |event| {
-                match event {
-                    WindowEvent::Focused(false) => {
-                        let state = w_clone.state::<AppState>();
-                        if state.is_mouse_inside.load(Ordering::Relaxed) {
-                            return;
-                        }
-
-                        if is_wayland() {
-                            state.config_manager.lock().sync_to_disk();
-                        }
-
-                        let _ = w_clone.hide();
+            main_window.on_window_event(move |event| match event {
+                WindowEvent::Focused(false) => {
+                    let state = w_clone.state::<AppState>();
+                    if state.is_mouse_inside.load(Ordering::Relaxed) {
+                        return;
                     }
 
-                    WindowEvent::Moved(pos) => {
-                        // UPDATE MEMORY ONLY (No Disk I/O here)
-                        if is_wayland() && w_clone.is_visible().unwrap_or(false) {
-                            let state = w_clone.state::<AppState>();
-
-                            let monitor_name = w_clone
-                                .current_monitor()
-                                .ok()
-                                .flatten()
-                                .and_then(|m| m.name().map(|n| n.to_string()));
-
-                            let mut config = state.config_manager.lock();
-                            config.update_state(monitor_name, pos.x, pos.y);
-                        }
+                    if is_wayland() {
+                        state.config_manager.lock().sync_to_disk();
                     }
-                    _ => {}
+
+                    let _ = w_clone.hide();
                 }
+
+                WindowEvent::Moved(pos) => {
+                    let state = w_clone.state::<AppState>();
+                    handle_window_moved_for_wayland(&w_clone, &state, pos);
+                }
+                _ => {}
             });
 
             start_clipboard_watcher(app_handle.clone(), clipboard_manager);
