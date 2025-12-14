@@ -18,6 +18,7 @@ pub struct WindowState {
 pub struct ConfigManager {
     data_dir: PathBuf,
     state: WindowState,
+    dirty: bool, // Tracks if we have unsaved changes in memory
 }
 
 impl ConfigManager {
@@ -25,6 +26,7 @@ impl ConfigManager {
         let mut manager = Self {
             data_dir,
             state: WindowState::default(),
+            dirty: false,
         };
         let _ = manager.load();
         manager
@@ -34,14 +36,25 @@ impl ConfigManager {
         self.state.clone()
     }
 
-    pub fn save_state(&mut self, monitor_name: Option<String>, x: i32, y: i32) {
-        self.state = WindowState { monitor_name, x, y };
-        let _ = self.save_to_disk();
+    /// Updates the state in memory only. Use sync_to_disk() to flush.
+    pub fn update_state(&mut self, monitor_name: Option<String>, x: i32, y: i32) {
+        self.state.monitor_name = monitor_name;
+        self.state.x = x;
+        self.state.y = y;
+        self.dirty = true;
     }
 
-    /// Calculates the best position for the window.
-    /// If saved state is valid, returns it.
-    /// If not (or first run), returns default position (Bottom-Center of primary monitor).
+    /// Flushes changes to disk only if there are unsaved changes.
+    pub fn sync_to_disk(&mut self) {
+        if self.dirty {
+            if let Err(e) = self.save_to_disk() {
+                eprintln!("[ConfigManager] Failed to save config: {}", e);
+            } else {
+                self.dirty = false;
+            }
+        }
+    }
+
     pub fn get_valid_position(
         &self,
         available_monitors: &[Monitor],
@@ -80,7 +93,6 @@ impl ConfigManager {
         let m_pos = monitor.position();
         let m_size = monitor.size();
 
-        // Basic check: Top-Left corner of window is inside monitor?
         x >= m_pos.x
             && x < (m_pos.x + m_size.width as i32)
             && y >= m_pos.y
@@ -98,13 +110,9 @@ impl ConfigManager {
         const APP_CSS_WIDTH: f64 = 360.0;
         let effective_width = (APP_CSS_WIDTH * scale_factor) as i32;
 
-        // Padding from bottom to avoid covering taskbars entirely
-        let padding = 45;
+        let padding = 20;
 
-        // X = center horizontally
         let x = m_pos.x + (m_size.width as i32 / 2) - (effective_width / 2);
-
-        // Y = bottom - window height - padding
         let y = m_pos.y + m_size.height as i32 - window_size.height as i32 - padding;
 
         PhysicalPosition::new(x, y)

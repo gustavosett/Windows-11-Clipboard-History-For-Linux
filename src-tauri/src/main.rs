@@ -178,10 +178,8 @@ impl WindowController {
     pub fn toggle(app: &AppHandle) {
         if let Some(window) = app.get_webview_window("main") {
             if window.is_visible().unwrap_or(false) {
-                // If focused or visible, hide it
                 let _ = window.hide();
             } else {
-                // If hidden, save who had focus, move window, then show
                 save_focused_window();
                 Self::position_and_show(&window, app);
             }
@@ -190,6 +188,12 @@ impl WindowController {
 
     pub fn hide(app: &AppHandle) {
         if let Some(window) = app.get_webview_window("main") {
+            // FLUSH CONFIG TO DISK ON HIDE
+            if let Some(state) = app.try_state::<AppState>() {
+                if is_wayland() {
+                    state.config_manager.lock().sync_to_disk();
+                }
+            }
             let _ = window.hide();
         }
     }
@@ -198,7 +202,11 @@ impl WindowController {
         let state = app.state::<AppState>();
 
         if is_wayland() {
-            let config = state.config_manager.lock();
+            let config: parking_lot::lock_api::MutexGuard<
+                '_,
+                parking_lot::RawMutex,
+                ConfigManager,
+            > = state.config_manager.lock();
 
             if let Ok(monitors) = window.available_monitors() {
                 if !monitors.is_empty() {
@@ -440,12 +448,16 @@ fn main() {
                         if state.is_mouse_inside.load(Ordering::Relaxed) {
                             return;
                         }
+
+                        if is_wayland() {
+                            state.config_manager.lock().sync_to_disk();
+                        }
+
                         let _ = w_clone.hide();
                     }
 
-                    // Handler for when the window is moved (SAVE POSITION FOR WAYLAND)
                     WindowEvent::Moved(pos) => {
-                        // We only care about saving if it's Wayland and the window is visible
+                        // UPDATE MEMORY ONLY (No Disk I/O here)
                         if is_wayland() && w_clone.is_visible().unwrap_or(false) {
                             let state = w_clone.state::<AppState>();
 
@@ -455,10 +467,8 @@ fn main() {
                                 .flatten()
                                 .and_then(|m| m.name().map(|n| n.to_string()));
 
-                            // Update and save to disk
                             let mut config = state.config_manager.lock();
-
-                            config.save_state(monitor_name, pos.x, pos.y);
+                            config.update_state(monitor_name, pos.x, pos.y);
                         }
                     }
                     _ => {}
