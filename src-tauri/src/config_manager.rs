@@ -105,14 +105,14 @@ impl ConfigManager {
     ) -> PhysicalPosition<i32> {
         let m_pos = monitor.position();
         let m_size = monitor.size();
-        let scale_factor = monitor.scale_factor();
 
-        const APP_CSS_WIDTH: f64 = 360.0;
-        let effective_width = (APP_CSS_WIDTH * scale_factor) as i32;
+        // Padding from bottom to avoid covering taskbars entirely
+        let padding = 45;
 
-        let padding = 20;
+        // X = center horizontally using the actual window width in physical pixels
+        let x = m_pos.x + (m_size.width as i32 / 2) - (window_size.width as i32 / 2);
 
-        let x = m_pos.x + (m_size.width as i32 / 2) - (effective_width / 2);
+        // Y = bottom - window height - padding
         let y = m_pos.y + m_size.height as i32 - window_size.height as i32 - padding;
 
         PhysicalPosition::new(x, y)
