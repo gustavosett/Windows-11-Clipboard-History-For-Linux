@@ -28,7 +28,14 @@ impl ConfigManager {
             state: WindowState::default(),
             dirty: false,
         };
-        let _ = manager.load();
+
+        if let Err(e) = manager.load() {
+            eprintln!(
+                "[ConfigManager] Warning: Failed to load config: {}. Defaulting to empty state.",
+                e
+            );
+        }
+
         manager
     }
 
