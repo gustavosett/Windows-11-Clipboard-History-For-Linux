@@ -23,7 +23,7 @@ This project and everyone participating in it is governed by our commitment to c
 2. **Clone your fork** locally:
    ```bash
    git clone https://github.com/YOUR-USERNAME/Windows-11-Clipboard-History-For-Linux.git
-   cd Windows-11-Clipboard-History-For-Linux
+   cd win11-clipboard-history-for-linux
    ```
 3. **Add the upstream remote**:
    ```bash

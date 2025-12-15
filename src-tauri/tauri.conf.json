@@ -50,8 +50,7 @@
     "linux": {
       "deb": {
         "files": {
-          "/etc/udev/rules.d/99-win11-clipboard-input.rules": "bundle/linux/99-win11-clipboard-input.rules",
-          "/usr/share/pixmaps/win11-clipboard-history.png": "icons/128x128.png"
+          "/etc/udev/rules.d/99-win11-clipboard-input.rules": "bundle/linux/99-win11-clipboard-input.rules"
         },
         "postInstallScript": "bundle/linux/postinst.sh",
         "preRemoveScript": "bundle/linux/postrm.sh"
