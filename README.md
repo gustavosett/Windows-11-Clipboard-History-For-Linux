@@ -24,7 +24,7 @@ Built with 🦀 **Rust** + ⚡ **Tauri v2** + ⚛️ **React** + 🎨 **Tailwind
 
 ## ✨ Features
 
-- 🐧 **Wayland & X11 Support** - Uses kernel-level input handling (`evdev` & `uinput`) to bypass Wayland restrictions.
+- 🐧 **Wayland & X11 Support** - Uses native desktop environment hotkeys for reliable global shortcuts.
 - ⚡ **Global Hotkey** - Press `Super+V` or `Ctrl+Alt+V` to open instantly.
 - 🖱️ **Smart Positioning** - Window follows your mouse cursor across multiple monitors.
 - 📌 **Pinning** - Keep important items at the top of your list.
@@ -60,17 +60,16 @@ If you prefer to install manually, download the latest release from the [Release
    - **Fedora/RHEL:** `sudo dnf install ./win11-clipboard-history-*.rpm`
    - **AppImage:** Make executable (`chmod +x`) and run.
 
-2. **Configure Permissions (Crucial):**
-   Since this app listens to global hotkeys on Wayland, it needs access to `/dev/input`.
+2. **Configure Permissions (Optional but Recommended):**
+   Global hotkeys (`Super+V`) work out-of-the-box! However, for the app to simulate `Ctrl+V` keystrokes (to paste GIFs or Emojis automatically), it needs access to `uinput`.
 
    ```bash
    # 1. Create 'input' group
    sudo groupadd input
    sudo usermod -aG input $USER
 
-   # 2. Create udev rules
-   echo 'KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"' | sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules
-   echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' | sudo tee -a /etc/udev/rules.d/99-win11-clipboard-input.rules
+   # 2. Create udev rules for uinput
+   echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' | sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules
 
    # 3. Load uinput module
    sudo modprobe uinput
@@ -80,7 +79,7 @@ If you prefer to install manually, download the latest release from the [Release
    sudo udevadm control --reload-rules && sudo udevadm trigger
    ```
 
-   *You will need to log out and back in for group changes to take effect if doing this manually.*
+   *You may need to log out and back in for group changes to take effect if doing this manually.*
 
 </details>
 
