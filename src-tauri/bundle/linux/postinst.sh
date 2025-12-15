@@ -79,22 +79,53 @@ WRAPPER
     echo -e "${GREEN}✓${NC} Created wrapper script for Snap compatibility"
 fi
 
-# Ensure input group exists
+# Install application icons to standard system paths for better DE compatibility (especially Cinnamon)
+install_icons() {
+    echo -e "${BLUE}Installing application icons...${NC}"
+    
+    # Source icons from the installed package
+    local ICON_SRC_DIR="/usr/share/icons/hicolor"
+    local PIXMAPS_DIR="/usr/share/pixmaps"
+    
+    # Create pixmaps directory if it doesn't exist
+    mkdir -p "$PIXMAPS_DIR"
+    
+    # Install main icon to pixmaps (fallback location that most DEs check)
+    if [ -f "$ICON_SRC_DIR/128x128/apps/win11-clipboard-history.png" ]; then
+        cp "$ICON_SRC_DIR/128x128/apps/win11-clipboard-history.png" "$PIXMAPS_DIR/win11-clipboard-history.png"
+        echo -e "${GREEN}✓${NC} Installed icon to pixmaps"
+    elif [ -f "$LIB_DIR/icons/icon.png" ]; then
+        cp "$LIB_DIR/icons/icon.png" "$PIXMAPS_DIR/win11-clipboard-history.png"
+        echo -e "${GREEN}✓${NC} Installed icon to pixmaps (from lib)"
+    fi
+    
+    # Update icon cache if gtk-update-icon-cache is available
+    if command -v gtk-update-icon-cache &> /dev/null; then
+        gtk-update-icon-cache -f -t "$ICON_SRC_DIR" 2>/dev/null || true
+    fi
+    
+    # Also update icon cache for all themes
+    if command -v update-icon-caches &> /dev/null; then
+        update-icon-caches /usr/share/icons/* 2>/dev/null || true
+    fi
+}
+
+install_icons
+
+# Ensure input group exists (needed for paste simulation via uinput)
 if ! getent group input > /dev/null 2>&1; then
     echo -e "${BLUE}Creating 'input' group...${NC}"
     groupadd input
 fi
 
-# Create udev rules for input devices and uinput
+# Create udev rules for uinput device (needed for paste keystroke simulation)
 UDEV_RULE="/etc/udev/rules.d/99-win11-clipboard-input.rules"
 cat > "$UDEV_RULE" << 'EOF'
 # udev rules for Windows 11 Clipboard History
-# Input devices (keyboards) - needed for evdev global hotkey detection
-KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"
 # uinput device - needed for kernel-level keyboard simulation (paste injection)
 KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
 EOF
-echo -e "${GREEN}✓${NC} Created udev rules for input devices"
+echo -e "${GREEN}✓${NC} Created udev rules for uinput device"
 
 # Load uinput module if not loaded
 if ! lsmod | grep -q uinput; then
@@ -127,14 +158,13 @@ if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
     fi
 fi
 
-# Grant IMMEDIATE access using ACLs (no logout required!)
-# This allows the user to start using the app right away
-# The group membership above ensures it works after reboot too
+# Grant IMMEDIATE access to uinput using ACLs (no logout required!)
+# This allows the user to start using paste features right away
 grant_immediate_access() {
     local user="$1"
     
     if [ -z "$user" ] || [ "$user" = "root" ]; then
-        return
+        return 0  # Success - nothing to do for root
     fi
     
     # Check if setfacl is available
@@ -152,21 +182,14 @@ grant_immediate_access() {
     fi
     
     if command -v setfacl &> /dev/null; then
-        echo -e "${BLUE}Granting immediate input device access (no logout needed)...${NC}"
+        echo -e "${BLUE}Granting immediate uinput access for paste simulation...${NC}"
         
-        # Grant ACL access to keyboard input devices
-        for dev in /dev/input/event*; do
-            if [ -e "$dev" ]; then
-                setfacl -m "u:${user}:rw" "$dev" 2>/dev/null || true
-            fi
-        done
-        
-        # Grant ACL access to uinput
+        # Grant ACL access to uinput (for paste keystroke simulation)
         if [ -e /dev/uinput ]; then
             setfacl -m "u:${user}:rw" /dev/uinput 2>/dev/null || true
         fi
         
-        echo -e "${GREEN}✓${NC} Granted immediate access to input devices"
+        echo -e "${GREEN}✓${NC} Granted immediate access to uinput device"
         return 0
     else
         echo -e "${YELLOW}!${NC} Could not install 'acl' package for immediate access"
@@ -175,8 +198,6 @@ grant_immediate_access() {
 }
 
 # Determine if logout is needed:
-# - If user was already in input group, no logout needed
-# - If ACLs were granted successfully, no logout needed
 # - Otherwise, logout is needed for new group membership to take effect
 NEEDS_LOGOUT=false
 if [ "$USER_ALREADY_IN_INPUT_GROUP" = true ]; then
@@ -312,17 +333,18 @@ echo -e "${GREEN}║          Windows 11 Clipboard History installed!           
 echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-if [ "$NEEDS_LOGOUT" = true ]; then
-    echo -e "${YELLOW}⚠ Please log out and log back in for permissions to apply.${NC}"
-    echo ""
-    echo "After logging back in, the app will start automatically."
-elif [ "$APP_LAUNCHED" = true ]; then
+if [ "$APP_LAUNCHED" = true ]; then
     echo -e "${GREEN}✓ App is now running! Press Super+V or Ctrl+Alt+V to open.${NC}"
 else
     echo -e "${GREEN}✓ Ready to use!${NC}"
     echo ""
     echo "The app will start automatically on your next login."
     echo "To start now, find 'Clipboard History' in your application menu."
+fi
+
+if [ "$NEEDS_LOGOUT" = true ]; then
+    echo ""
+    echo -e "${YELLOW}Note: you may need to log out and back in to apply certain pasting permissions.${NC}"
 fi
 
 echo ""
