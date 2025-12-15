@@ -89,13 +89,15 @@ install_icons() {
     
     # Create pixmaps directory if it doesn't exist
     mkdir -p "$PIXMAPS_DIR"
-    
+
     # Install main icon to pixmaps (fallback location that most DEs check)
     if [ -f "$ICON_SRC_DIR/128x128/apps/win11-clipboard-history.png" ]; then
-        cp "$ICON_SRC_DIR/128x128/apps/win11-clipboard-history.png" "$PIXMAPS_DIR/win11-clipboard-history.png"
+        install -m 644 "$ICON_SRC_DIR/128x128/apps/win11-clipboard-history.png" \
+            "$PIXMAPS_DIR/win11-clipboard-history.png"
         echo -e "${GREEN}✓${NC} Installed icon to pixmaps"
     elif [ -f "$LIB_DIR/icons/icon.png" ]; then
-        cp "$LIB_DIR/icons/icon.png" "$PIXMAPS_DIR/win11-clipboard-history.png"
+        install -m 644 "$LIB_DIR/icons/icon.png" \
+            "$PIXMAPS_DIR/win11-clipboard-history.png"
         echo -e "${GREEN}✓${NC} Installed icon to pixmaps (from lib)"
     fi
     
