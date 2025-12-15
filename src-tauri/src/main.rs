@@ -392,7 +392,7 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
 }
 
 /// Register global shortcuts using tauri-plugin-global-shortcut
-fn register_global_shortcuts(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+fn register_global_shortcuts(app: &AppHandle) {
     // Super+V shortcut (Windows key + V)
     let super_v = Shortcut::new(Some(Modifiers::SUPER), Code::KeyV);
 
@@ -401,29 +401,33 @@ fn register_global_shortcuts(app: &AppHandle) -> Result<(), Box<dyn std::error::
 
     let app_handle = app.clone();
 
-    if let Err(e) = app.global_shortcut().on_shortcut(super_v, move |_app, shortcut, event| {
-        if event.state == ShortcutState::Pressed {
-            eprintln!("[GlobalShortcut] Super+V triggered: {:?}", shortcut);
-            WindowController::toggle(&app_handle);
-        }
-    }) {
+    if let Err(e) = app
+        .global_shortcut()
+        .on_shortcut(super_v, move |_app, shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                eprintln!("[GlobalShortcut] Super+V triggered: {:?}", shortcut);
+                WindowController::toggle(&app_handle);
+            }
+        })
+    {
         eprintln!("[GlobalShortcut] Failed to register Super+V: {}", e);
     }
 
     let app_handle2 = app.clone();
 
-    if let Err(e) = app.global_shortcut().on_shortcut(ctrl_alt_v, move |_app, shortcut, event| {
-        if event.state == ShortcutState::Pressed {
-            eprintln!("[GlobalShortcut] Ctrl+Alt+V triggered: {:?}", shortcut);
-            WindowController::toggle(&app_handle2);
-        }
-    }) {
+    if let Err(e) = app
+        .global_shortcut()
+        .on_shortcut(ctrl_alt_v, move |_app, shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                eprintln!("[GlobalShortcut] Ctrl+Alt+V triggered: {:?}", shortcut);
+                WindowController::toggle(&app_handle2);
+            }
+        })
+    {
         eprintln!("[GlobalShortcut] Failed to register Ctrl+Alt+V: {}", e);
     }
 
     eprintln!("[GlobalShortcut] Attempted to register shortcuts: Super+V, Ctrl+Alt+V");
-
-    Ok(())
 }
 
 // --- Main ---
@@ -520,10 +524,7 @@ fn main() {
             start_clipboard_watcher(app_handle.clone(), clipboard_manager);
 
             // Register global shortcuts using tauri-plugin-global-shortcut
-            if let Err(e) = register_global_shortcuts(&app_handle) {
-                eprintln!("[GlobalShortcut] Failed to register shortcuts: {}", e);
-                eprintln!("[GlobalShortcut] The app will still work via system tray");
-            }
+            register_global_shortcuts(&app_handle);
 
             Ok(())
         })
