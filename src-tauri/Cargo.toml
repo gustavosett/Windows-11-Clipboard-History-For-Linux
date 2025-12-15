@@ -23,6 +23,7 @@ tauri-build = { version = "2", features = [] }
 # Tauri Core
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-shell = "2"
+tauri-plugin-global-shortcut = "2"
 
 # Clipboard Management - wayland-data-control for native Wayland support
 arboard = { version = "3.4", features = ["image-data", "wayland-data-control"] }
@@ -52,7 +53,6 @@ dirs = "5.0"
 [target.'cfg(target_os = "linux")'.dependencies]
 enigo = "0.6"
 x11rb = { version = "0.13", features = ["allow-unsafe-code", "xtest"] }
-evdev = "0.12"
 libc = "0.2"
 
 [features]
