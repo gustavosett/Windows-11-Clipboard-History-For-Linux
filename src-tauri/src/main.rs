@@ -401,25 +401,27 @@ fn register_global_shortcuts(app: &AppHandle) -> Result<(), Box<dyn std::error::
 
     let app_handle = app.clone();
 
-    app.global_shortcut()
-        .on_shortcut(super_v, move |_app, shortcut, event| {
-            if event.state == ShortcutState::Pressed {
-                eprintln!("[GlobalShortcut] Super+V triggered: {:?}", shortcut);
-                WindowController::toggle(&app_handle);
-            }
-        })?;
+    if let Err(e) = app.global_shortcut().on_shortcut(super_v, move |_app, shortcut, event| {
+        if event.state == ShortcutState::Pressed {
+            eprintln!("[GlobalShortcut] Super+V triggered: {:?}", shortcut);
+            WindowController::toggle(&app_handle);
+        }
+    }) {
+        eprintln!("[GlobalShortcut] Failed to register Super+V: {}", e);
+    }
 
     let app_handle2 = app.clone();
 
-    app.global_shortcut()
-        .on_shortcut(ctrl_alt_v, move |_app, shortcut, event| {
-            if event.state == ShortcutState::Pressed {
-                eprintln!("[GlobalShortcut] Ctrl+Alt+V triggered: {:?}", shortcut);
-                WindowController::toggle(&app_handle2);
-            }
-        })?;
+    if let Err(e) = app.global_shortcut().on_shortcut(ctrl_alt_v, move |_app, shortcut, event| {
+        if event.state == ShortcutState::Pressed {
+            eprintln!("[GlobalShortcut] Ctrl+Alt+V triggered: {:?}", shortcut);
+            WindowController::toggle(&app_handle2);
+        }
+    }) {
+        eprintln!("[GlobalShortcut] Failed to register Ctrl+Alt+V: {}", e);
+    }
 
-    eprintln!("[GlobalShortcut] Registered shortcuts: Super+V, Ctrl+Alt+V");
+    eprintln!("[GlobalShortcut] Attempted to register shortcuts: Super+V, Ctrl+Alt+V");
 
     Ok(())
 }
