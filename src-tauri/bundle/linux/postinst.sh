@@ -166,7 +166,9 @@ grant_uinput_access() {
 
 # ACL fallback: Only needed for non-systemd systems or if uaccess doesn't work
 # On systemd systems with TAG+="uaccess", permissions are granted automatically
-if ! loginctl show-session $(loginctl --no-legend | grep "$ACTUAL_USER" | head -1 | awk '{print $1}') -p Active 2>/dev/null | grep -q "Active=yes"; then
+# Extract the session ID for the actual user
+SESSION_ID=$(loginctl --no-legend | grep "$ACTUAL_USER" | head -1 | awk '{print $1}')
+if ! loginctl show-session "$SESSION_ID" -p Active 2>/dev/null | grep -q "Active=yes"; then
     # User doesn't have an active systemd session, use ACL fallback
     grant_uinput_access "$ACTUAL_USER"
 else
