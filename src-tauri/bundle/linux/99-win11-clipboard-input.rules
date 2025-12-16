@@ -1,7 +1,8 @@
 # udev rules for Windows 11 Clipboard History
+# Allows non-root users in the 'input' group to access input devices for global hotkeys
 
-# Input devices (keyboards) - TAG+="uaccess" allows logged-in user to read events
-KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input", TAG+="uaccess"
+# Input devices (keyboards) - needed for evdev global hotkey detection
+KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"
 
 # uinput device - needed for kernel-level keyboard simulation (paste injection)
 KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
