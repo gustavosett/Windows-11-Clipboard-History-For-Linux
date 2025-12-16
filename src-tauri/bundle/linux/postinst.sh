@@ -36,44 +36,52 @@ install_clipboard_tools() {
 
 install_clipboard_tools
 
-# Setup Permissions (Udev & Groups)
-setup_permissions() {
-    echo -e "${BLUE}Configuring permissions for global hotkeys...${NC}"
+# Setup Permissions for uinput (needed for paste simulation)
+setup_uinput_permissions() {
+    echo -e "${BLUE}Configuring permissions for paste simulation...${NC}"
     
-    # 1. Ensure Udev Rules are active
-    # The file should be installed by the package in /etc/udev/rules.d/
-    if [ -f "/etc/udev/rules.d/99-win11-clipboard-input.rules" ]; then
-        udevadm control --reload-rules && udevadm trigger
-        echo -e "${GREEN}✓${NC} Udev rules reloaded"
-    else
-        # Fallback: Create it if missing
-        echo 'KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"' > /etc/udev/rules.d/99-win11-clipboard-input.rules
-        echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
-        udevadm control --reload-rules && udevadm trigger
-        echo -e "${GREEN}✓${NC} Udev rules created and loaded"
-    fi
-
-    # 2. Create input group if missing
+    # Create input group if missing
     getent group input >/dev/null || groupadd input
 
-    # 3. Add user to input group
-    # Since this runs as root (sudo), we try to find the real user
+    # Create udev rule for uinput (needed for paste simulation)
+    UDEV_RULE="/etc/udev/rules.d/99-win11-clipboard-input.rules"
+    cat > "$UDEV_RULE" << 'EOF'
+# udev rules for Windows 11 Clipboard History
+# uinput device - needed for kernel-level keyboard simulation (paste injection)
+# TAG+="uaccess" grants access to the active session user via systemd-logind
+# GROUP="input" serves as fallback for non-systemd systems
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput", TAG+="uaccess"
+EOF
+    echo -e "${GREEN}✓${NC} Created udev rules for uinput (with uaccess support)"
+
+    # Load uinput module if not loaded
+    if ! lsmod | grep -q uinput; then
+        modprobe uinput 2>/dev/null || true
+    fi
+
+    # Ensure uinput is loaded on boot
+    if [ ! -f /etc/modules-load.d/uinput.conf ]; then
+        echo "uinput" > /etc/modules-load.d/uinput.conf
+        echo -e "${GREEN}✓${NC} Configured uinput module to load on boot"
+    fi
+
+    # Reload udev rules
+    udevadm control --reload-rules 2>/dev/null || true
+    udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true
+
+    # Add user to input group for uinput access
     REAL_USER="${SUDO_USER:-$USER}"
-    
     if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
         if ! id -nG "$REAL_USER" | grep -qw input; then
             usermod -aG input "$REAL_USER"
-            echo -e "${GREEN}✓${NC} User '$REAL_USER' added to 'input' group"
-            echo -e "${YELLOW}NOTE:${NC} You may need to log out and back in for group changes to take effect."
+            echo -e "${GREEN}✓${NC} User '$REAL_USER' added to 'input' group for paste simulation"
         else
             echo -e "${GREEN}✓${NC} User '$REAL_USER' is already in 'input' group"
         fi
-    else
-        echo -e "${YELLOW}!${NC} Could not detect non-root user. Please run: sudo usermod -aG input \$USER"
     fi
 }
 
-setup_permissions
+setup_uinput_permissions
 
 # Create wrapper script to handle Snap environment conflicts
 BINARY_PATH="/usr/bin/win11-clipboard-history"
@@ -118,62 +126,15 @@ WRAPPER
     echo -e "${GREEN}✓${NC} Created wrapper script for Snap compatibility"
 fi
 
-# Ensure input group exists
-if ! getent group input > /dev/null 2>&1; then
-    echo -e "${BLUE}Creating 'input' group...${NC}"
-    groupadd input
-fi
-
-# Create udev rules for input devices and uinput
-UDEV_RULE="/etc/udev/rules.d/99-win11-clipboard-input.rules"
-cat > "$UDEV_RULE" << 'EOF'
-# udev rules for Windows 11 Clipboard History
-# Input devices (keyboards) - needed for evdev global hotkey detection
-KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"
-# uinput device - needed for kernel-level keyboard simulation (paste injection)
-KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
-EOF
-echo -e "${GREEN}✓${NC} Created udev rules for input devices"
-
-# Load uinput module if not loaded
-if ! lsmod | grep -q uinput; then
-    modprobe uinput 2>/dev/null || true
-fi
-
-# Ensure uinput is loaded on boot
-if [ ! -f /etc/modules-load.d/uinput.conf ]; then
-    echo "uinput" > /etc/modules-load.d/uinput.conf
-    echo -e "${GREEN}✓${NC} Configured uinput module to load on boot"
-fi
-
-# Reload udev rules and trigger for misc subsystem (for uinput)
-udevadm control --reload-rules 2>/dev/null || true
-udevadm trigger 2>/dev/null || true
-udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true
-
 # Get the actual user (not root when using sudo)
 ACTUAL_USER="${SUDO_USER:-$USER}"
 
-# Check if user already has input group membership (from previous install or manual setup)
-USER_ALREADY_IN_INPUT_GROUP=false
-if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
-    if groups "$ACTUAL_USER" 2>/dev/null | grep -q '\binput\b'; then
-        USER_ALREADY_IN_INPUT_GROUP=true
-        echo -e "${GREEN}✓${NC} User $ACTUAL_USER is already in 'input' group"
-    else
-        usermod -aG input "$ACTUAL_USER"
-        echo -e "${GREEN}✓${NC} Added $ACTUAL_USER to 'input' group"
-    fi
-fi
-
-# Grant IMMEDIATE access using ACLs (no logout required!)
-# This allows the user to start using the app right away
-# The group membership above ensures it works after reboot too
-grant_immediate_access() {
+# Grant immediate access to uinput using ACLs (no logout required for paste)
+grant_uinput_access() {
     local user="$1"
     
     if [ -z "$user" ] || [ "$user" = "root" ]; then
-        return
+        return 1
     fi
     
     # Check if setfacl is available
@@ -191,21 +152,11 @@ grant_immediate_access() {
     fi
     
     if command -v setfacl &> /dev/null; then
-        echo -e "${BLUE}Granting immediate input device access (no logout needed)...${NC}"
-        
-        # Grant ACL access to keyboard input devices
-        for dev in /dev/input/event*; do
-            if [ -e "$dev" ]; then
-                setfacl -m "u:${user}:rw" "$dev" 2>/dev/null || true
-            fi
-        done
-        
-        # Grant ACL access to uinput
+        # Grant ACL access to uinput only (for paste simulation)
         if [ -e /dev/uinput ]; then
             setfacl -m "u:${user}:rw" /dev/uinput 2>/dev/null || true
+            echo -e "${GREEN}✓${NC} Granted immediate access to uinput for paste simulation"
         fi
-        
-        echo -e "${GREEN}✓${NC} Granted immediate access to input devices"
         return 0
     else
         echo -e "${YELLOW}!${NC} Could not install 'acl' package for immediate access"
@@ -213,20 +164,15 @@ grant_immediate_access() {
     fi
 }
 
-# Determine if logout is needed:
-# - If user was already in input group, no logout needed
-# - If ACLs were granted successfully, no logout needed
-# - Otherwise, logout is needed for new group membership to take effect
-NEEDS_LOGOUT=false
-if [ "$USER_ALREADY_IN_INPUT_GROUP" = true ]; then
-    # User already has permissions from previous session
-    NEEDS_LOGOUT=false
-elif grant_immediate_access "$ACTUAL_USER"; then
-    # ACLs granted immediate access
-    NEEDS_LOGOUT=false
+# ACL fallback: Only needed for non-systemd systems or if uaccess doesn't work
+# On systemd systems with TAG+="uaccess", permissions are granted automatically
+if ! loginctl show-session $(loginctl --no-legend | grep "$ACTUAL_USER" | head -1 | awk '{print $1}') -p Active 2>/dev/null | grep -q "Active=yes"; then
+    # User doesn't have an active systemd session, use ACL fallback
+    grant_uinput_access "$ACTUAL_USER"
 else
-    # Neither condition met, logout required
-    NEEDS_LOGOUT=true
+    echo -e "${GREEN}✓${NC} Using systemd-logind uaccess for automatic permission management"
+    # Still try ACL as extra safety for immediate access
+    grant_uinput_access "$ACTUAL_USER" 2>/dev/null || true
 fi
 
 # Setup autostart for the application (only if user agrees)
@@ -308,11 +254,6 @@ launch_app() {
         return 1
     fi
     
-    # Skip if logout is required
-    if [ "$NEEDS_LOGOUT" = true ]; then
-        return 1
-    fi
-    
     # Get user's runtime dir for proper D-Bus access
     local user_id
     user_id=$(id -u "$user" 2>/dev/null) || return 1
@@ -351,12 +292,8 @@ echo -e "${GREEN}║          Windows 11 Clipboard History installed!           
 echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-if [ "$NEEDS_LOGOUT" = true ]; then
-    echo -e "${YELLOW}⚠ Please log out and log back in for permissions to apply.${NC}"
-    echo ""
-    echo "After logging back in, the app will start automatically."
-elif [ "$APP_LAUNCHED" = true ]; then
-    echo -e "${GREEN}✓ App is now running! Press Super+V or Ctrl+Alt+V to open.${NC}"
+if [ "$APP_LAUNCHED" = true ]; then
+    echo -e "${GREEN}✓ App is now running! Press Super+V to open.${NC}"
 else
     echo -e "${GREEN}✓ Ready to use!${NC}"
     echo ""
@@ -364,6 +301,18 @@ else
     echo "To start now, find 'Clipboard History' in your application menu."
 fi
 
+echo ""
+echo -e "${BLUE}Note:${NC} If the Super+V shortcut doesn't work automatically,"
+echo "please configure it manually in your desktop's keyboard settings:"
+echo ""
+echo "  GNOME/Pantheon: Settings → Keyboard → Shortcuts → Custom"
+echo "  KDE Plasma:     System Settings → Shortcuts → Custom Shortcuts"
+echo "  XFCE:           Settings → Keyboard → Application Shortcuts"
+echo "  Cinnamon:       System Settings → Keyboard → Shortcuts → Custom"
+echo "  COSMIC:         Settings → Keyboard → Custom Shortcuts"
+echo ""
+echo "  Command:  win11-clipboard-history"
+echo "  Shortcut: Super+V"
 echo ""
 
 exit 0
