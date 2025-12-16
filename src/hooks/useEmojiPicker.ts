@@ -25,8 +25,11 @@ export function useEmojiPicker() {
 
   // Preload search index on mount
   useEffect(() => {
-    preloadSearchIndex()
-    setIsLoading(false)
+    const t = setTimeout(() => {
+      preloadSearchIndex()
+      setIsLoading(false)
+    }, 0)
+    return () => clearTimeout(t)
   }, [])
 
   // Load recent emojis from backend
