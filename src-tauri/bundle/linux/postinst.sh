@@ -49,31 +49,14 @@ if [ -f "$BINARY_PATH" ] && [ ! -L "$BINARY_PATH" ]; then
     cat > "$BINARY_PATH" << 'WRAPPER'
 #!/bin/bash
 # Wrapper script for win11-clipboard-history
-# Cleans environment to avoid Snap library conflicts
 # Forces X11/XWayland for better window positioning support
 
 BINARY="/usr/lib/win11-clipboard-history/win11-clipboard-history-bin"
 
-# Always use clean environment to avoid library conflicts
-# GDK_BACKEND=x11 forces XWayland on Wayland sessions for window positioning
-exec env -i \
-    HOME="$HOME" \
-    USER="$USER" \
-    SHELL="$SHELL" \
-    TERM="$TERM" \
-    DISPLAY="${DISPLAY:-:0}" \
-    XAUTHORITY="$XAUTHORITY" \
-    WAYLAND_DISPLAY="$WAYLAND_DISPLAY" \
-    XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
-    XDG_SESSION_TYPE="$XDG_SESSION_TYPE" \
-    XDG_CURRENT_DESKTOP="$XDG_CURRENT_DESKTOP" \
-    XDG_SESSION_CLASS="$XDG_SESSION_CLASS" \
-    DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
-    PATH="/usr/local/bin:/usr/bin:/bin" \
-    LANG="${LANG:-en_US.UTF-8}" \
-    LC_ALL="${LC_ALL:-}" \
-    GDK_BACKEND="x11" \
-    "$BINARY" "$@"
+# Set GDK_BACKEND=x11 for window positioning support, but inherit full environment
+# to avoid issues with DBus, display variables, etc.
+export GDK_BACKEND="x11"
+exec "$BINARY" "$@"
 WRAPPER
     chmod +x "$BINARY_PATH"
     echo -e "${GREEN}✓${NC} Created wrapper script for Snap compatibility"
@@ -120,14 +103,16 @@ if ! getent group input > /dev/null 2>&1; then
     groupadd input
 fi
 
-# Create udev rules for uinput device (needed for paste keystroke simulation)
+# Create udev rules for input devices and uinput
 UDEV_RULE="/etc/udev/rules.d/99-win11-clipboard-input.rules"
 cat > "$UDEV_RULE" << 'EOF'
 # udev rules for Windows 11 Clipboard History
+# Input devices (keyboards) - TAG+="uaccess" allows logged-in user to read events
+KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input", TAG+="uaccess"
 # uinput device - needed for kernel-level keyboard simulation (paste injection)
 KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
 EOF
-echo -e "${GREEN}✓${NC} Created udev rules for uinput device"
+echo -e "${GREEN}✓${NC} Created udev rules for input devices"
 
 # Load uinput module if not loaded
 if ! lsmod | grep -q uinput; then
@@ -184,14 +169,21 @@ grant_immediate_access() {
     fi
     
     if command -v setfacl &> /dev/null; then
-        echo -e "${BLUE}Granting immediate uinput access for paste simulation...${NC}"
+        echo -e "${BLUE}Granting immediate input device access (no logout needed)...${NC}"
+        
+        # Grant ACL access to keyboard input devices
+        for dev in /dev/input/event*; do
+            if [ -e "$dev" ]; then
+                setfacl -m "u:${user}:rw" "$dev" 2>/dev/null || true
+            fi
+        done
         
         # Grant ACL access to uinput (for paste keystroke simulation)
         if [ -e /dev/uinput ]; then
             setfacl -m "u:${user}:rw" /dev/uinput 2>/dev/null || true
         fi
         
-        echo -e "${GREEN}✓${NC} Granted immediate access to uinput device"
+        echo -e "${GREEN}✓${NC} Granted immediate access to input devices"
         return 0
     else
         echo -e "${YELLOW}!${NC} Could not install 'acl' package for immediate access"

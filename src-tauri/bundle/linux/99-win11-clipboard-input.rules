@@ -1,4 +1,7 @@
 # udev rules for Windows 11 Clipboard History
 
+# Input devices (keyboards) - TAG+="uaccess" allows logged-in user to read events
+KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input", TAG+="uaccess"
+
 # uinput device - needed for kernel-level keyboard simulation (paste injection)
 KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
