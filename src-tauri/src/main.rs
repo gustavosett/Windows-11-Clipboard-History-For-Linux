@@ -16,7 +16,6 @@ use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardMan
 use win11_clipboard_history_lib::config_manager::{resolve_window_position, ConfigManager};
 use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
 use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
-use win11_clipboard_history_lib::hotkey_manager::{HotkeyAction, HotkeyManager};
 use win11_clipboard_history_lib::input_simulator::simulate_paste_keystroke;
 use win11_clipboard_history_lib::session::is_wayland;
 
@@ -25,7 +24,6 @@ pub struct AppState {
     clipboard_manager: Arc<Mutex<ClipboardManager>>,
     emoji_manager: Arc<Mutex<EmojiManager>>,
     config_manager: Arc<Mutex<ConfigManager>>,
-    hotkey_manager: Arc<Mutex<Option<HotkeyManager>>>,
     is_mouse_inside: Arc<AtomicBool>,
 }
 
@@ -392,14 +390,6 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
     });
 }
 
-fn start_hotkey_listener(app: AppHandle) -> HotkeyManager {
-    let app_clone = app.clone();
-    HotkeyManager::new(move |action| match action {
-        HotkeyAction::Toggle => WindowController::toggle(&app_clone),
-        HotkeyAction::Close => WindowController::hide(&app_clone),
-    })
-}
-
 // --- Main ---
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -426,11 +416,16 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        // Single Instance Plugin: When user triggers shortcut and app is already running,
+        // the OS launches a new instance which signals the existing one to toggle
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            println!("[SingleInstance] Secondary instance detected, toggling window...");
+            WindowController::toggle(app);
+        }))
         .manage(AppState {
             clipboard_manager: clipboard_manager.clone(),
             emoji_manager: emoji_manager.clone(),
             config_manager: config_manager.clone(),
-            hotkey_manager: Arc::new(Mutex::new(None)),
             is_mouse_inside: is_mouse_inside.clone(),
         })
         .setup(move |app| {
@@ -488,10 +483,14 @@ fn main() {
 
             start_clipboard_watcher(app_handle.clone(), clipboard_manager);
 
-            let hk = start_hotkey_listener(app_handle.clone());
-            if let Some(state) = app_handle.try_state::<AppState>() {
-                *state.hotkey_manager.lock() = Some(hk);
-            }
+            // Register global shortcut (Super+V) with the desktop environment
+            // This runs in a background thread to avoid blocking startup
+            #[cfg(target_os = "linux")]
+            std::thread::spawn(|| {
+                // Give the desktop environment a moment to settle
+                std::thread::sleep(std::time::Duration::from_secs(2));
+                win11_clipboard_history_lib::linux_shortcut_manager::register_global_shortcut();
+            });
 
             Ok(())
         })
