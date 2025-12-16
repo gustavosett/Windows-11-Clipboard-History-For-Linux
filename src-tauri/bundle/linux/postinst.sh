@@ -61,7 +61,7 @@ setup_permissions() {
     REAL_USER="${SUDO_USER:-$USER}"
     
     if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
-        if ! groups "$REAL_USER" | grep -q "\binput\b"; then
+        if ! id -nG "$REAL_USER" | grep -qw input; then
             usermod -aG input "$REAL_USER"
             echo -e "${GREEN}✓${NC} User '$REAL_USER' added to 'input' group"
             echo -e "${YELLOW}NOTE:${NC} You may need to log out and back in for group changes to take effect."
