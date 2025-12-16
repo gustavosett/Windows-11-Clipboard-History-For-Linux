@@ -50,6 +50,7 @@
     "longDescription": "A modern, beautiful clipboard history manager for Linux that mimics the Windows 11 Win+V clipboard experience. Built with Tauri, React, and Rust.",
     "linux": {
       "deb": {
+        "depends": ["xclip", "wl-clipboard", "acl"],
         "files": {
           "/etc/udev/rules.d/99-win11-clipboard-input.rules": "bundle/linux/99-win11-clipboard-input.rules"
         },
@@ -57,6 +58,7 @@
         "preRemoveScript": "bundle/linux/postrm.sh"
       },
       "rpm": {
+        "depends": ["xclip", "wl-clipboard", "acl"],
         "postInstallScript": "bundle/linux/postinst.sh",
         "preRemoveScript": "bundle/linux/postrm.sh"
       }
