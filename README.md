@@ -53,7 +53,7 @@ curl -sL http://install-clipboard.gustavosett.dev | bash
 If you prefer to install manually, download the latest release from the [Releases Page](https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/releases).
 
 <details>
-<summary><b>Click to see manual setup instructions</b></summary>
+<summary><b>Click to see manual setup instructions (for other formats or troubleshooting)</b></summary>
 
 1. **Install the package:**
    - **Debian/Ubuntu:** `sudo apt install ./win11-clipboard-history_*.deb`

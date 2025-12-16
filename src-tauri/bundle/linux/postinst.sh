@@ -36,6 +36,45 @@ install_clipboard_tools() {
 
 install_clipboard_tools
 
+# Setup Permissions (Udev & Groups)
+setup_permissions() {
+    echo -e "${BLUE}Configuring permissions for global hotkeys...${NC}"
+    
+    # 1. Ensure Udev Rules are active
+    # The file should be installed by the package in /etc/udev/rules.d/
+    if [ -f "/etc/udev/rules.d/99-win11-clipboard-input.rules" ]; then
+        udevadm control --reload-rules && udevadm trigger
+        echo -e "${GREEN}✓${NC} Udev rules reloaded"
+    else
+        # Fallback: Create it if missing
+        echo 'KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"' > /etc/udev/rules.d/99-win11-clipboard-input.rules
+        echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
+        udevadm control --reload-rules && udevadm trigger
+        echo -e "${GREEN}✓${NC} Udev rules created and loaded"
+    fi
+
+    # 2. Create input group if missing
+    getent group input >/dev/null || groupadd input
+
+    # 3. Add user to input group
+    # Since this runs as root (sudo), we try to find the real user
+    REAL_USER="${SUDO_USER:-$USER}"
+    
+    if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
+        if ! groups "$REAL_USER" | grep -q "\binput\b"; then
+            usermod -aG input "$REAL_USER"
+            echo -e "${GREEN}✓${NC} User '$REAL_USER' added to 'input' group"
+            echo -e "${YELLOW}NOTE:${NC} You may need to log out and back in for group changes to take effect."
+        else
+            echo -e "${GREEN}✓${NC} User '$REAL_USER' is already in 'input' group"
+        fi
+    else
+        echo -e "${YELLOW}!${NC} Could not detect non-root user. Please run: sudo usermod -aG input \$USER"
+    fi
+}
+
+setup_permissions
+
 # Create wrapper script to handle Snap environment conflicts
 BINARY_PATH="/usr/bin/win11-clipboard-history"
 LIB_DIR="/usr/lib/win11-clipboard-history"
