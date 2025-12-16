@@ -34,16 +34,16 @@
     "clsx": "^2.1.0",
     "emojilib": "^4.0.2",
     "fuse.js": "^7.0.0",
-    "lucide-react": "^0.460.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-window": "^1.8.10"
+    "lucide-react": "^0.561.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-window": "^2.2.3"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@types/react-window": "^1.8.8",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@types/react-window": "^2.0.0",
     "@typescript-eslint/eslint-plugin": "^8.13.0",
     "@typescript-eslint/parser": "^8.49.0",
     "@vitejs/plugin-react": "^4.3.3",
