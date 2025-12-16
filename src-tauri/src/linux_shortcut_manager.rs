@@ -291,7 +291,7 @@ impl GSettings {
         let cleaned = output
             .trim_start_matches('[')
             .trim_end_matches(']')
-            .replace(['\'', '"'], ""); // Handle potential double quotes too
+            .replace(['\'', '"'], ""); // Remove both single and double quotes for parsing
 
         Ok(cleaned
             .split(',')
