@@ -230,12 +230,14 @@ install:
 	install -Dm644 src-tauri/icons/128x128.png $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
 	install -Dm644 src-tauri/icons/icon.png $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/$(APP_NAME).png
 	@# Create comprehensive udev rules for input devices and uinput
+	@# Uses TAG+="uaccess" for systemd-logind permission handling
+	@# with GROUP="input" as fallback for non-systemd systems
 	@mkdir -p /etc/udev/rules.d
 	@echo '# udev rules for Windows 11 Clipboard History' > /etc/udev/rules.d/99-win11-clipboard-input.rules
-	@echo '# Input devices - needed for evdev global hotkey detection' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
-	@echo 'KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
-	@echo '# uinput device - needed for kernel-level keyboard simulation' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
-	@echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
+	@echo '# TAG+="uaccess" grants access to the active session user via systemd-logind' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
+	@echo '# GROUP="input" serves as fallback for non-systemd systems' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
+	@echo 'KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input", TAG+="uaccess"' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
+	@echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput", TAG+="uaccess"' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
 	@# Load uinput module
 	@modprobe uinput 2>/dev/null || true
 	@# Ensure uinput loads on boot
