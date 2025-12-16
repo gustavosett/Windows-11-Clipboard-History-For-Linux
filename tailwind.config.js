@@ -30,7 +30,7 @@ export default {
           'border-subtle': '#3a3a3a',
           
           // Acrylic/Mica effect
-          'acrylic-bg': 'rgba(32, 32, 32, 0.7)',
+          'acrylic-bg': 'rgba(32, 32, 32, 0.85)',
           'acrylic-tint': 'rgba(255, 255, 255, 0.03)',
           
           // Semantic colors
@@ -49,7 +49,7 @@ export default {
           'text-primary': '#1a1a1a',
           'text-secondary': '#5c5c5c',
           'border': '#e5e5e5',
-          'acrylic-bg': 'rgba(243, 243, 243, 0.7)',
+          'acrylic-bg': 'rgba(243, 243, 243, 0.85)',
         }
       },
       borderRadius: {

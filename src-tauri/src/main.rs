@@ -12,11 +12,11 @@ use tauri::{
     AppHandle, Emitter, Manager, Monitor, PhysicalPosition, PhysicalSize, State, WebviewWindow,
     WindowEvent,
 };
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardManager};
 use win11_clipboard_history_lib::config_manager::{resolve_window_position, ConfigManager};
 use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
 use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
-use win11_clipboard_history_lib::hotkey_manager::{HotkeyAction, HotkeyManager};
 use win11_clipboard_history_lib::input_simulator::simulate_paste_keystroke;
 use win11_clipboard_history_lib::session::is_wayland;
 
@@ -25,7 +25,6 @@ pub struct AppState {
     clipboard_manager: Arc<Mutex<ClipboardManager>>,
     emoji_manager: Arc<Mutex<EmojiManager>>,
     config_manager: Arc<Mutex<ConfigManager>>,
-    hotkey_manager: Arc<Mutex<Option<HotkeyManager>>>,
     is_mouse_inside: Arc<AtomicBool>,
 }
 
@@ -392,12 +391,43 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
     });
 }
 
-fn start_hotkey_listener(app: AppHandle) -> HotkeyManager {
-    let app_clone = app.clone();
-    HotkeyManager::new(move |action| match action {
-        HotkeyAction::Toggle => WindowController::toggle(&app_clone),
-        HotkeyAction::Close => WindowController::hide(&app_clone),
-    })
+/// Register global shortcuts using tauri-plugin-global-shortcut
+fn register_global_shortcuts(app: &AppHandle) {
+    // Super+V shortcut (Windows key + V)
+    let super_v = Shortcut::new(Some(Modifiers::SUPER), Code::KeyV);
+
+    // Ctrl+Alt+V as fallback (for systems where Super is used by DE)
+    let ctrl_alt_v = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyV);
+
+    let app_handle = app.clone();
+
+    if let Err(e) = app
+        .global_shortcut()
+        .on_shortcut(super_v, move |_app, shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                eprintln!("[GlobalShortcut] Super+V triggered: {:?}", shortcut);
+                WindowController::toggle(&app_handle);
+            }
+        })
+    {
+        eprintln!("[GlobalShortcut] Failed to register Super+V: {}", e);
+    }
+
+    let app_handle2 = app.clone();
+
+    if let Err(e) = app
+        .global_shortcut()
+        .on_shortcut(ctrl_alt_v, move |_app, shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                eprintln!("[GlobalShortcut] Ctrl+Alt+V triggered: {:?}", shortcut);
+                WindowController::toggle(&app_handle2);
+            }
+        })
+    {
+        eprintln!("[GlobalShortcut] Failed to register Ctrl+Alt+V: {}", e);
+    }
+
+    eprintln!("[GlobalShortcut] Attempted to register shortcuts: Super+V, Ctrl+Alt+V");
 }
 
 // --- Main ---
@@ -426,11 +456,11 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(AppState {
             clipboard_manager: clipboard_manager.clone(),
             emoji_manager: emoji_manager.clone(),
             config_manager: config_manager.clone(),
-            hotkey_manager: Arc::new(Mutex::new(None)),
             is_mouse_inside: is_mouse_inside.clone(),
         })
         .setup(move |app| {
@@ -440,10 +470,15 @@ fn main() {
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
 
-            let icon = Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap();
+            // Load the tray icon - use 32x32 PNG for best compatibility with all DEs
+            let icon = Image::from_bytes(include_bytes!("../icons/32x32.png"))
+                .or_else(|_| Image::from_bytes(include_bytes!("../icons/icon.png")))
+                .expect("Failed to load tray icon");
 
             let _tray = TrayIconBuilder::new()
                 .icon(icon)
+                .tooltip("Clipboard History - Super+V")
+                .title("Clipboard History")
                 .menu(&menu)
                 .on_menu_event(move |app, event| match event.id.as_ref() {
                     "quit" => app.exit(0),
@@ -488,10 +523,8 @@ fn main() {
 
             start_clipboard_watcher(app_handle.clone(), clipboard_manager);
 
-            let hk = start_hotkey_listener(app_handle.clone());
-            if let Some(state) = app_handle.try_state::<AppState>() {
-                *state.hotkey_manager.lock() = Some(hk);
-            }
+            // Register global shortcuts using tauri-plugin-global-shortcut
+            register_global_shortcuts(&app_handle);
 
             Ok(())
         })
