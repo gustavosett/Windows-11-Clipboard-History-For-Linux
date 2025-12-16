@@ -16,17 +16,17 @@ echo -e "${BLUE}Setting up Windows 11 Clipboard History...${NC}"
 install_clipboard_tools() {
     echo -e "${BLUE}Installing clipboard tools for GIF support...${NC}"
     local installed=false
-
+    
     if command -v apt-get &> /dev/null; then
         apt-get install -y xclip wl-clipboard 2>/dev/null && installed=true || true
-    elif command -v dnf &> /dev/null; then
+        elif command -v dnf &> /dev/null; then
         dnf install -y xclip wl-clipboard 2>/dev/null && installed=true || true
-    elif command -v pacman &> /dev/null; then
+        elif command -v pacman &> /dev/null; then
         pacman -S --needed --noconfirm xclip wl-clipboard 2>/dev/null && installed=true || true
-    elif command -v zypper &> /dev/null; then
+        elif command -v zypper &> /dev/null; then
         zypper install -y xclip wl-clipboard 2>/dev/null && installed=true || true
     fi
-
+    
     if [ "$installed" = true ]; then
         echo -e "${GREEN}✓${NC} Clipboard tools installed"
     else
@@ -42,7 +42,7 @@ setup_uinput_permissions() {
     
     # Create input group if missing
     getent group input >/dev/null || groupadd input
-
+    
     # Create udev rule for uinput (needed for paste simulation)
     UDEV_RULE="/etc/udev/rules.d/99-win11-clipboard-input.rules"
     cat > "$UDEV_RULE" << 'EOF'
@@ -53,22 +53,22 @@ setup_uinput_permissions() {
 KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput", TAG+="uaccess"
 EOF
     echo -e "${GREEN}✓${NC} Created udev rules for uinput (with uaccess support)"
-
+    
     # Load uinput module if not loaded
     if ! lsmod | grep -q uinput; then
         modprobe uinput 2>/dev/null || true
     fi
-
+    
     # Ensure uinput is loaded on boot
     if [ ! -f /etc/modules-load.d/uinput.conf ]; then
         echo "uinput" > /etc/modules-load.d/uinput.conf
         echo -e "${GREEN}✓${NC} Configured uinput module to load on boot"
     fi
-
+    
     # Reload udev rules
     udevadm control --reload-rules 2>/dev/null || true
     udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true
-
+    
     # Add user to input group for uinput access
     REAL_USER="${SUDO_USER:-$USER}"
     if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
@@ -142,11 +142,11 @@ grant_uinput_access() {
         echo -e "${YELLOW}!${NC} 'acl' package not installed. Installing..."
         if command -v apt-get &> /dev/null; then
             apt-get install -y acl 2>/dev/null || true
-        elif command -v dnf &> /dev/null; then
+            elif command -v dnf &> /dev/null; then
             dnf install -y acl 2>/dev/null || true
-        elif command -v pacman &> /dev/null; then
+            elif command -v pacman &> /dev/null; then
             pacman -S --needed --noconfirm acl 2>/dev/null || true
-        elif command -v zypper &> /dev/null; then
+            elif command -v zypper &> /dev/null; then
             zypper install -y acl 2>/dev/null || true
         fi
     fi
@@ -214,7 +214,7 @@ setup_autostart() {
         [nN]|[nN][oO])
             echo -e "${YELLOW}!${NC} Autostart skipped. You can enable it later in your desktop's Startup Applications."
             return
-            ;;
+        ;;
     esac
     
     # Create autostart directory if it doesn't exist
@@ -267,11 +267,11 @@ launch_app() {
     # Try to launch via gtk-launch (works properly with user context)
     if command -v gtk-launch &> /dev/null; then
         sudo -u "$user" \
-            DISPLAY="${DISPLAY:-:0}" \
-            WAYLAND_DISPLAY="$WAYLAND_DISPLAY" \
-            XDG_RUNTIME_DIR="$runtime_dir" \
-            DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/bus" \
-            gtk-launch win11-clipboard-history 2>/dev/null &
+        DISPLAY="${DISPLAY:-:0}" \
+        WAYLAND_DISPLAY="$WAYLAND_DISPLAY" \
+        XDG_RUNTIME_DIR="$runtime_dir" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/bus" \
+        gtk-launch win11-clipboard-history 2>/dev/null &
         return 0
     fi
     

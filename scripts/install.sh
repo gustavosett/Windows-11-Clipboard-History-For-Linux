@@ -64,16 +64,16 @@ install_deps() {
         ubuntu|debian|linuxmint|pop|kali|neon)
             sudo apt-get update -qq
             sudo apt-get install -y xclip wl-clipboard acl
-            ;;
+        ;;
         fedora|rhel|centos|almalinux|rocky)
             sudo dnf install -y xclip wl-clipboard acl
-            ;;
+        ;;
         arch|manjaro|endeavouros)
             command -v pacman >/dev/null && sudo pacman -S --needed --noconfirm xclip wl-clipboard acl
-            ;;
+        ;;
         opensuse*)
             sudo zypper install -y xclip wl-clipboard acl
-            ;;
+        ;;
     esac
 }
 
@@ -95,15 +95,15 @@ case "$DISTRO" in
         log "Installing .deb package..."
         # 'yes' handles the prompt. 2>/dev/null hides the apt "download is unsandboxed" warning if it still appears
         yes | sudo apt-get install -y "./$FILE"
-        ;;
-        
+    ;;
+    
     fedora|rhel|centos|almalinux|rocky)
         FILE="win11-clipboard-history-${CLEAN_VERSION}-1.x86_64.rpm"
         download_file "$BASE_URL/$FILE" "$FILE"
         install_deps
         sudo dnf install -y "./$FILE"
-        ;;
-        
+    ;;
+    
     *)
         log "Installing AppImage..."
         FILE="win11-clipboard-history_${CLEAN_VERSION}_amd64.AppImage"
@@ -139,7 +139,7 @@ EOF
             sudo modprobe uinput 2>/dev/null || true
             sudo udevadm control --reload-rules && sudo udevadm trigger
         fi
-        ;;
+    ;;
 esac
 
 # --- 4. Final Permissions ---
