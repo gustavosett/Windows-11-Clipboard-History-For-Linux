@@ -68,7 +68,7 @@ When using Windows 11 Clipboard History For Linux:
 
 ### Permissions
 
-- **Global hotkey capture**: Required for Super+V functionality
+- **Global hotkey capture**: Required for global shortcuts (Super+V, Ctrl+Alt+V)
 - **System tray**: For background operation
 - **Clipboard access**: Core functionality
 

@@ -24,7 +24,7 @@ Built with 🦀 **Rust** + ⚡ **Tauri v2** + ⚛️ **React** + 🎨 **Tailwind
 
 ## ✨ Features
 
-- 🐧 **Wayland & X11 Support** - Uses kernel-level input handling (`evdev` & `uinput`) to bypass Wayland restrictions.
+- 🐧 **Wayland & X11 Support** - Uses OS-level shortcuts and `uinput` for pasting to support Wayland & X11.
 - ⚡ **Global Hotkey** - Press `Super+V` or `Ctrl+Alt+V` to open instantly.
 - 🖱️ **Smart Positioning** - Window follows your mouse cursor across multiple monitors.
 - 📌 **Pinning** - Keep important items at the top of your list.
@@ -61,7 +61,7 @@ If you prefer to install manually, download the latest release from the [Release
    - **AppImage:** Make executable (`chmod +x`) and run.
 
 2. **Configure Permissions (Crucial):**
-   Since this app listens to global hotkeys on Wayland, it needs access to `/dev/input`.
+   Since this app simulates keystrokes (paste) on Wayland, it needs access to `/dev/uinput`.
 
    ```bash
    # 1. Create 'input' group
@@ -69,8 +69,7 @@ If you prefer to install manually, download the latest release from the [Release
    sudo usermod -aG input $USER
 
    # 2. Create udev rules
-   echo 'KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"' | sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules
-   echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' | sudo tee -a /etc/udev/rules.d/99-win11-clipboard-input.rules
+   echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' | sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules
 
    # 3. Load uinput module
    sudo modprobe uinput
@@ -145,8 +144,9 @@ make build
 
 ### App won't open with Super+V
 1. Ensure the app is running: `pgrep -f win11-clipboard-history`
-2. Check permissions: `ls -l /dev/input/event0`. The group should be `input` and your user should be in that group (`groups`).
-3. Try the alternative hotkey: `Ctrl+Alt+V`.
+2. Check if the shortcut is registered in your Desktop Environment settings (Settings -> Keyboard -> Shortcuts).
+   - **Command:**  win11-clipboard-history
+   - **Shortcut:** Super+V (or your preferred combination)
 
 ### Pasting doesn't work
 1. **Wayland:** Ensure `wl-clipboard` is installed: `sudo apt install wl-clipboard`.
@@ -176,6 +176,13 @@ rm -f ~/.local/bin/win11-clipboard-history
 rm -rf ~/.local/lib/win11-clipboard-history
 rm -f ~/.config/autostart/win11-clipboard-history.desktop
 ```
+
+**Check if it still have shortcuts registered and remove them:**
+> This can happen if the application was uninstalled while it was running or if the uninstall permissions were incorrect.
+
+1. Go to Settings -> Keyboard -> Shortcuts
+2. Find "Win11 Clipboard History" or similar entry
+3. Remove the shortcut or change it to "Disabled"
 
 ---
 
