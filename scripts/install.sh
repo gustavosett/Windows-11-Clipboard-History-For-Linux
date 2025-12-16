@@ -126,11 +126,16 @@ WRAPPER
         
         # Manual Permission Setup for AppImage
         if ! [ -f /etc/udev/rules.d/99-win11-clipboard-input.rules ]; then
-            log "Configuring input permissions..."
+            log "Configuring input permissions (with uaccess support)..."
             getent group input >/dev/null || sudo groupadd input
             groups "$USER" | grep -q input || sudo usermod -aG input "$USER"
-            echo 'KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"' | sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules > /dev/null
-            echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' | sudo tee -a /etc/udev/rules.d/99-win11-clipboard-input.rules > /dev/null
+            cat << 'EOF' | sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules > /dev/null
+# udev rules for Windows 11 Clipboard History
+# TAG+="uaccess" grants access to the active session user via systemd-logind
+# GROUP="input" serves as fallback for non-systemd systems
+KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input", TAG+="uaccess"
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput", TAG+="uaccess"
+EOF
             sudo modprobe uinput 2>/dev/null || true
             sudo udevadm control --reload-rules && sudo udevadm trigger
         fi
@@ -139,13 +144,21 @@ esac
 
 # --- 4. Final Permissions ---
 
-log "Applying immediate access via ACLs..."
-# This allows the app to work without logging out/in
-if command -v setfacl &>/dev/null; then
-    for dev in /dev/input/event*; do
-        [ -e "$dev" ] && sudo setfacl -m "u:${USER}:rw" "$dev" 2>/dev/null || true
-    done
-    [ -e /dev/uinput ] && sudo setfacl -m "u:${USER}:rw" /dev/uinput 2>/dev/null || true
+# Check if systemd-logind uaccess is working, otherwise use ACL fallback
+if loginctl show-session $(loginctl --no-legend 2>/dev/null | grep "$USER" | head -1 | awk '{print $1}') -p Active 2>/dev/null | grep -q "Active=yes"; then
+    log "Using systemd-logind uaccess for automatic permission management"
+    # Trigger udev to apply uaccess tags
+    sudo udevadm trigger --subsystem-match=input --action=change 2>/dev/null || true
+    sudo udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true
+else
+    log "Applying ACL fallback for immediate access..."
+    # ACL fallback for non-systemd systems or when uaccess isn't working
+    if command -v setfacl &>/dev/null; then
+        for dev in /dev/input/event*; do
+            [ -e "$dev" ] && sudo setfacl -m "u:${USER}:rw" "$dev" 2>/dev/null || true
+        done
+        [ -e /dev/uinput ] && sudo setfacl -m "u:${USER}:rw" /dev/uinput 2>/dev/null || true
+    fi
 fi
 
 # --- 5. Launch ---
