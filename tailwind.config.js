@@ -61,9 +61,6 @@ export default {
         'win11-card': '0 2px 8px rgba(0, 0, 0, 0.15)',
         'win11-elevated': '0 16px 48px rgba(0, 0, 0, 0.35)',
       },
-      backdropBlur: {
-        'acrylic': '20px',
-      },
       animation: {
         'fade-in': 'fadeIn 0.15s ease-out',
         'slide-up': 'slideUp 0.2s ease-out',
