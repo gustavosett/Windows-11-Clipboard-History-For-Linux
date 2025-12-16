@@ -3,7 +3,7 @@
  * Windows 11 style emoji picker with virtualized grid for performance
  */
 import { useState, useCallback, memo, useRef, useLayoutEffect } from 'react'
-import { FixedSizeGrid as Grid } from 'react-window'
+import { Grid } from 'react-window'
 import { clsx } from 'clsx'
 import { Search, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEmojiPicker } from '../hooks/useEmojiPicker'
@@ -165,7 +165,7 @@ export function EmojiPicker() {
       const { columnIndex, rowIndex, style } = props
       const index = rowIndex * columnCount + columnIndex
       if (index >= filteredEmojis.length) {
-        return null
+        return <></>
       }
 
       const emoji = filteredEmojis[index]
@@ -309,18 +309,16 @@ export function EmojiPicker() {
           </div>
         )}
         {filteredEmojis.length > 0 && dimensions.width > 0 && (
-          <Grid
+          <Grid<object>
             columnCount={columnCount}
             columnWidth={columnWidth}
-            height={gridHeight}
             rowCount={rowCount}
             rowHeight={CELL_SIZE}
-            width={gridWidth}
             className="scrollbar-win11"
-            style={{ overflowX: 'hidden' }}
-          >
-            {Cell}
-          </Grid>
+            style={{ overflowX: 'hidden', height: gridHeight, width: gridWidth }}
+            cellComponent={Cell}
+            cellProps={{}}
+          />
         )}
       </div>
 

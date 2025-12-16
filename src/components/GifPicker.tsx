@@ -3,7 +3,7 @@
  * Windows 11 style GIF picker with virtualized grid for performance
  */
 import { useState, memo, useRef, useLayoutEffect, useCallback } from 'react'
-import { FixedSizeGrid as Grid } from 'react-window'
+import { Grid } from 'react-window'
 import { clsx } from 'clsx'
 import { Search, X, RefreshCw, TrendingUp } from 'lucide-react'
 import { useGifPicker } from '../hooks/useGifPicker'
@@ -197,7 +197,7 @@ export function GifPicker() {
       const gif = gifs[index]
 
       if (!gif) {
-        return null
+        return <></>
       }
 
       return <GifCell gif={gif} onSelect={handleSelect} style={style} />
@@ -221,17 +221,16 @@ export function GifPicker() {
 
     if (dimensions.width > 0 && dimensions.height > 0) {
       return (
-        <Grid
+        <Grid<object>
           columnCount={COLUMN_COUNT}
           columnWidth={columnWidth}
-          height={gridHeight}
           rowCount={rowCount}
           rowHeight={CELL_HEIGHT}
-          width={gridWidth}
           className="scrollbar-thin scrollbar-thumb-win11-border-subtle scrollbar-track-transparent"
-        >
-          {CellRenderer}
-        </Grid>
+          style={{ height: gridHeight, width: gridWidth }}
+          cellComponent={CellRenderer}
+          cellProps={{}}
+        />
       )
     }
 
