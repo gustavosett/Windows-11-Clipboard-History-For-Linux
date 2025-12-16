@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
+use uuid::Uuid;
 
 // =============================================================================
 // Configuration
@@ -478,7 +479,11 @@ impl ShortcutHandler for KdeHandler {
             }
 
             // Append New Entry
-            let uuid = "0c1f1d23-2a8d-4001-9f8f-388d0bd91a8a"; // Fixed UUID for idempotency
+            // Generate deterministic UUID v5 based on shortcut ID to ensure uniqueness per shortcut
+            // but consistency across runs (idempotency)
+            let namespace = Uuid::NAMESPACE_DNS;
+            let uuid = Uuid::new_v5(&namespace, s.id.as_bytes()).to_string();
+
             let entry = format!(
                 "\n[{0}]\nComment={1}\nEnabled=true\nName={1}\nType=SIMPLE_ACTION_DATA\n\n[{0}/Actions]\nActionsCount=1\n\n[{0}/Actions/Action0]\nCommandURL={2}\nType=COMMAND_URL\n\n[{0}/Conditions]\nComment=\nConditionsCount=0\n\n[{0}/Triggers]\nTriggersCount=1\n\n[{0}/Triggers/Trigger0]\nKey={3}\nType=SHORTCUT\nUuid={{{4}}}\n",
                 section_name, s.name, s.command, s.kde_binding, uuid
