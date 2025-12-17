@@ -1,11 +1,11 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { clsx } from 'clsx'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { useClipboardHistory } from './hooks/useClipboardHistory'
 import { HistoryItem } from './components/HistoryItem'
-import { TabBar } from './components/TabBar'
+import { TabBar, TabBarRef } from './components/TabBar'
 import { Header } from './components/Header'
 import { EmptyState } from './components/EmptyState'
 import { DragHandle } from './components/DragHandle'
@@ -84,17 +84,23 @@ function applyThemeClass(isDark: boolean) {
 }
 
 /**
- * Main Clipboard App Component - Windows 11 Clipboard History Manager
+ * Main Clipboard App Component
  */
 function ClipboardApp() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('clipboard')
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [focusedIndex, setFocusedIndex] = useState(0)
 
   const isDark = useThemeMode(settings.theme_mode)
 
   const { history, isLoading, clearHistory, deleteItem, togglePin, pasteItem } =
     useClipboardHistory()
+
+  // Refs for focus management
+  const tabBarRef = useRef<TabBarRef>(null)
+  const historyItemRefs = useRef<(HTMLDivElement | null)[]>([])
+  const contentContainerRef = useRef<HTMLDivElement>(null)
 
   // Load initial settings and set up listener for changes
   useEffect(() => {
@@ -145,9 +151,91 @@ function ClipboardApp() {
     return () => globalThis.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Use refs to store current values for the focus handler (to avoid re-registering listener)
+  const activeTabRef = useRef(activeTab)
+  const historyRef = useRef(history)
+
+  // Keep refs in sync
+  useEffect(() => {
+    activeTabRef.current = activeTab
+  }, [activeTab])
+
+  useEffect(() => {
+    historyRef.current = history
+  }, [history])
+
+  // Handle window-shown event for focus management (registered once)
+  useEffect(() => {
+    const focusFirstItem = () => {
+      // Small delay to ensure the window is fully rendered and focused
+      setTimeout(() => {
+        const currentTab = activeTabRef.current
+        const currentHistory = historyRef.current
+
+        if (currentTab === 'clipboard') {
+          // Focus the first history item if on clipboard tab
+          if (currentHistory.length > 0) {
+            setFocusedIndex(0)
+            historyItemRefs.current[0]?.focus()
+          }
+        } else {
+          // Focus the first tab button if on other tabs
+          tabBarRef.current?.focusFirstTab()
+        }
+      }, 100)
+    }
+
+    // Listen to window-shown event (emitted from Rust when window is toggled visible)
+    const unlistenWindowShown = listen('window-shown', focusFirstItem)
+
+    return () => {
+      unlistenWindowShown.then((unlisten) => unlisten())
+    }
+  }, []) // Empty dependency array - listener is registered once
+
+  // Keyboard navigation for clipboard items
+  useEffect(() => {
+    if (activeTab !== 'clipboard' || history.length === 0) return
+
+    const handleArrowKeys = (e: KeyboardEvent) => {
+      // Check if a tab button is focused - if so, don't intercept arrows
+      const activeElement = document.activeElement
+      if (activeElement?.getAttribute('role') === 'tab') return
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        const newIndex = Math.min(focusedIndex + 1, history.length - 1)
+        setFocusedIndex(newIndex)
+        historyItemRefs.current[newIndex]?.focus()
+        historyItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest' })
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        const newIndex = Math.max(focusedIndex - 1, 0)
+        setFocusedIndex(newIndex)
+        historyItemRefs.current[newIndex]?.focus()
+        historyItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest' })
+      } else if (e.key === 'Home') {
+        e.preventDefault()
+        setFocusedIndex(0)
+        historyItemRefs.current[0]?.focus()
+        historyItemRefs.current[0]?.scrollIntoView({ block: 'nearest' })
+      } else if (e.key === 'End') {
+        e.preventDefault()
+        const lastIndex = history.length - 1
+        setFocusedIndex(lastIndex)
+        historyItemRefs.current[lastIndex]?.focus()
+        historyItemRefs.current[lastIndex]?.scrollIntoView({ block: 'nearest' })
+      }
+    }
+
+    globalThis.addEventListener('keydown', handleArrowKeys)
+    return () => globalThis.removeEventListener('keydown', handleArrowKeys)
+  }, [activeTab, focusedIndex, history.length])
+
   // Handle tab change
   const handleTabChange = useCallback((tab: ActiveTab) => {
     setActiveTab(tab)
+    setFocusedIndex(0) // Reset focused index when changing tabs
   }, [])
 
   const handleMouseEnter = () => {
@@ -184,11 +272,15 @@ function ClipboardApp() {
               {history.map((item, index) => (
                 <HistoryItem
                   key={item.id}
+                  ref={(el) => {
+                    historyItemRefs.current[index] = el
+                  }}
                   item={item}
                   index={index}
                   onPaste={pasteItem}
                   onDelete={deleteItem}
                   onTogglePin={togglePin}
+                  onFocus={() => setFocusedIndex(index)}
                 />
               ))}
             </div>
@@ -226,10 +318,11 @@ function ClipboardApp() {
       <DragHandle />
 
       {/* Tab bar */}
-      <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
+      <TabBar ref={tabBarRef} activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Scrollable content area */}
       <div
+        ref={contentContainerRef}
         className={clsx(
           'flex-1',
           // Only use scrollbar for non-emoji tabs, emoji has its own virtualized scrolling
