@@ -228,7 +228,7 @@ setup_autostart() {
 Name=Clipboard History
 Comment=Windows 11-style Clipboard History Manager
 GenericName=Clipboard Manager
-Exec=win11-clipboard-history --quiet
+Exec=win11-clipboard-history
 Icon=win11-clipboard-history
 Terminal=false
 Type=Application

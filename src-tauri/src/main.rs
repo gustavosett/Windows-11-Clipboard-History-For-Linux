@@ -488,7 +488,6 @@ fn main() {
         println!("OPTIONS:");
         println!("    -h, --help       Show this help message");
         println!("    -v, --version    Show version information");
-        println!("    -q, --quiet      Start in background (for autostart)");
         println!("        --settings   Open settings window on startup");
         println!();
         println!("SHORTCUTS:");
@@ -499,10 +498,6 @@ fn main() {
 
     // Check if --settings flag is present (for first instance startup)
     let open_settings_on_start = args.iter().any(|arg| arg == "--settings");
-
-    // Check if --quiet flag is present (start in background without showing window)
-    // This is the default behavior, but the flag makes it explicit for autostart entries
-    let _start_quiet = args.iter().any(|arg| arg == "--quiet" || arg == "-q");
 
     win11_clipboard_history_lib::session::init();
 
