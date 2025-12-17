@@ -24,11 +24,29 @@ pub struct ShortcutConfig {
     pub cosmic_key: &'static str,
 }
 
+fn get_command_path() -> &'static str {
+    // First, check if binary is in PATH (production install)
+    if Utils::command_exists("win11-clipboard-history") {
+        return "win11-clipboard-history";
+    }
+
+    // Try to find the current executable path (for development)
+    if let Ok(exe_path) = env::current_exe() {
+        let path_str = exe_path.to_string_lossy().to_string();
+        // Leak the string to get a 'static lifetime
+        // This is acceptable since this is called once at startup
+        return Box::leak(path_str.into_boxed_str());
+    }
+
+    // Fallback to just the name
+    "win11-clipboard-history"
+}
+
 const SHORTCUTS: &[ShortcutConfig] = &[
     ShortcutConfig {
         id: "win11-clipboard-history",
         name: "Clipboard History",
-        command: "win11-clipboard-history",
+        command: "win11-clipboard-history", // Will be replaced at runtime
         gnome_binding: "<Super>v",
         kde_binding: "Meta+V",
         xfce_binding: "<Super>v",
@@ -38,7 +56,7 @@ const SHORTCUTS: &[ShortcutConfig] = &[
     ShortcutConfig {
         id: "win11-clipboard-history-alt",
         name: "Clipboard History (Alt)",
-        command: "win11-clipboard-history",
+        command: "win11-clipboard-history", // Will be replaced at runtime
         gnome_binding: "<Ctrl><Alt>v",
         kde_binding: "Ctrl+Alt+V",
         xfce_binding: "<Primary><Alt>v",
@@ -92,13 +110,17 @@ pub fn register_global_shortcut() {
     let handler = detect_handler();
     println!("[ShortcutManager] Detected Environment: {}", handler.name());
 
+    let command_path = get_command_path();
+    println!("[ShortcutManager] Using command path: {}", command_path);
+
     for shortcut in SHORTCUTS {
-        match handler.register(shortcut) {
-            Ok(_) => println!("[ShortcutManager] \u{2713} Registered '{}'", shortcut.name),
-            Err(e) => eprintln!(
-                "[ShortcutManager] \u{2717} Failed '{}': {}",
-                shortcut.name, e
-            ),
+        // Create a new config with the correct command path
+        let mut config = shortcut.clone();
+        config.command = command_path;
+
+        match handler.register(&config) {
+            Ok(_) => println!("[ShortcutManager] \u{2713} Registered '{}'", config.name),
+            Err(e) => eprintln!("[ShortcutManager] \u{2717} Failed '{}': {}", config.name, e),
         }
     }
 }
@@ -107,16 +129,16 @@ pub fn unregister_global_shortcut() {
     let handler = detect_handler();
     println!("[ShortcutManager] Environment: {}", handler.name());
 
+    let command_path = get_command_path();
+
     for shortcut in SHORTCUTS {
-        match handler.unregister(shortcut) {
-            Ok(_) => println!(
-                "[ShortcutManager] \u{2713} Unregistered '{}'",
-                shortcut.name
-            ),
-            Err(e) => eprintln!(
-                "[ShortcutManager] \u{2717} Failed '{}': {}",
-                shortcut.name, e
-            ),
+        // Create a new config with the correct command path
+        let mut config = shortcut.clone();
+        config.command = command_path;
+
+        match handler.unregister(&config) {
+            Ok(_) => println!("[ShortcutManager] \u{2713} Unregistered '{}'", config.name),
+            Err(e) => eprintln!("[ShortcutManager] \u{2717} Failed '{}': {}", config.name, e),
         }
     }
 }

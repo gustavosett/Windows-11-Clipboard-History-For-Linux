@@ -28,6 +28,20 @@
         "skipTaskbar": true,
         "alwaysOnTop": true,
         "focus": true
+      },
+      {
+        "title": "Settings - Clipboard History",
+        "label": "settings",
+        "width": 480,
+        "height": 520,
+        "resizable": false,
+        "decorations": true,
+        "transparent": false,
+        "visible": false,
+        "skipTaskbar": false,
+        "alwaysOnTop": false,
+        "center": true,
+        "focus": true
       }
     ],
     "security": {

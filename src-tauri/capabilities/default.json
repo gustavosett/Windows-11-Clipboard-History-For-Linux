@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["main"],
+  "description": "Capability for the main and settings windows",
+  "windows": ["main", "settings"],
   "permissions": [
     "core:default",
     "core:window:default",
