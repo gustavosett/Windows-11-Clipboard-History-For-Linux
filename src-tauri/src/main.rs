@@ -234,7 +234,51 @@ impl WindowController {
         }
 
         let _ = window.show();
+        let _ = window.set_always_on_top(true);
         let _ = window.set_focus();
+
+        let window_clone = window.clone();
+        let app_clone = app.clone();
+
+        // Delay to ensure window is visible and focused before emitting event
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            let _ = window_clone.set_always_on_top(false);
+            let _ = window_clone.set_focus();
+
+            // On X11, use xdotool for reliable focus stealing
+            #[cfg(target_os = "linux")]
+            if !is_wayland() {
+                let _ = Self::x11_force_focus_with_xdotool();
+            }
+
+            std::thread::sleep(std::time::Duration::from_millis(50));
+            let _ = window_clone.set_focus();
+            let _ = app_clone.emit("window-shown", ());
+        });
+    }
+
+    /// Use xdotool to force window focus on X11 (more reliable than Tauri's set_focus)
+    #[cfg(target_os = "linux")]
+    fn x11_force_focus_with_xdotool() -> Result<(), String> {
+        use std::process::Command;
+
+        // Search for our window by title
+        let output = Command::new("xdotool")
+            .args(["search", "--name", "Clipboard History"])
+            .output()
+            .map_err(|e| format!("xdotool search failed: {}", e))?;
+
+        let window_ids = String::from_utf8_lossy(&output.stdout);
+        if let Some(window_id) = window_ids.lines().next() {
+            Command::new("xdotool")
+                .args(["windowactivate", "--sync", window_id])
+                .output()
+                .map_err(|e| format!("windowactivate failed: {}", e))?;
+            Ok(())
+        } else {
+            Err("Window not found".to_string())
+        }
     }
 
     fn position_for_wayland(window: &WebviewWindow, state: &State<AppState>) {
@@ -256,9 +300,8 @@ impl WindowController {
         let (cursor_x, cursor_y) = match Self::get_cursor_position(window) {
             Some(pos) => pos,
             None => {
+                // Fallback: center the window if we can't get cursor position
                 let _ = window.center();
-                let _ = window.show();
-                let _ = window.set_focus();
                 return;
             }
         };
