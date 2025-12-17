@@ -263,7 +263,7 @@ install:
 	@echo "[Desktop Entry]" > $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
 	@echo "Name=Clipboard History" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
 	@echo "Comment=Windows 11-style Clipboard History Manager" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo "Exec=$(BINDIR)/$(APP_NAME)" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
+	@echo "Exec=$(BINDIR)/$(APP_NAME) --quiet" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
 	@echo "Icon=$(APP_NAME)" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
 	@echo "Terminal=false" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
 	@echo "Type=Application" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
