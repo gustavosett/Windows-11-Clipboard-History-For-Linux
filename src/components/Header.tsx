@@ -27,12 +27,14 @@ export function Header({ onClearHistory, itemCount }: HeaderProps) {
         <button
           onClick={onClearHistory}
           disabled={itemCount === 0}
+          tabIndex={-1}
           className={clsx(
             'no-drag',
             'p-2 rounded-md transition-colors',
             'dark:text-win11-text-secondary text-win11Light-text-secondary',
             'hover:dark:bg-win11-bg-tertiary hover:bg-win11Light-bg-tertiary',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
           )}
           title="Clear all"
         >
