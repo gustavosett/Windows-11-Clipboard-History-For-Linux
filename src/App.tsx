@@ -18,7 +18,7 @@ import { invoke } from '@tauri-apps/api/core'
  */
 function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('clipboard')
-  useDarkMode()
+  const isDark = useDarkMode()
 
   const { history, isLoading, clearHistory, deleteItem, togglePin, pasteItem } =
     useClipboardHistory()
@@ -105,9 +105,9 @@ function App() {
     <div
       className={clsx(
         'h-screen w-screen overflow-hidden flex flex-col rounded-win11-lg',
-        'glass-effect-light dark:glass-effect',
-        'bg-win11Light-acrylic-bg dark:bg-win11-acrylic-bg',
-        'text-win11Light-text-primary dark:text-win11-text-primary'
+        isDark ? 'glass-effect' : 'glass-effect-light',
+        isDark ? 'bg-win11-acrylic-bg' : 'bg-win11Light-acrylic-bg',
+        isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
       )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

@@ -56,7 +56,7 @@ body {
 @layer components {
   .scrollbar-win11 {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
   }
 
   .scrollbar-win11::-webkit-scrollbar {
@@ -68,27 +68,24 @@ body {
   }
 
   .scrollbar-win11::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 3px;
   }
 
   .scrollbar-win11::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.35);
+    background: rgba(0, 0, 0, 0.35);
   }
 
-  /* Light mode scrollbar */
-  @media (prefers-color-scheme: light) {
-    .scrollbar-win11 {
-      scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-    }
+  :root.dark .scrollbar-win11 {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
 
-    .scrollbar-win11::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.2);
-    }
+  :root.dark .scrollbar-win11::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+  }
 
-    .scrollbar-win11::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 0, 0, 0.35);
-    }
+  :root.dark .scrollbar-win11::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
   }
 
   .scrollbar-hide {
