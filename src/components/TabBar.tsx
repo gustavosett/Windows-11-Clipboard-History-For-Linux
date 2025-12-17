@@ -1,3 +1,4 @@
+import { forwardRef, useRef, useImperativeHandle, useCallback } from 'react'
 import { clsx } from 'clsx'
 import { ClipboardList, Smile, Image } from 'lucide-react'
 import type { ActiveTab } from '../types/clipboard'
@@ -7,29 +8,75 @@ interface TabBarProps {
   onTabChange: (tab: ActiveTab) => void
 }
 
-/**
- * Windows 11 style tab bar for switching between Clipboard, GIFs, and Emoji
- */
-export function TabBar({ activeTab, onTabChange }: TabBarProps) {
-  const tabs: { id: ActiveTab; label: string; icon: typeof ClipboardList }[] = [
-    { id: 'clipboard', label: 'Clipboard', icon: ClipboardList },
-    { id: 'emoji', label: 'Emoji', icon: Smile },
-    { id: 'gifs', label: 'GIFs', icon: Image },
-  ]
+export interface TabBarRef {
+  focusFirstTab: () => void
+}
+
+const tabs: { id: ActiveTab; label: string; icon: typeof ClipboardList }[] = [
+  { id: 'clipboard', label: 'Clipboard', icon: ClipboardList },
+  { id: 'emoji', label: 'Emoji', icon: Smile },
+  { id: 'gifs', label: 'GIFs', icon: Image },
+]
+
+export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
+  { activeTab, onTabChange },
+  ref
+) {
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  useImperativeHandle(ref, () => ({
+    focusFirstTab: () => {
+      tabRefs.current[0]?.focus()
+    },
+  }))
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent, index: number) => {
+      let newIndex = index
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        newIndex = (index + 1) % tabs.length
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        newIndex = (index - 1 + tabs.length) % tabs.length
+      } else if (e.key === 'Home') {
+        e.preventDefault()
+        newIndex = 0
+      } else if (e.key === 'End') {
+        e.preventDefault()
+        newIndex = tabs.length - 1
+      }
+
+      if (newIndex !== index) {
+        tabRefs.current[newIndex]?.focus()
+        onTabChange(tabs[newIndex].id)
+      }
+    },
+    [onTabChange]
+  )
 
   return (
     <div
       className="flex items-center gap-1 p-2 px-4 border-b dark:border-win11-border-subtle border-win11Light-border"
       data-tauri-drag-region
+      role="tablist"
     >
-      {tabs.map((tab) => {
+      {tabs.map((tab, index) => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
 
         return (
           <button
             key={tab.id}
+            ref={(el) => {
+              tabRefs.current[index] = el
+            }}
             onClick={() => onTabChange(tab.id)}
+            onKeyDown={(e) => handleKeyDown(e, index)}
+            role="tab"
+            aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
             className={clsx(
               'no-drag',
               'flex items-center justify-center gap-2 px-4 py-2 rounded-md',
@@ -53,4 +100,4 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
       })}
     </div>
   )
-}
+})
