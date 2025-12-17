@@ -233,6 +233,11 @@ impl WindowController {
             Self::position_for_non_wayland(window);
         }
 
+        #[cfg(target_os = "linux")]
+        if is_wayland() {
+            Self::configure_wayland_focus(window);
+        }
+
         let _ = window.show();
         let _ = window.set_always_on_top(true);
         let _ = window.set_focus();
@@ -240,16 +245,16 @@ impl WindowController {
         let window_clone = window.clone();
         let app_clone = app.clone();
 
-        // Delay to ensure window is visible and focused before emitting event
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_millis(100));
             let _ = window_clone.set_always_on_top(false);
             let _ = window_clone.set_focus();
 
-            // On X11, use xdotool for reliable focus stealing
             #[cfg(target_os = "linux")]
-            if !is_wayland() {
-                let _ = Self::x11_force_focus_with_xdotool();
+            if is_wayland() {
+                Self::wayland_activate_window(&window_clone);
+            } else {
+                let _ = Self::x11_activate_window();
             }
 
             std::thread::sleep(std::time::Duration::from_millis(50));
@@ -258,12 +263,50 @@ impl WindowController {
         });
     }
 
-    /// Use xdotool to force window focus on X11 (more reliable than Tauri's set_focus)
+    /// Configure GTK window properties for Wayland focus
     #[cfg(target_os = "linux")]
-    fn x11_force_focus_with_xdotool() -> Result<(), String> {
+    fn configure_wayland_focus(window: &WebviewWindow) {
+        use gtk::gdk;
+        use gtk::prelude::*;
+
+        if let Ok(gtk_window) = window.gtk_window() {
+            gtk_window.set_startup_id(&Self::generate_startup_id());
+            gtk_window.set_type_hint(gdk::WindowTypeHint::Dialog);
+            gtk_window.set_focus_on_map(true);
+            gtk_window.set_accept_focus(true);
+        }
+    }
+
+    /// Activate window on Wayland using GTK present with fresh startup ID
+    #[cfg(target_os = "linux")]
+    fn wayland_activate_window(window: &WebviewWindow) {
+        use gtk::prelude::*;
+
+        if let Ok(gtk_window) = window.gtk_window() {
+            gtk_window.set_startup_id(&Self::generate_startup_id());
+            gtk_window.present();
+
+            if let Some(child) = gtk_window.child() {
+                child.grab_focus();
+            }
+        }
+    }
+
+    /// Generate unique startup ID to get fresh activation token from compositor
+    #[cfg(target_os = "linux")]
+    fn generate_startup_id() -> String {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_micros();
+        format!("clipboard_{}_TIME{}", std::process::id(), timestamp)
+    }
+
+    /// Activate window on X11 using xdotool
+    #[cfg(target_os = "linux")]
+    fn x11_activate_window() -> Result<(), String> {
         use std::process::Command;
 
-        // Search for our window by title
         let output = Command::new("xdotool")
             .args(["search", "--name", "Clipboard History"])
             .output()

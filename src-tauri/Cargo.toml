@@ -55,6 +55,7 @@ tauri-plugin-single-instance = "2"
 enigo = "0.6"
 x11rb = { version = "0.13", features = ["allow-unsafe-code", "xtest"] }
 libc = "0.2"
+gtk = "0.18"
 
 [features]
 default = ["custom-protocol"]
