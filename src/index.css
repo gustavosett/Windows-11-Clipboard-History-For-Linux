@@ -112,8 +112,8 @@ body {
   .glass-effect {
     background: linear-gradient(
       135deg,
-      rgba(20, 20, 20, var(--win11-dark-bg-alpha-start, 0.7)) 0%,
-      rgba(20, 20, 20, var(--win11-dark-bg-alpha-end, 0.67)) 100%
+      rgba(40, 40, 40, var(--win11-dark-bg-alpha-start, 0.7)) 0%,
+      rgba(40, 40, 40, var(--win11-dark-bg-alpha-end, 0.67)) 100%
     );
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.25),
@@ -123,8 +123,8 @@ body {
   .glass-effect-light {
     background: linear-gradient(
       135deg,
-      rgba(245, 245, 245, var(--win11-light-bg-alpha-start, 0.7)) 0%,
-      rgba(245, 245, 245, var(--win11-light-bg-alpha-end, 0.65)) 100%
+      rgba(255, 255, 255, var(--win11-light-bg-alpha-start, 0.7)) 0%,
+      rgba(255, 255, 255, var(--win11-light-bg-alpha-end, 0.65)) 100%
     );
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.15),
