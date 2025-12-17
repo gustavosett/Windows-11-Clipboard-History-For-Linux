@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
  */
 export function useDarkMode(): boolean {
   const [isDark, setIsDark] = useState(() => {
-    if (globalThis.window !== undefined) {
+    if (globalThis.matchMedia) {
       return globalThis.matchMedia('(prefers-color-scheme: dark)').matches
     }
     return true // Default to dark mode
