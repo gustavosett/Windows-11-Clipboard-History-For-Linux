@@ -18,6 +18,15 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* CSS Custom Properties for dynamic background opacity */
+  /* These values represent the actual alpha channel (0.0 = transparent, 1.0 = opaque) */
+  --win11-dark-bg-alpha-start: 0.7;
+  --win11-dark-bg-alpha-end: 0.67;
+
+  /* Light mode opacity values */
+  --win11-light-bg-alpha-start: 0.7;
+  --win11-light-bg-alpha-end: 0.65;
 }
 
 /* Reset for Tauri */
@@ -103,8 +112,8 @@ body {
   .glass-effect {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0.02) 100%
+      rgba(20, 20, 20, var(--win11-dark-bg-alpha-start, 0.7)) 0%,
+      rgba(20, 20, 20, var(--win11-dark-bg-alpha-end, 0.67)) 100%
     );
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.25),
@@ -114,8 +123,8 @@ body {
   .glass-effect-light {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.85) 0%,
-      rgba(255, 255, 255, 0.75) 100%
+      rgba(245, 245, 245, var(--win11-light-bg-alpha-start, 0.7)) 0%,
+      rgba(245, 245, 245, var(--win11-light-bg-alpha-end, 0.65)) 100%
     );
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.15),
