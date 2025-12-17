@@ -18,6 +18,7 @@ use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
 use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
 use win11_clipboard_history_lib::input_simulator::simulate_paste_keystroke;
 use win11_clipboard_history_lib::session::is_wayland;
+use win11_clipboard_history_lib::user_settings::{UserSettings, UserSettingsManager};
 
 /// Application state shared across all handlers
 pub struct AppState {
@@ -57,6 +58,33 @@ fn get_recent_emojis(state: State<AppState>) -> Vec<EmojiUsage> {
 #[tauri::command]
 fn set_mouse_state(state: State<AppState>, inside: bool) {
     state.is_mouse_inside.store(inside, Ordering::Relaxed);
+}
+
+// --- User Settings Commands ---
+
+#[tauri::command]
+fn get_user_settings() -> Result<UserSettings, String> {
+    let manager = UserSettingsManager::new();
+    Ok(manager.load())
+}
+
+#[tauri::command]
+fn set_user_settings(app: AppHandle, new_settings: UserSettings) -> Result<(), String> {
+    let manager = UserSettingsManager::new();
+    manager.save(&new_settings)?;
+
+    // Emit event to notify all windows that settings have changed
+    app.emit("app-settings-changed", &new_settings)
+        .map_err(|e| format!("Failed to emit settings changed event: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn is_settings_window_visible(app: AppHandle) -> bool {
+    app.get_webview_window("settings")
+        .map(|w| w.is_visible().unwrap_or(false))
+        .unwrap_or(false)
 }
 
 #[tauri::command]
@@ -326,6 +354,53 @@ impl WindowController {
     }
 }
 
+// --- Settings Window Controller ---
+
+struct SettingsController;
+
+impl SettingsController {
+    /// Shows the settings window, recreating it if somehow destroyed
+    pub fn show(app: &AppHandle) {
+        use tauri::{WebviewUrl, WebviewWindowBuilder};
+
+        match app.get_webview_window("settings") {
+            Some(window) => {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+            None => {
+                // Fallback: recreate the window if it was somehow destroyed
+                eprintln!(
+                    "[SettingsController] Settings window missing, recreating as fallback..."
+                );
+
+                match WebviewWindowBuilder::new(
+                    app,
+                    "settings",
+                    WebviewUrl::App("index.html".into()),
+                )
+                .title("Settings - Clipboard History")
+                .inner_size(480.0, 520.0)
+                .resizable(false)
+                .decorations(true)
+                .transparent(false)
+                .visible(true)
+                .skip_taskbar(false)
+                .always_on_top(false)
+                .center()
+                .focused(true)
+                .build()
+                {
+                    Ok(_) => {
+                        println!("[SettingsController] Settings window recreated successfully")
+                    }
+                    Err(e) => eprintln!("[SettingsController] Failed to recreate window: {}", e),
+                }
+            }
+        }
+    }
+}
+
 // --- Window Event Helper ---
 
 fn handle_window_moved_for_wayland(
@@ -396,10 +471,38 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    if args.len() > 1 && (args[1] == "--version" || args[1] == "-v") {
+
+    // Handle --version / -v
+    if args.iter().any(|arg| arg == "--version" || arg == "-v") {
         println!("win11-clipboard-history {}", VERSION);
         return;
     }
+
+    // Handle --help / -h
+    if args.iter().any(|arg| arg == "--help" || arg == "-h") {
+        println!("win11-clipboard-history {}", VERSION);
+        println!();
+        println!("USAGE:");
+        println!("    win11-clipboard-history [OPTIONS]");
+        println!();
+        println!("OPTIONS:");
+        println!("    -h, --help       Show this help message");
+        println!("    -v, --version    Show version information");
+        println!("    -q, --quiet      Start in background (for autostart)");
+        println!("        --settings   Open settings window on startup");
+        println!();
+        println!("SHORTCUTS:");
+        println!("    Super+V          Open clipboard history");
+        println!("    Ctrl+Alt+V       Alternative shortcut");
+        return;
+    }
+
+    // Check if --settings flag is present (for first instance startup)
+    let open_settings_on_start = args.iter().any(|arg| arg == "--settings");
+
+    // Check if --quiet flag is present (start in background without showing window)
+    // This is the default behavior, but the flag makes it explicit for autostart entries
+    let _start_quiet = args.iter().any(|arg| arg == "--quiet" || arg == "-q");
 
     win11_clipboard_history_lib::session::init();
 
@@ -418,9 +521,17 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         // Single Instance Plugin: When user triggers shortcut and app is already running,
         // the OS launches a new instance which signals the existing one to toggle
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            println!("[SingleInstance] Secondary instance detected, toggling window...");
-            WindowController::toggle(app);
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // Check if --settings flag is present
+            if argv.iter().any(|arg| arg == "--settings") {
+                println!(
+                    "[SingleInstance] Secondary instance with --settings flag, opening settings..."
+                );
+                SettingsController::show(app);
+            } else {
+                println!("[SingleInstance] Secondary instance detected, toggling window...");
+                WindowController::toggle(app);
+            }
         }))
         .manage(AppState {
             clipboard_manager: clipboard_manager.clone(),
@@ -431,9 +542,10 @@ fn main() {
         .setup(move |app| {
             let app_handle = app.handle().clone();
 
-            let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show Clipboard", true, None::<&str>)?;
+            let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &quit])?;
+            let menu = Menu::with_items(app, &[&show, &settings, &quit])?;
 
             let icon = Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap();
 
@@ -443,6 +555,7 @@ fn main() {
                 .on_menu_event(move |app, event| match event.id.as_ref() {
                     "quit" => app.exit(0),
                     "show" => WindowController::toggle(app),
+                    "settings" => SettingsController::show(app),
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
@@ -456,15 +569,32 @@ fn main() {
                 })
                 .build(app)?;
 
+            // Verify that settings window was created from config
+            if app.get_webview_window("settings").is_none() {
+                eprintln!("[Setup] FATAL: Settings window missing from config");
+            } else {
+                println!("[Setup] Settings window created successfully from config");
+            }
+
             // Window Event Handlers (Focus & Move)
             let main_window = app.get_webview_window("main").unwrap();
             let w_clone = main_window.clone();
+            let app_handle_for_event = app_handle.clone();
 
             main_window.on_window_event(move |event| match event {
                 WindowEvent::Focused(false) => {
                     let state = w_clone.state::<AppState>();
                     if state.is_mouse_inside.load(Ordering::Relaxed) {
                         return;
+                    }
+
+                    // Don't hide if settings window is visible (for live preview)
+                    if let Some(settings_window) =
+                        app_handle_for_event.get_webview_window("settings")
+                    {
+                        if settings_window.is_visible().unwrap_or(false) {
+                            return;
+                        }
                     }
 
                     if is_wayland() {
@@ -492,6 +622,11 @@ fn main() {
                 win11_clipboard_history_lib::linux_shortcut_manager::register_global_shortcut();
             });
 
+            // If --settings flag was passed on first startup, open the settings window
+            if open_settings_on_start {
+                SettingsController::show(&app_handle);
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -505,6 +640,9 @@ fn main() {
             paste_gif_from_url,
             finish_paste,
             set_mouse_state,
+            get_user_settings,
+            set_user_settings,
+            is_settings_window_visible,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
