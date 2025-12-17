@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, forwardRef } from 'react'
 import { clsx } from 'clsx'
 import { Pin, X, Image as ImageIcon, Type } from 'lucide-react'
 import type { ClipboardItem } from '../types/clipboard'
@@ -8,13 +8,14 @@ interface HistoryItemProps {
   onPaste: (id: string) => void
   onDelete: (id: string) => void
   onTogglePin: (id: string) => void
+  onFocus?: () => void
   index: number
 }
 
-/**
- * A single clipboard history card with Windows 11 styling
- */
-export function HistoryItem({ item, onPaste, onDelete, onTogglePin, index }: HistoryItemProps) {
+export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function HistoryItem(
+  { item, onPaste, onDelete, onTogglePin, onFocus, index },
+  ref
+) {
   const isText = item.content.type === 'Text'
 
   // Format timestamp
@@ -56,6 +57,7 @@ export function HistoryItem({ item, onPaste, onDelete, onTogglePin, index }: His
 
   return (
     <div
+      ref={ref}
       className={clsx(
         // Base styles
         'group relative rounded-win11 p-3 cursor-pointer',
@@ -69,9 +71,12 @@ export function HistoryItem({ item, onPaste, onDelete, onTogglePin, index }: His
         'bg-win11Light-bg-card hover:bg-win11Light-bg-card-hover',
         'border border-win11Light-border',
         // Pinned indicator
-        item.pinned && 'ring-1 ring-win11-bg-accent'
+        item.pinned && 'ring-1 ring-win11-bg-accent',
+        // Focus styles
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
       )}
       onClick={handleClick}
+      onFocus={onFocus}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -168,4 +173,4 @@ export function HistoryItem({ item, onPaste, onDelete, onTogglePin, index }: His
       )}
     </div>
   )
-}
+})
