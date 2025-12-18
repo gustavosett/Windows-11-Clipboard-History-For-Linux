@@ -233,10 +233,10 @@ impl WindowController {
             Self::position_for_non_wayland(window);
         }
 
-        #[cfg(target_os = "linux")]
-        if is_wayland() {
-            Self::configure_wayland_focus(window);
-        }
+        // #[cfg(target_os = "linux")]
+        // if is_wayland() {
+        //     Self::configure_wayland_focus(window); TODO: use this when wayland focus is more stable
+        // }
 
         let _ = window.show();
         let _ = window.set_always_on_top(true);
@@ -263,19 +263,19 @@ impl WindowController {
         });
     }
 
-    /// Configure GTK window properties for Wayland focus
-    #[cfg(target_os = "linux")]
-    fn configure_wayland_focus(window: &WebviewWindow) {
-        use gtk::gdk;
-        use gtk::prelude::*;
+    // /// Configure GTK window properties for Wayland focus
+    // #[cfg(target_os = "linux")] # TODO: use this when wayland focus is more stable
+    // fn configure_wayland_focus(window: &WebviewWindow) {
+    //     use gtk::gdk;
+    //     use gtk::prelude::*;
 
-        if let Ok(gtk_window) = window.gtk_window() {
-            gtk_window.set_startup_id(&Self::generate_startup_id());
-            gtk_window.set_type_hint(gdk::WindowTypeHint::Dialog);
-            gtk_window.set_focus_on_map(true);
-            gtk_window.set_accept_focus(true);
-        }
-    }
+    //     if let Ok(gtk_window) = window.gtk_window() {
+    //         gtk_window.set_startup_id(&Self::generate_startup_id());
+    //         gtk_window.set_type_hint(gdk::WindowTypeHint::Dialog);
+    //         gtk_window.set_focus_on_map(true);
+    //         gtk_window.set_accept_focus(true);
+    //     }
+    // }
 
     /// Activate window on Wayland using GTK present with fresh startup ID
     #[cfg(target_os = "linux")]
