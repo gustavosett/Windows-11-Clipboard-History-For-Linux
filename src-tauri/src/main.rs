@@ -15,9 +15,9 @@ use tauri::{
 use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardManager};
 use win11_clipboard_history_lib::config_manager::{resolve_window_position, ConfigManager};
 use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
-use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
 #[cfg(target_os = "linux")]
 use win11_clipboard_history_lib::focus_manager::x11_robust_activate;
+use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
 use win11_clipboard_history_lib::input_simulator::simulate_paste_keystroke;
 use win11_clipboard_history_lib::session::is_wayland;
 use win11_clipboard_history_lib::user_settings::{UserSettings, UserSettingsManager};
@@ -237,7 +237,7 @@ impl WindowController {
 
         #[cfg(target_os = "linux")]
         let is_wayland_session = is_wayland();
-        
+
         #[cfg(not(target_os = "linux"))]
         let is_wayland_session = false;
 
@@ -248,7 +248,7 @@ impl WindowController {
             let _ = window.set_focus();
         } else {
             // X11: Nasce como janela normal.
-            // X11 born as normal window. 
+            // X11 born as normal window.
             // We do NOT activate always_on_top to avoid focus blocking and glitch.
             let _ = window.show();
         }
@@ -264,10 +264,10 @@ impl WindowController {
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 let _ = window_clone.set_always_on_top(false);
                 let _ = window_clone.set_focus();
-                
+
                 std::thread::sleep(std::time::Duration::from_millis(50));
                 Self::wayland_activate_window(&window_clone);
-                
+
                 std::thread::sleep(std::time::Duration::from_millis(50));
                 let _ = window_clone.set_focus();
             } else {

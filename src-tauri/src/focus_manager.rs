@@ -11,9 +11,7 @@ use std::time::{Duration, Instant};
 #[cfg(target_os = "linux")]
 use x11rb::connection::Connection;
 #[cfg(target_os = "linux")]
-use x11rb::protocol::xproto::{
-    AtomEnum, ClientMessageEvent, ConnectionExt, EventMask, InputFocus,
-};
+use x11rb::protocol::xproto::{AtomEnum, ClientMessageEvent, ConnectionExt, EventMask, InputFocus};
 
 /// Time to wait after restoring focus before allowing the paste to proceed
 #[cfg(target_os = "linux")]
@@ -110,8 +108,8 @@ const WINDOW_MAP_POLL_INTERVAL: Duration = Duration::from_millis(10);
 /// * `Err(String)` if there was an error
 #[cfg(target_os = "linux")]
 pub fn x11_activate_window_by_id(window_id: u32) -> Result<(), String> {
-    let (conn, screen_num) = x11rb::connect(None)
-        .map_err(|e| format!("X11 connect failed: {}", e))?;
+    let (conn, screen_num) =
+        x11rb::connect(None).map_err(|e| format!("X11 connect failed: {}", e))?;
 
     let screen = conn
         .setup()
@@ -151,9 +149,13 @@ pub fn x11_activate_window_by_id(window_id: u32) -> Result<(), String> {
     )
     .map_err(|e| format!("Failed to send event: {}", e))?;
 
-    conn.flush().map_err(|e| format!("Failed to flush: {}", e))?;
+    conn.flush()
+        .map_err(|e| format!("Failed to flush: {}", e))?;
 
-    eprintln!("[FocusManager] Sent _NET_ACTIVE_WINDOW for window {}", window_id);
+    eprintln!(
+        "[FocusManager] Sent _NET_ACTIVE_WINDOW for window {}",
+        window_id
+    );
     Ok(())
 }
 
@@ -170,16 +172,20 @@ pub fn x11_activate_window_by_id(window_id: u32) -> Result<(), String> {
 #[cfg(target_os = "linux")]
 pub fn wait_for_window_by_title(title: &str, timeout: Duration) -> Option<u32> {
     let start = Instant::now();
-    
+
     while start.elapsed() < timeout {
         if let Some(window_id) = find_window_by_title(title) {
-            eprintln!("[FocusManager] Found window '{}' with ID {} after {:?}", 
-                title, window_id, start.elapsed());
+            eprintln!(
+                "[FocusManager] Found window '{}' with ID {} after {:?}",
+                title,
+                window_id,
+                start.elapsed()
+            );
             return Some(window_id);
         }
         thread::sleep(WINDOW_MAP_POLL_INTERVAL);
     }
-    
+
     eprintln!("[FocusManager] Timeout waiting for window '{}'", title);
     None
 }
@@ -284,16 +290,11 @@ pub fn x11_activate_window_by_title(title: &str) -> Result<(), String> {
 /// Use this as a fallback if _NET_ACTIVE_WINDOW doesn't work.
 #[cfg(target_os = "linux")]
 pub fn x11_force_input_focus(window_id: u32) -> Result<(), String> {
-    let (conn, _) = x11rb::connect(None)
-        .map_err(|e| format!("X11 connect failed: {}", e))?;
+    let (conn, _) = x11rb::connect(None).map_err(|e| format!("X11 connect failed: {}", e))?;
 
     // Set input focus with PointerRoot revert mode
-    conn.set_input_focus(
-        InputFocus::POINTER_ROOT,
-        window_id,
-        x11rb::CURRENT_TIME,
-    )
-    .map_err(|e| format!("set_input_focus failed: {}", e))?;
+    conn.set_input_focus(InputFocus::POINTER_ROOT, window_id, x11rb::CURRENT_TIME)
+        .map_err(|e| format!("set_input_focus failed: {}", e))?;
 
     conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
 
@@ -311,7 +312,10 @@ pub fn x11_robust_activate(title: &str) -> Result<(), String> {
 
     // Step 2: Try EWMH _NET_ACTIVE_WINDOW (preferred, WM-friendly)
     if let Err(e) = x11_activate_window_by_id(window_id) {
-        eprintln!("[FocusManager] EWMH activation failed: {}, trying fallback", e);
+        eprintln!(
+            "[FocusManager] EWMH activation failed: {}, trying fallback",
+            e
+        );
     }
 
     // Step 3: Small delay for WM to process

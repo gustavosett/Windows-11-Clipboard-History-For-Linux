@@ -19,7 +19,7 @@ pub use emoji_manager::{EmojiManager, EmojiUsage};
 pub use focus_manager::{restore_focused_window, save_focused_window};
 
 #[cfg(target_os = "linux")]
-pub use focus_manager::{x11_robust_activate, x11_activate_window_by_title};
+pub use focus_manager::{x11_activate_window_by_title, x11_robust_activate};
 pub use gif_manager::{paste_gif_to_clipboard, paste_gif_to_clipboard_with_uri};
 pub use session::{get_session_type, is_wayland, is_x11, SessionType};
 pub use user_settings::{UserSettings, UserSettingsManager};
