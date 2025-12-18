@@ -12,10 +12,10 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
     eprintln!("[SimulatePaste] Sending Ctrl+V...");
 
     const X11_STRATEGIES: &[PasteStrategy] = &[
-        ("XTest", simulate_paste_xtest),
         ("xdotool", simulate_paste_xdotool),
-        ("enigo", simulate_paste_enigo),
         ("uinput", simulate_paste_uinput),
+        ("XTest", simulate_paste_xtest),
+        ("enigo", simulate_paste_enigo),
     ];
 
     const NON_X11_STRATEGIES: &[PasteStrategy] = &[("uinput", simulate_paste_uinput)];

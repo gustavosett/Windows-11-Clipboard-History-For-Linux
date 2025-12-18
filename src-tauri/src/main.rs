@@ -16,6 +16,8 @@ use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardMan
 use win11_clipboard_history_lib::config_manager::{resolve_window_position, ConfigManager};
 use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
 use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
+#[cfg(target_os = "linux")]
+use win11_clipboard_history_lib::focus_manager::x11_robust_activate;
 use win11_clipboard_history_lib::input_simulator::simulate_paste_keystroke;
 use win11_clipboard_history_lib::session::is_wayland;
 use win11_clipboard_history_lib::user_settings::{UserSettings, UserSettingsManager};
@@ -233,32 +235,52 @@ impl WindowController {
             Self::position_for_non_wayland(window);
         }
 
-        // #[cfg(target_os = "linux")]
-        // if is_wayland() {
-        //     Self::configure_wayland_focus(window); TODO: use this when wayland focus is more stable
-        // }
+        #[cfg(target_os = "linux")]
+        let is_wayland_session = is_wayland();
+        
+        #[cfg(not(target_os = "linux"))]
+        let is_wayland_session = false;
 
-        let _ = window.show();
-        let _ = window.set_always_on_top(true);
-        let _ = window.set_focus();
+        if is_wayland_session {
+            // Wayland needs to be born "On Top" to be visible
+            let _ = window.show();
+            let _ = window.set_always_on_top(true);
+            let _ = window.set_focus();
+        } else {
+            // X11: Nasce como janela normal.
+            // X11 born as normal window. 
+            // We do NOT activate always_on_top to avoid focus blocking and glitch.
+            let _ = window.show();
+        }
 
         let window_clone = window.clone();
         let app_clone = app.clone();
 
         std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(100));
-            let _ = window_clone.set_always_on_top(false);
-            let _ = window_clone.set_focus();
-
+            // For Wayland, we still need a small delay for the compositor
+            // For X11, we use polling-based wait instead of fixed sleep
             #[cfg(target_os = "linux")]
-            if is_wayland() {
+            if is_wayland_session {
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                let _ = window_clone.set_always_on_top(false);
+                let _ = window_clone.set_focus();
+                
+                std::thread::sleep(std::time::Duration::from_millis(50));
                 Self::wayland_activate_window(&window_clone);
+                
+                std::thread::sleep(std::time::Duration::from_millis(50));
+                let _ = window_clone.set_focus();
             } else {
-                let _ = Self::x11_activate_window();
+                // Use EWMH _NET_ACTIVE_WINDOW protocol with polling instead of fixed sleep.
+                // This waits for the window to actually appear in X11's client list
+                // before attempting activation, solving the race condition.
+                if let Err(e) = x11_robust_activate("Clipboard History") {
+                    eprintln!("[WindowController] X11 activation failed: {}", e);
+                    // Fallback: try xdotool as last resort
+                    let _ = Self::x11_activate_window_xdotool();
+                }
             }
 
-            std::thread::sleep(std::time::Duration::from_millis(50));
-            let _ = window_clone.set_focus();
             let _ = app_clone.emit("window-shown", ());
         });
     }
@@ -302,9 +324,9 @@ impl WindowController {
         format!("clipboard_{}_TIME{}", std::process::id(), timestamp)
     }
 
-    /// Activate window on X11 using xdotool
+    /// Activate window on X11 using xdotool (fallback method)
     #[cfg(target_os = "linux")]
-    fn x11_activate_window() -> Result<(), String> {
+    fn x11_activate_window_xdotool() -> Result<(), String> {
         use std::process::Command;
 
         let output = Command::new("xdotool")
