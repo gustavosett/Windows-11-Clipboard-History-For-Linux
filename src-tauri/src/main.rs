@@ -263,12 +263,6 @@ impl WindowController {
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 let _ = window_clone.set_always_on_top(false);
                 let _ = window_clone.set_focus();
-
-                std::thread::sleep(std::time::Duration::from_millis(50));
-                Self::wayland_activate_window(&window_clone);
-
-                std::thread::sleep(std::time::Duration::from_millis(50));
-                let _ = window_clone.set_focus();
             } else {
                 // Use EWMH _NET_ACTIVE_WINDOW protocol with polling instead of fixed sleep.
                 // This waits for the window to actually appear in X11's client list
@@ -282,45 +276,6 @@ impl WindowController {
 
             let _ = app_clone.emit("window-shown", ());
         });
-    }
-
-    // /// Configure GTK window properties for Wayland focus
-    // #[cfg(target_os = "linux")] # TODO: use this when wayland focus is more stable
-    // fn configure_wayland_focus(window: &WebviewWindow) {
-    //     use gtk::gdk;
-    //     use gtk::prelude::*;
-
-    //     if let Ok(gtk_window) = window.gtk_window() {
-    //         gtk_window.set_startup_id(&Self::generate_startup_id());
-    //         gtk_window.set_type_hint(gdk::WindowTypeHint::Dialog);
-    //         gtk_window.set_focus_on_map(true);
-    //         gtk_window.set_accept_focus(true);
-    //     }
-    // }
-
-    /// Activate window on Wayland using GTK present with fresh startup ID
-    #[cfg(target_os = "linux")]
-    fn wayland_activate_window(window: &WebviewWindow) {
-        use gtk::prelude::*;
-
-        if let Ok(gtk_window) = window.gtk_window() {
-            gtk_window.set_startup_id(&Self::generate_startup_id());
-            gtk_window.present();
-
-            if let Some(child) = gtk_window.child() {
-                child.grab_focus();
-            }
-        }
-    }
-
-    /// Generate unique startup ID to get fresh activation token from compositor
-    #[cfg(target_os = "linux")]
-    fn generate_startup_id() -> String {
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_micros();
-        format!("clipboard_{}_TIME{}", std::process::id(), timestamp)
     }
 
     /// Activate window on X11 using xdotool (fallback method)
