@@ -247,7 +247,6 @@ impl WindowController {
             let _ = window.set_always_on_top(true);
             let _ = window.set_focus();
         } else {
-            // X11: Nasce como janela normal.
             // X11 born as normal window.
             // We do NOT activate always_on_top to avoid focus blocking and glitch.
             let _ = window.show();
