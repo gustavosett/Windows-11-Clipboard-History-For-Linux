@@ -148,6 +148,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
                 : 'dark:text-win11-text-tertiary text-win11Light-text-secondary'
             )}
             title={item.pinned ? 'Unpin' : 'Pin'}
+            tabIndex={-1}
           >
             <Pin className="w-4 h-4" fill={item.pinned ? 'currentColor' : 'none'} />
           </button>
@@ -161,6 +162,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
               'hover:text-win11-error hover:dark:bg-win11-bg-tertiary hover:bg-win11Light-bg-tertiary'
             )}
             title="Delete"
+            tabIndex={-1}
           >
             <X className="w-4 h-4" />
           </button>
@@ -169,7 +171,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
 
       {/* Pinned badge */}
       {item.pinned && (
-        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-win11-bg-accent" />
+        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-win11-bg-accent" tabIndex={-1} />
       )}
     </div>
   )
