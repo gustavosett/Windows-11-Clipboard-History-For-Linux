@@ -197,7 +197,7 @@ export function EmojiPicker() {
 
   // Reset focus indices when emojis change
   useEffect(() => {
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRecentFocusedIndex(0)
     setMainFocusedIndex(0)
   }, [searchQuery, selectedCategory])

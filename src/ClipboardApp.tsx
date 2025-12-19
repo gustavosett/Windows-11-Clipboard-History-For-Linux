@@ -260,7 +260,7 @@ function ClipboardApp() {
       case 'clipboard':
         if (isLoading) {
           return (
-            <div className="flex items-center justify-center h-full" tabIndex={-1}>
+            <div className="flex items-center justify-center h-full">
               <div className="w-6 h-6 border-2 border-win11-bg-accent border-t-transparent rounded-full animate-spin" />
             </div>
           )
@@ -276,12 +276,7 @@ function ClipboardApp() {
               onClearHistory={clearHistory}
               itemCount={history.filter((i) => !i.pinned).length}
             />
-            <div
-              className="flex flex-col gap-2 p-3"
-              role="listbox"
-              aria-label="Clipboard history"
-              tabIndex={-1}
-            >
+            <div className="flex flex-col gap-2 p-3" role="listbox" aria-label="Clipboard history">
               {history.map((item, index) => (
                 <HistoryItem
                   key={item.id}

@@ -60,18 +60,12 @@ const GifCell = memo(function GifCell({
       >
         {/* Loading skeleton */}
         {!isLoaded && !hasError && (
-          <div
-            className="absolute inset-0 animate-pulse dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary"
-            tabIndex={-1}
-          />
+          <div className="absolute inset-0 animate-pulse dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary" />
         )}
 
         {/* Error state */}
         {hasError && (
-          <div
-            className="absolute inset-0 flex items-center justify-center text-xs dark:text-win11-text-disabled text-win11Light-text-disabled"
-            tabIndex={-1}
-          >
+          <div className="absolute inset-0 flex items-center justify-center text-xs dark:text-win11-text-disabled text-win11Light-text-disabled">
             Failed
           </div>
         )}

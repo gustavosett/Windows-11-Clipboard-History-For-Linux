@@ -172,10 +172,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
 
       {/* Pinned badge */}
       {item.pinned && (
-        <div
-          className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-win11-bg-accent"
-          tabIndex={-1}
-        />
+        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-win11-bg-accent" />
       )}
     </div>
   )

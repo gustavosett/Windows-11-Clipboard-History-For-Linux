@@ -23,7 +23,6 @@ export function DragHandle() {
       data-tauri-drag-region
       className="relative w-full flex justify-center pt-4 pb-1 cursor-grab active:cursor-grabbing select-none"
       onMouseDown={handleMouseDown}
-      tabIndex={-1}
     >
       <div
         data-tauri-drag-region
