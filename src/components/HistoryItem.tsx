@@ -10,10 +10,11 @@ interface HistoryItemProps {
   onTogglePin: (id: string) => void
   onFocus?: () => void
   index: number
+  isFocused?: boolean
 }
 
 export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function HistoryItem(
-  { item, onPaste, onDelete, onTogglePin, onFocus, index },
+  { item, onPaste, onDelete, onTogglePin, onFocus, index, isFocused = false },
   ref
 ) {
   const isText = item.content.type === 'Text'
@@ -78,7 +79,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
       onClick={handleClick}
       onFocus={onFocus}
       role="button"
-      tabIndex={0}
+      tabIndex={isFocused ? 0 : -1}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -148,6 +149,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
                 : 'dark:text-win11-text-tertiary text-win11Light-text-secondary'
             )}
             title={item.pinned ? 'Unpin' : 'Pin'}
+            tabIndex={-1}
           >
             <Pin className="w-4 h-4" fill={item.pinned ? 'currentColor' : 'none'} />
           </button>
@@ -161,6 +163,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
               'hover:text-win11-error hover:dark:bg-win11-bg-tertiary hover:bg-win11Light-bg-tertiary'
             )}
             title="Delete"
+            tabIndex={-1}
           >
             <X className="w-4 h-4" />
           </button>

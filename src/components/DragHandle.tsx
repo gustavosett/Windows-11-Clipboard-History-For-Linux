@@ -1,5 +1,5 @@
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { X } from 'lucide-react' // Supondo que use lucide, ou use um SVG direto
+import { X } from 'lucide-react'
 
 export function DragHandle() {
   const appWindow = getCurrentWindow()
@@ -33,6 +33,7 @@ export function DragHandle() {
         onClick={handleClose}
         onMouseDown={(e) => e.stopPropagation()}
         className="absolute right-4 top-1/2 -translate-y-1/2 p-1 pt-5 text-black/50 dark:text-white/50 rounded-md cursor-pointer z-10"
+        tabIndex={-1}
       >
         <X className="w-5 h-5" />
       </button>
