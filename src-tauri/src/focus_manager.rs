@@ -237,7 +237,7 @@ fn find_window_by_title(title: &str) -> Option<u32> {
         // Try _NET_WM_NAME first (UTF-8)
         if let Ok(cookie) = conn.get_property(false, window, net_wm_name, utf8_string, 0, 256) {
             if let Ok(reply) = cookie.reply() {
-                if let Ok(name) = String::from_utf8(reply.value.clone()) {
+                if let Ok(name) = String::from_utf8(reply.value) {
                     if name.contains(title) {
                         return Some(window);
                     }
@@ -248,7 +248,7 @@ fn find_window_by_title(title: &str) -> Option<u32> {
         // Fall back to WM_NAME (legacy)
         if let Ok(cookie) = conn.get_property(false, window, AtomEnum::WM_NAME, AtomEnum::STRING, 0, 256) {
             if let Ok(reply) = cookie.reply() {
-                if let Ok(name) = String::from_utf8(reply.value.clone()) {
+                if let Ok(name) = String::from_utf8(reply.value) {
                     if name.contains(title) {
                         return Some(window);
                     }
@@ -318,9 +318,17 @@ pub fn x11_robust_activate(title: &str) -> Result<(), String> {
     thread::sleep(Duration::from_millis(30));
 
     // Step 4: Verify focus was acquired, force if not
-    if let Some(current_focus) = get_focused_window() {
-        if current_focus != window_id {
-            eprintln!("[FocusManager] Focus not acquired, forcing input focus");
+    match get_focused_window() {
+        Some(current_focus) => {
+            if current_focus != window_id {
+                eprintln!("[FocusManager] Focus not acquired, forcing input focus");
+                x11_force_input_focus(window_id)?;
+            }
+        }
+        None => {
+            eprintln!(
+                "[FocusManager] Could not determine focused window after EWMH activation; forcing input focus as fallback"
+            );
             x11_force_input_focus(window_id)?;
         }
     }
