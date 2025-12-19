@@ -235,27 +235,23 @@ fn find_window_by_title(title: &str) -> Option<u32> {
     // Search each window for matching title
     for window in windows {
         // Try _NET_WM_NAME first (UTF-8)
-        if let Ok(reply) = conn
-            .get_property(false, window, net_wm_name, utf8_string, 0, 256)
-            .ok()?
-            .reply()
-        {
-            if let Ok(name) = String::from_utf8(reply.value.clone()) {
-                if name.contains(title) {
-                    return Some(window);
+        if let Ok(cookie) = conn.get_property(false, window, net_wm_name, utf8_string, 0, 256) {
+            if let Ok(reply) = cookie.reply() {
+                if let Ok(name) = String::from_utf8(reply.value.clone()) {
+                    if name.contains(title) {
+                        return Some(window);
+                    }
                 }
             }
         }
 
         // Fall back to WM_NAME (legacy)
-        if let Ok(reply) = conn
-            .get_property(false, window, AtomEnum::WM_NAME, AtomEnum::STRING, 0, 256)
-            .ok()?
-            .reply()
-        {
-            if let Ok(name) = String::from_utf8(reply.value.clone()) {
-                if name.contains(title) {
-                    return Some(window);
+        if let Ok(cookie) = conn.get_property(false, window, AtomEnum::WM_NAME, AtomEnum::STRING, 0, 256) {
+            if let Ok(reply) = cookie.reply() {
+                if let Ok(name) = String::from_utf8(reply.value.clone()) {
+                    if name.contains(title) {
+                        return Some(window);
+                    }
                 }
             }
         }
