@@ -290,7 +290,7 @@ fi
 
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║          Windows 11 Clipboard History installed!              ║${NC}"
+echo -e "${GREEN}║          Windows 11 Clipboard History installed!               ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 

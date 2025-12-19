@@ -331,17 +331,17 @@ install:
 	echo ""; \
 	if [ "$$NEEDS_LOGOUT" = true ]; then \
 		echo -e "$(YELLOW)╔════════════════════════════════════════════════════════════════╗$(RESET)"; \
-		echo -e "$(YELLOW)║     ⚠ Please log out and log back in for permissions          ║$(RESET)"; \
+		echo -e "$(YELLOW)║     ⚠ Please log out and log back in for permissions           ║$(RESET)"; \
 		echo -e "$(YELLOW)╚════════════════════════════════════════════════════════════════╝$(RESET)"; \
 		echo ""; \
 		echo "After logging back in, the app will start automatically."; \
 	elif [ "$$APP_LAUNCHED" = true ]; then \
 		echo -e "$(GREEN)╔════════════════════════════════════════════════════════════════╗$(RESET)"; \
-		echo -e "$(GREEN)║     ✓ App is now running! Press Super+V to open.              ║$(RESET)"; \
+		echo -e "$(GREEN)║     ✓ App is now running! Press Super+V to open.               ║$(RESET)"; \
 		echo -e "$(GREEN)╚════════════════════════════════════════════════════════════════╝$(RESET)"; \
 	else \
 		echo -e "$(GREEN)╔════════════════════════════════════════════════════════════════╗$(RESET)"; \
-		echo -e "$(GREEN)║     ✓ Installed! Find 'Clipboard History' in your app menu.   ║$(RESET)"; \
+		echo -e "$(GREEN)║     ✓ Installed! Find 'Clipboard History' in your app menu.    ║$(RESET)"; \
 		echo -e "$(GREEN)╚════════════════════════════════════════════════════════════════╝$(RESET)"; \
 	fi
 	@echo ""
