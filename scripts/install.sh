@@ -62,8 +62,13 @@ install_deps() {
     log "Installing dependencies..."
     case "$DISTRO" in
         ubuntu|debian|linuxmint|pop|kali|neon)
-            sudo apt-get update -qq
-            sudo apt-get install -y xclip wl-clipboard acl
+            sudo apt-get update -qq 2>/dev/null || {
+                warn "apt-get update had issues (likely from external repos). Continuing anyway..."
+            }
+            sudo apt-get install -y xclip wl-clipboard acl || {
+                warn "Retrying dependency installation..."
+                sudo apt-get install -y --no-install-recommends xclip wl-clipboard acl
+            }
         ;;
         fedora|rhel|centos|almalinux|rocky)
             sudo dnf install -y xclip wl-clipboard acl
