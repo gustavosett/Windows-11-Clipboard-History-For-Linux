@@ -246,7 +246,9 @@ fn find_window_by_title(title: &str) -> Option<u32> {
         }
 
         // Fall back to WM_NAME (legacy)
-        if let Ok(cookie) = conn.get_property(false, window, AtomEnum::WM_NAME, AtomEnum::STRING, 0, 256) {
+        if let Ok(cookie) =
+            conn.get_property(false, window, AtomEnum::WM_NAME, AtomEnum::STRING, 0, 256)
+        {
             if let Ok(reply) = cookie.reply() {
                 if let Ok(name) = String::from_utf8(reply.value) {
                     if name.contains(title) {
