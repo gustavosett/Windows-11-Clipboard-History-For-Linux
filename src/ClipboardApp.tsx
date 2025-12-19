@@ -202,6 +202,10 @@ function ClipboardApp() {
       const activeElement = document.activeElement
       if (activeElement?.getAttribute('role') === 'tab') return
 
+      // Check if focus is on a history item
+      const isOnHistoryItem = historyItemRefs.current.some((ref) => ref === activeElement)
+      if (!isOnHistoryItem) return
+
       if (e.key === 'ArrowDown') {
         e.preventDefault()
         const newIndex = Math.min(focusedIndex + 1, history.length - 1)
@@ -225,6 +229,10 @@ function ClipboardApp() {
         setFocusedIndex(lastIndex)
         historyItemRefs.current[lastIndex]?.focus()
         historyItemRefs.current[lastIndex]?.scrollIntoView({ block: 'nearest' })
+      } else if (e.key === 'Tab' && !e.shiftKey) {
+        // When pressing Tab on a history item, go back to the tab bar
+        e.preventDefault()
+        tabBarRef.current?.focusFirstTab()
       }
     }
 
@@ -268,7 +276,12 @@ function ClipboardApp() {
               onClearHistory={clearHistory}
               itemCount={history.filter((i) => !i.pinned).length}
             />
-            <div className="flex flex-col gap-2 p-3" tabIndex={-1}>
+            <div
+              className="flex flex-col gap-2 p-3"
+              role="listbox"
+              aria-label="Clipboard history"
+              tabIndex={-1}
+            >
               {history.map((item, index) => (
                 <HistoryItem
                   key={item.id}
@@ -277,6 +290,7 @@ function ClipboardApp() {
                   }}
                   item={item}
                   index={index}
+                  isFocused={index === focusedIndex}
                   onPaste={pasteItem}
                   onDelete={deleteItem}
                   onTogglePin={togglePin}

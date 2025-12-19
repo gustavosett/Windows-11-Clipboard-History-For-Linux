@@ -10,10 +10,11 @@ interface HistoryItemProps {
   onTogglePin: (id: string) => void
   onFocus?: () => void
   index: number
+  isFocused?: boolean
 }
 
 export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function HistoryItem(
-  { item, onPaste, onDelete, onTogglePin, onFocus, index },
+  { item, onPaste, onDelete, onTogglePin, onFocus, index, isFocused = false },
   ref
 ) {
   const isText = item.content.type === 'Text'
@@ -78,7 +79,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
       onClick={handleClick}
       onFocus={onFocus}
       role="button"
-      tabIndex={0}
+      tabIndex={isFocused ? 0 : -1}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -171,7 +172,10 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
 
       {/* Pinned badge */}
       {item.pinned && (
-        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-win11-bg-accent" tabIndex={-1} />
+        <div
+          className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-win11-bg-accent"
+          tabIndex={-1}
+        />
       )}
     </div>
   )

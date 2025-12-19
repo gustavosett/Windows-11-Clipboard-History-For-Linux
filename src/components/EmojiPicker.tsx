@@ -2,8 +2,8 @@
  * Emoji Picker Component
  * Windows 11 style emoji picker with virtualized grid for performance
  */
-import { useState, useCallback, memo, useRef, useLayoutEffect } from 'react'
-import { Grid } from 'react-window'
+import { useState, useCallback, memo, useRef, useLayoutEffect, useEffect } from 'react'
+import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Search, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEmojiPicker } from '../hooks/useEmojiPicker'
@@ -18,15 +18,31 @@ interface EmojiCellProps {
   emoji: Emoji
   onSelect: (emoji: Emoji) => void
   onHover?: (emoji: Emoji | null) => void
+  tabIndex?: number
+  'data-main-index'?: number
+  onKeyDown?: (e: React.KeyboardEvent) => void
+  onItemFocus?: () => void
 }
 
 /** Individual emoji cell - memoized for performance */
-const EmojiCell = memo(function EmojiCell({ emoji, onSelect, onHover }: EmojiCellProps) {
+const EmojiCell = memo(function EmojiCell({
+  emoji,
+  onSelect,
+  onHover,
+  tabIndex = -1,
+  'data-main-index': mainIndex,
+  onKeyDown,
+  onItemFocus,
+}: EmojiCellProps) {
   return (
     <button
       onClick={() => onSelect(emoji)}
       onMouseEnter={() => onHover?.(emoji)}
       onMouseLeave={() => onHover?.(null)}
+      onFocus={onItemFocus}
+      onKeyDown={onKeyDown}
+      tabIndex={tabIndex}
+      data-main-index={mainIndex}
       className={clsx(
         'flex items-center justify-center',
         'w-full h-full text-2xl',
@@ -48,16 +64,28 @@ interface CategoryPillProps {
   category: string
   isActive: boolean
   onClick: () => void
+  tabIndex?: number
+  onKeyDown?: (e: React.KeyboardEvent) => void
+  onFocus?: () => void
+  'data-category-index'?: number
 }
 
 const CategoryPill = memo(function CategoryPill({
   category,
   isActive,
   onClick,
+  tabIndex = 0,
+  onKeyDown,
+  onFocus,
+  'data-category-index': index,
 }: CategoryPillProps) {
   return (
     <button
       onClick={onClick}
+      tabIndex={tabIndex}
+      onKeyDown={onKeyDown}
+      onFocus={onFocus}
+      data-category-index={index}
       className={clsx(
         'px-3 py-1 text-xs rounded-full whitespace-nowrap',
         'transition-colors duration-150',
@@ -76,6 +104,69 @@ const CategoryPill = memo(function CategoryPill({
   )
 })
 
+interface EmojiGridData {
+  emojis: Emoji[]
+  onSelect: (emoji: Emoji) => void
+  onHover: (emoji: Emoji | null) => void
+  focusedIndex: number
+  onKeyDown: (e: React.KeyboardEvent, index: number) => void
+  onItemFocus: (index: number) => void
+  columnCount: number
+  columnWidth: number
+}
+
+function EmojiGridCell({
+  columnIndex,
+  rowIndex,
+  style,
+  emojis,
+  onSelect,
+  onHover,
+  focusedIndex,
+  onKeyDown,
+  onItemFocus,
+  columnCount,
+  columnWidth,
+  ariaAttributes,
+}: {
+  columnIndex: number
+  rowIndex: number
+  style: React.CSSProperties
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ariaAttributes: any
+} & EmojiGridData) {
+  const index = rowIndex * columnCount + columnIndex
+  if (index >= emojis.length) {
+    return <></>
+  }
+
+  const emoji = emojis[index]
+  const isFocused = index === focusedIndex
+
+  return (
+    <div
+      {...ariaAttributes}
+      style={{
+        ...style,
+        left: Number(style.left) + GRID_PADDING,
+        width: columnWidth,
+        height: CELL_SIZE,
+        padding: 4,
+      }}
+    >
+      <EmojiCell
+        emoji={emoji}
+        onSelect={onSelect}
+        onHover={onHover}
+        tabIndex={isFocused ? 0 : -1}
+        data-main-index={index}
+        onKeyDown={(e) => onKeyDown(e, index)}
+        onItemFocus={() => onItemFocus(index)}
+      />
+    </div>
+  )
+}
+
 export function EmojiPicker() {
   const {
     searchQuery,
@@ -92,7 +183,24 @@ export function EmojiPicker() {
   const [hoveredEmoji, setHoveredEmoji] = useState<Emoji | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const gridRef = useGridRef(null)
+  const recentGridRef = useRef<HTMLDivElement>(null)
+  const mainGridContainerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
+
+  // Roving tabindex state for recent emojis
+  const [recentFocusedIndex, setRecentFocusedIndex] = useState(0)
+  // Roving tabindex state for main emoji grid
+  const [mainFocusedIndex, setMainFocusedIndex] = useState(0)
+  // Roving tabindex state for categories
+  const [categoryFocusedIndex, setCategoryFocusedIndex] = useState(0)
+
+  // Reset focus indices when emojis change
+  useEffect(() => {
+    // eslint-disable-next-line
+    setRecentFocusedIndex(0)
+    setMainFocusedIndex(0)
+  }, [searchQuery, selectedCategory])
 
   // Measure container size - use useLayoutEffect for synchronous measurement
   useLayoutEffect(() => {
@@ -159,31 +267,242 @@ export function EmojiPicker() {
   const gridHeight = dimensions.height > 0 ? dimensions.height : 200
   const gridWidth = dimensions.width > 0 ? dimensions.width : 320
 
-  // Cell renderer for virtualized grid
-  const Cell = useCallback(
-    (props: { columnIndex: number; rowIndex: number; style: React.CSSProperties }) => {
-      const { columnIndex, rowIndex, style } = props
-      const index = rowIndex * columnCount + columnIndex
-      if (index >= filteredEmojis.length) {
-        return <></>
+  // Recent emojis column count (they're smaller)
+  const recentColumnCount = 8
+
+  // Keyboard navigation for categories
+  const handleCategoryKeyDown = useCallback(
+    (e: React.KeyboardEvent, currentIndex: number) => {
+      // Total items = 1 (All) + categories.length
+      const totalItems = 1 + categories.length
+      let newIndex = currentIndex
+      let handled = false
+
+      switch (e.key) {
+        case 'ArrowRight':
+          if (currentIndex < totalItems - 1) {
+            newIndex = currentIndex + 1
+            handled = true
+          }
+          break
+        case 'ArrowLeft':
+          if (currentIndex > 0) {
+            newIndex = currentIndex - 1
+            handled = true
+          }
+          break
+        case 'Home':
+          newIndex = 0
+          handled = true
+          break
+        case 'End':
+          newIndex = totalItems - 1
+          handled = true
+          break
+        case 'Enter':
+        case ' ':
+          e.preventDefault()
+          if (currentIndex === 0) {
+            setSelectedCategory(null)
+          } else {
+            setSelectedCategory(categories[currentIndex - 1])
+          }
+          return
       }
 
-      const emoji = filteredEmojis[index]
-      return (
-        <div
-          style={{
-            ...style,
-            left: Number(style.left) + GRID_PADDING,
-            width: columnWidth,
-            height: CELL_SIZE,
-            padding: 4,
-          }}
-        >
-          <EmojiCell emoji={emoji} onSelect={handleSelect} onHover={setHoveredEmoji} />
-        </div>
-      )
+      if (handled) {
+        e.preventDefault()
+        e.stopPropagation()
+        setCategoryFocusedIndex(newIndex)
+
+        // Scroll container if needed
+        const container = scrollContainerRef.current
+        if (container) {
+          const button = container.querySelector(
+            `[data-category-index="${newIndex}"]`
+          ) as HTMLElement
+          if (button) {
+            button.focus()
+            button.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+          }
+        }
+      }
     },
-    [filteredEmojis, handleSelect, columnCount, columnWidth]
+    [categories, setSelectedCategory]
+  )
+
+  // Keyboard navigation for recent emojis grid
+  const handleRecentKeyDown = useCallback(
+    (e: React.KeyboardEvent, currentIndex: number) => {
+      const recentCount = Math.min(recentEmojis.length, 16)
+      if (recentCount === 0) return
+
+      let newIndex = currentIndex
+      let handled = false
+
+      switch (e.key) {
+        case 'ArrowRight':
+          if (currentIndex < recentCount - 1) {
+            newIndex = currentIndex + 1
+            handled = true
+          }
+          break
+        case 'ArrowLeft':
+          if (currentIndex > 0) {
+            newIndex = currentIndex - 1
+            handled = true
+          }
+          break
+        case 'ArrowDown': {
+          const nextRowIndex = currentIndex + recentColumnCount
+          if (nextRowIndex < recentCount) {
+            newIndex = nextRowIndex
+            handled = true
+          }
+          break
+        }
+        case 'ArrowUp': {
+          const prevRowIndex = currentIndex - recentColumnCount
+          if (prevRowIndex >= 0) {
+            newIndex = prevRowIndex
+            handled = true
+          }
+          break
+        }
+        case 'Home':
+          newIndex = 0
+          handled = true
+          break
+        case 'End':
+          newIndex = recentCount - 1
+          handled = true
+          break
+        case 'Enter':
+        case ' ':
+          e.preventDefault()
+          if (recentEmojis[currentIndex]) {
+            handleSelect(recentEmojis[currentIndex])
+          }
+          return
+      }
+
+      if (handled) {
+        e.preventDefault()
+        e.stopPropagation()
+        setRecentFocusedIndex(newIndex)
+        // Focus the new element
+        const container = recentGridRef.current
+        if (container) {
+          const button = container.querySelector(`[data-recent-index="${newIndex}"]`) as HTMLElement
+          button?.focus()
+        }
+      }
+    },
+    [recentEmojis, handleSelect, recentColumnCount]
+  )
+
+  // Keyboard navigation for main emoji grid
+  const handleMainGridKeyDown = useCallback(
+    (e: React.KeyboardEvent, currentIndex: number) => {
+      if (filteredEmojis.length === 0) return
+
+      let newIndex = currentIndex
+      let handled = false
+
+      switch (e.key) {
+        case 'ArrowRight':
+          if (currentIndex < filteredEmojis.length - 1) {
+            newIndex = currentIndex + 1
+            handled = true
+          }
+          break
+        case 'ArrowLeft':
+          if (currentIndex > 0) {
+            newIndex = currentIndex - 1
+            handled = true
+          }
+          break
+        case 'ArrowDown': {
+          const nextRowIndex = currentIndex + columnCount
+          if (nextRowIndex < filteredEmojis.length) {
+            newIndex = nextRowIndex
+            handled = true
+          }
+          break
+        }
+        case 'ArrowUp': {
+          const prevRowIndex = currentIndex - columnCount
+          if (prevRowIndex >= 0) {
+            newIndex = prevRowIndex
+            handled = true
+          }
+          break
+        }
+        case 'Home':
+          if (e.ctrlKey) {
+            newIndex = 0
+          } else {
+            // Go to start of current row
+            const currentRow = Math.floor(currentIndex / columnCount)
+            newIndex = currentRow * columnCount
+          }
+          handled = true
+          break
+        case 'End':
+          if (e.ctrlKey) {
+            newIndex = filteredEmojis.length - 1
+          } else {
+            // Go to end of current row
+            const currentRow = Math.floor(currentIndex / columnCount)
+            newIndex = Math.min((currentRow + 1) * columnCount - 1, filteredEmojis.length - 1)
+          }
+          handled = true
+          break
+        case 'PageDown':
+          newIndex = Math.min(currentIndex + columnCount * 3, filteredEmojis.length - 1)
+          handled = true
+          break
+        case 'PageUp':
+          newIndex = Math.max(currentIndex - columnCount * 3, 0)
+          handled = true
+          break
+        case 'Enter':
+        case ' ':
+          e.preventDefault()
+          if (filteredEmojis[currentIndex]) {
+            handleSelect(filteredEmojis[currentIndex])
+          }
+          return
+      }
+
+      if (handled) {
+        e.preventDefault()
+        e.stopPropagation()
+        setMainFocusedIndex(newIndex)
+
+        // Scroll the grid to show the focused item
+        if (gridRef.current) {
+          const targetRow = Math.floor(newIndex / columnCount)
+          const targetCol = newIndex % columnCount
+          gridRef.current.scrollToCell({
+            rowIndex: targetRow,
+            columnIndex: targetCol,
+            rowAlign: 'smart',
+            columnAlign: 'smart',
+          })
+        }
+
+        // Focus the new element after a small delay to allow scroll
+        setTimeout(() => {
+          const container = mainGridContainerRef.current
+          if (container) {
+            const button = container.querySelector(`[data-main-index="${newIndex}"]`) as HTMLElement
+            button?.focus()
+          }
+        }, 10)
+      }
+    },
+    [filteredEmojis, columnCount, handleSelect, gridRef]
   )
 
   if (isLoading) {
@@ -240,11 +559,20 @@ export function EmojiPicker() {
               Recently used
             </span>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {recentEmojis.slice(0, 16).map((emoji) => (
+          <div
+            ref={recentGridRef}
+            className="flex flex-wrap gap-1"
+            role="grid"
+            aria-label="Recently used emojis"
+          >
+            {recentEmojis.slice(0, 16).map((emoji, index) => (
               <button
                 key={`recent-${emoji.char}`}
+                data-recent-index={index}
+                tabIndex={index === recentFocusedIndex ? 0 : -1}
                 onClick={() => handleSelect(emoji)}
+                onFocus={() => setRecentFocusedIndex(index)}
+                onKeyDown={(e) => handleRecentKeyDown(e, index)}
                 className={clsx(
                   'w-8 h-8 flex items-center justify-center text-xl',
                   'rounded-md transition-all duration-100',
@@ -253,6 +581,7 @@ export function EmojiPicker() {
                   'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
                 )}
                 title={emoji.name}
+                aria-label={emoji.name}
               >
                 {emoji.char}
               </button>
@@ -267,6 +596,7 @@ export function EmojiPicker() {
           <button
             onClick={() => scrollCategories('left')}
             className="p-1 rounded-full hover:bg-win11-bg-tertiary dark:hover:bg-win11-bg-card-hover text-win11Light-text-secondary dark:text-win11-text-secondary"
+            tabIndex={-1}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -274,18 +604,28 @@ export function EmojiPicker() {
           <div
             ref={scrollContainerRef}
             className="flex gap-1.5 overflow-x-hidden scroll-smooth flex-1"
+            role="tablist"
+            aria-label="Emoji categories"
           >
             <CategoryPill
               category="All"
               isActive={selectedCategory === null}
               onClick={() => setSelectedCategory(null)}
+              tabIndex={categoryFocusedIndex === 0 ? 0 : -1}
+              onKeyDown={(e) => handleCategoryKeyDown(e, 0)}
+              onFocus={() => setCategoryFocusedIndex(0)}
+              data-category-index={0}
             />
-            {categories.map((cat) => (
+            {categories.map((cat, index) => (
               <CategoryPill
                 key={cat}
                 category={cat}
                 isActive={selectedCategory === cat}
                 onClick={() => setSelectedCategory(cat)}
+                tabIndex={categoryFocusedIndex === index + 1 ? 0 : -1}
+                onKeyDown={(e) => handleCategoryKeyDown(e, index + 1)}
+                onFocus={() => setCategoryFocusedIndex(index + 1)}
+                data-category-index={index + 1}
               />
             ))}
           </div>
@@ -293,6 +633,7 @@ export function EmojiPicker() {
           <button
             onClick={() => scrollCategories('right')}
             className="p-1 rounded-full hover:bg-win11-bg-tertiary dark:hover:bg-win11-bg-card-hover text-win11Light-text-secondary dark:text-win11-text-secondary"
+            tabIndex={-1}
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -309,16 +650,30 @@ export function EmojiPicker() {
           </div>
         )}
         {filteredEmojis.length > 0 && dimensions.width > 0 && (
-          <Grid<object>
-            columnCount={columnCount}
-            columnWidth={columnWidth}
-            rowCount={rowCount}
-            rowHeight={CELL_SIZE}
-            className="scrollbar-win11"
-            style={{ overflowX: 'hidden', height: gridHeight, width: gridWidth }}
-            cellComponent={Cell}
-            cellProps={{}}
-          />
+          <div ref={mainGridContainerRef} role="grid" aria-label="Emoji grid">
+            <Grid<EmojiGridData>
+              gridRef={gridRef}
+              columnCount={columnCount}
+              columnWidth={columnWidth}
+              rowCount={rowCount}
+              rowHeight={CELL_SIZE}
+              defaultHeight={gridHeight}
+              defaultWidth={gridWidth}
+              className="scrollbar-win11"
+              style={{ overflowX: 'hidden' }}
+              cellProps={{
+                emojis: filteredEmojis,
+                onSelect: handleSelect,
+                onHover: setHoveredEmoji,
+                focusedIndex: mainFocusedIndex,
+                onKeyDown: handleMainGridKeyDown,
+                onItemFocus: setMainFocusedIndex,
+                columnCount,
+                columnWidth,
+              }}
+              cellComponent={EmojiGridCell}
+            />
+          </div>
         )}
       </div>
 

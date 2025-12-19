@@ -3,7 +3,7 @@
  * Windows 11 style GIF picker with virtualized grid for performance
  */
 import { useState, memo, useRef, useLayoutEffect, useCallback } from 'react'
-import { Grid } from 'react-window'
+import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Search, X, RefreshCw, TrendingUp } from 'lucide-react'
 import { useGifPicker } from '../hooks/useGifPicker'
@@ -20,10 +20,22 @@ interface GifCellProps {
   gif: Gif
   onSelect: (gif: Gif) => void
   style: React.CSSProperties
+  tabIndex?: number
+  'data-gif-index'?: number
+  onKeyDown?: (e: React.KeyboardEvent) => void
+  onItemFocus?: () => void
 }
 
 /** Individual GIF cell - memoized for performance */
-const GifCell = memo(function GifCell({ gif, onSelect, style }: GifCellProps) {
+const GifCell = memo(function GifCell({
+  gif,
+  onSelect,
+  style,
+  tabIndex = -1,
+  'data-gif-index': gifIndex,
+  onKeyDown,
+  onItemFocus,
+}: GifCellProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
 
@@ -31,6 +43,10 @@ const GifCell = memo(function GifCell({ gif, onSelect, style }: GifCellProps) {
     <div style={style} className="p-1">
       <button
         onClick={() => onSelect(gif)}
+        onFocus={onItemFocus}
+        onKeyDown={onKeyDown}
+        tabIndex={tabIndex}
+        data-gif-index={gifIndex}
         className={clsx(
           'w-full h-full rounded-lg overflow-hidden',
           'transition-all duration-150',
@@ -44,12 +60,18 @@ const GifCell = memo(function GifCell({ gif, onSelect, style }: GifCellProps) {
       >
         {/* Loading skeleton */}
         {!isLoaded && !hasError && (
-          <div className="absolute inset-0 animate-pulse dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary" tabIndex={-1} />
+          <div
+            className="absolute inset-0 animate-pulse dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary"
+            tabIndex={-1}
+          />
         )}
 
         {/* Error state */}
         {hasError && (
-          <div className="absolute inset-0 flex items-center justify-center text-xs dark:text-win11-text-disabled text-win11Light-text-disabled" tabIndex={-1}>
+          <div
+            className="absolute inset-0 flex items-center justify-center text-xs dark:text-win11-text-disabled text-win11Light-text-disabled"
+            tabIndex={-1}
+          >
             Failed
           </div>
         )}
@@ -116,6 +138,55 @@ function EmptyState({ message, isError }: EmptyStateProps) {
   )
 }
 
+interface GifGridData {
+  gifs: Gif[]
+  onSelect: (gif: Gif) => void
+  focusedIndex: number
+  onKeyDown: (e: React.KeyboardEvent, index: number) => void
+  onItemFocus: (index: number) => void
+}
+
+function GifGridCell({
+  columnIndex,
+  rowIndex,
+  style,
+  gifs,
+  onSelect,
+  focusedIndex,
+  onKeyDown,
+  onItemFocus,
+  ariaAttributes,
+}: {
+  columnIndex: number
+  rowIndex: number
+  style: React.CSSProperties
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ariaAttributes: any
+} & GifGridData) {
+  const index = rowIndex * COLUMN_COUNT + columnIndex
+
+  if (index >= gifs.length) {
+    return <></>
+  }
+
+  const gif = gifs[index]
+  const isFocused = index === focusedIndex
+
+  return (
+    <div {...ariaAttributes} style={style} className="p-1">
+      <GifCell
+        gif={gif}
+        onSelect={onSelect}
+        style={{ width: '100%', height: '100%' }}
+        tabIndex={isFocused ? 0 : -1}
+        data-gif-index={index}
+        onKeyDown={(e) => onKeyDown(e, index)}
+        onItemFocus={() => onItemFocus(index)}
+      />
+    </div>
+  )
+}
+
 export function GifPicker() {
   const {
     searchQuery,
@@ -130,7 +201,10 @@ export function GifPicker() {
 
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const gridRef = useGridRef(null)
+  const gridContainerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
+  const [focusedIndex, setFocusedIndex] = useState(0)
 
   // Measure container size
   useLayoutEffect(() => {
@@ -173,6 +247,7 @@ export function GifPicker() {
   // Clear search
   const handleClearSearch = useCallback(() => {
     setSearchQuery('')
+    setFocusedIndex(0)
     inputRef.current?.focus()
   }, [setSearchQuery])
 
@@ -182,27 +257,108 @@ export function GifPicker() {
   const rowCount = Math.ceil(gifs.length / COLUMN_COUNT)
   const gridHeight = dimensions.height
 
-  // Grid cell renderer
-  const CellRenderer = useCallback(
-    ({
-      columnIndex,
-      rowIndex,
-      style,
-    }: {
-      columnIndex: number
-      rowIndex: number
-      style: React.CSSProperties
-    }) => {
-      const index = rowIndex * COLUMN_COUNT + columnIndex
-      const gif = gifs[index]
+  // Keyboard navigation for GIF grid
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent, currentIndex: number) => {
+      if (gifs.length === 0) return
 
-      if (!gif) {
-        return <></>
+      let newIndex = currentIndex
+      let handled = false
+
+      switch (e.key) {
+        case 'ArrowRight':
+          if (currentIndex < gifs.length - 1) {
+            newIndex = currentIndex + 1
+            handled = true
+          }
+          break
+        case 'ArrowLeft':
+          if (currentIndex > 0) {
+            newIndex = currentIndex - 1
+            handled = true
+          }
+          break
+        case 'ArrowDown': {
+          const nextRowIndex = currentIndex + COLUMN_COUNT
+          if (nextRowIndex < gifs.length) {
+            newIndex = nextRowIndex
+            handled = true
+          }
+          break
+        }
+        case 'ArrowUp': {
+          const prevRowIndex = currentIndex - COLUMN_COUNT
+          if (prevRowIndex >= 0) {
+            newIndex = prevRowIndex
+            handled = true
+          }
+          break
+        }
+        case 'Home':
+          if (e.ctrlKey) {
+            newIndex = 0
+          } else {
+            // Go to start of current row
+            const currentRow = Math.floor(currentIndex / COLUMN_COUNT)
+            newIndex = currentRow * COLUMN_COUNT
+          }
+          handled = true
+          break
+        case 'End':
+          if (e.ctrlKey) {
+            newIndex = gifs.length - 1
+          } else {
+            // Go to end of current row
+            const currentRow = Math.floor(currentIndex / COLUMN_COUNT)
+            newIndex = Math.min((currentRow + 1) * COLUMN_COUNT - 1, gifs.length - 1)
+          }
+          handled = true
+          break
+        case 'PageDown':
+          newIndex = Math.min(currentIndex + COLUMN_COUNT * 3, gifs.length - 1)
+          handled = true
+          break
+        case 'PageUp':
+          newIndex = Math.max(currentIndex - COLUMN_COUNT * 3, 0)
+          handled = true
+          break
+        case 'Enter':
+        case ' ':
+          e.preventDefault()
+          if (gifs[currentIndex]) {
+            handleSelect(gifs[currentIndex])
+          }
+          return
       }
 
-      return <GifCell gif={gif} onSelect={handleSelect} style={style} />
+      if (handled) {
+        e.preventDefault()
+        e.stopPropagation()
+        setFocusedIndex(newIndex)
+
+        // Scroll the grid to show the focused item
+        if (gridRef.current) {
+          const targetRow = Math.floor(newIndex / COLUMN_COUNT)
+          const targetCol = newIndex % COLUMN_COUNT
+          gridRef.current.scrollToCell({
+            rowIndex: targetRow,
+            columnIndex: targetCol,
+            rowAlign: 'smart',
+            columnAlign: 'smart',
+          })
+        }
+
+        // Focus the new element after a small delay to allow scroll
+        setTimeout(() => {
+          const container = gridContainerRef.current
+          if (container) {
+            const button = container.querySelector(`[data-gif-index="${newIndex}"]`) as HTMLElement
+            button?.focus()
+          }
+        }, 10)
+      }
     },
-    [gifs, handleSelect]
+    [gifs, handleSelect, gridRef]
   )
 
   // Render grid content based on state
@@ -221,16 +377,26 @@ export function GifPicker() {
 
     if (dimensions.width > 0 && dimensions.height > 0) {
       return (
-        <Grid<object>
-          columnCount={COLUMN_COUNT}
-          columnWidth={columnWidth}
-          rowCount={rowCount}
-          rowHeight={CELL_HEIGHT}
-          className="scrollbar-thin scrollbar-thumb-win11-border-subtle scrollbar-track-transparent"
-          style={{ height: gridHeight, width: gridWidth }}
-          cellComponent={CellRenderer}
-          cellProps={{}}
-        />
+        <div ref={gridContainerRef} role="grid" aria-label="GIF grid">
+          <Grid<GifGridData>
+            gridRef={gridRef}
+            columnCount={COLUMN_COUNT}
+            columnWidth={columnWidth}
+            rowCount={rowCount}
+            rowHeight={CELL_HEIGHT}
+            defaultHeight={gridHeight}
+            defaultWidth={gridWidth}
+            className="scrollbar-thin scrollbar-thumb-win11-border-subtle scrollbar-track-transparent"
+            cellProps={{
+              gifs,
+              onSelect: handleSelect,
+              focusedIndex,
+              onKeyDown: handleGridKeyDown,
+              onItemFocus: setFocusedIndex,
+            }}
+            cellComponent={GifGridCell}
+          />
+        </div>
       )
     }
 
