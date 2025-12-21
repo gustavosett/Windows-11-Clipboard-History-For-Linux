@@ -642,7 +642,12 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
           </div>
         )}
         {filteredEmojis.length > 0 && dimensions.width > 0 && (
-          <div ref={mainGridContainerRef} role="grid" aria-label="Emoji grid" style={{ height: gridHeight }}>
+          <div
+            ref={mainGridContainerRef}
+            role="grid"
+            aria-label="Emoji grid"
+            style={{ height: gridHeight }}
+          >
             <Grid<EmojiGridData>
               gridRef={gridRef}
               columnCount={columnCount}

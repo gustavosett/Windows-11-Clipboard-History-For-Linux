@@ -13,7 +13,13 @@ interface HeaderProps {
 /**
  * Header component with title and action buttons
  */
-export function Header({ onClearHistory, itemCount, isDark, secondaryOpacity, tertiaryOpacity }: HeaderProps) {
+export function Header({
+  onClearHistory,
+  itemCount,
+  isDark,
+  secondaryOpacity,
+  tertiaryOpacity,
+}: HeaderProps) {
   const [isHovered, setIsHovered] = useState(false)
 
   return (
@@ -54,13 +60,15 @@ export function Header({ onClearHistory, itemCount, isDark, secondaryOpacity, te
             'no-drag',
             'p-2 rounded-md transition-colors',
             'select-none',
-            isDark
-              ? 'text-win11-text-secondary'
-              : 'text-win11Light-text-secondary',
+            isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
           )}
-          style={isHovered && itemCount > 0 ? getTertiaryBackgroundStyle(isDark, tertiaryOpacity) : undefined}
+          style={
+            isHovered && itemCount > 0
+              ? getTertiaryBackgroundStyle(isDark, tertiaryOpacity)
+              : undefined
+          }
           title="Clear all"
         >
           <span className="text-xs">Clear All</span>

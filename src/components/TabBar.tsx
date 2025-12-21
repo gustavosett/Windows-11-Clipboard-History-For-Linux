@@ -95,11 +95,7 @@ export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent',
               isActive
                 ? [isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary']
-                : [
-                    isDark
-                      ? 'text-win11-text-secondary'
-                      : 'text-win11Light-text-secondary',
-                  ]
+                : [isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary']
             )}
             style={
               isActive || isHovered

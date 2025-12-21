@@ -379,7 +379,12 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
 
     if (dimensions.width > 0 && dimensions.height > 0) {
       return (
-        <div ref={gridContainerRef} role="grid" aria-label="GIF grid" style={{ height: gridHeight }}>
+        <div
+          ref={gridContainerRef}
+          role="grid"
+          aria-label="GIF grid"
+          style={{ height: gridHeight }}
+        >
           <Grid<GifGridData>
             gridRef={gridRef}
             columnCount={COLUMN_COUNT}

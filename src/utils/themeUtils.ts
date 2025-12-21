@@ -8,8 +8,8 @@ export function calculateSecondaryOpacity(baseOpacity: number): number {
 }
 
 export function calculateTertiaryOpacity(baseOpacity: number): number {
-    const tertiary = calculateSecondaryOpacity(baseOpacity) + 0.3
-    return Math.min(tertiary, 1.0)
+  const tertiary = calculateSecondaryOpacity(baseOpacity) + 0.3
+  return Math.min(tertiary, 1.0)
 }
 
 export function getTertiaryBackgroundStyle(isDark: boolean, opacity: number) {
