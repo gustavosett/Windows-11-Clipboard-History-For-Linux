@@ -93,6 +93,7 @@ function ClipboardApp() {
   const [focusedIndex, setFocusedIndex] = useState(0)
 
   const isDark = useThemeMode(settings.theme_mode)
+  const opacity = isDark ? settings.dark_background_opacity : settings.light_background_opacity
 
   const { history, isLoading, clearHistory, deleteItem, togglePin, pasteItem } =
     useClipboardHistory()
@@ -297,10 +298,10 @@ function ClipboardApp() {
         )
 
       case 'emoji':
-        return <EmojiPicker />
+        return <EmojiPicker isDark={isDark} opacity={opacity} />
 
       case 'gifs':
-        return <GifPicker />
+        return <GifPicker isDark={isDark} opacity={opacity} />
 
       default:
         return null

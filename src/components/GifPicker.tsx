@@ -5,8 +5,9 @@
 import { useState, memo, useRef, useLayoutEffect, useCallback } from 'react'
 import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
-import { Search, X, RefreshCw, TrendingUp } from 'lucide-react'
+import { Search, RefreshCw, TrendingUp } from 'lucide-react'
 import { useGifPicker } from '../hooks/useGifPicker'
+import { SearchBar } from './SearchBar'
 import type { Gif } from '../types/gif'
 
 /** Number of columns in the grid */
@@ -181,7 +182,12 @@ function GifGridCell({
   )
 }
 
-export function GifPicker() {
+export interface GifPickerProps {
+  isDark: boolean
+  opacity: number
+}
+
+export function GifPicker({ isDark, opacity }: GifPickerProps) {
   const {
     searchQuery,
     setSearchQuery,
@@ -413,44 +419,16 @@ export function GifPicker() {
 
       {/* Search Bar */}
       <div className="px-3 pt-3 pb-2 flex-shrink-0">
-        <div className="relative">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 dark:text-win11-text-disabled text-win11Light-text-disabled"
-          />
-          <input
-            ref={inputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Tenor GIFs..."
-            className={clsx(
-              'w-full h-9 pl-9 pr-16 rounded-lg',
-              'text-sm',
-              'dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary',
-              'dark:text-win11-text-primary text-win11Light-text-primary',
-              'placeholder:dark:text-win11-text-disabled placeholder:text-win11Light-text-disabled',
-              'border dark:border-win11-border-subtle border-win11Light-border-subtle',
-              'focus:outline-none focus:ring-2 focus:ring-win11-bg-accent',
-              'transition-all duration-150'
-            )}
-          />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {searchQuery && (
-              <button
-                onClick={handleClearSearch}
-                className={clsx(
-                  'p-1 rounded',
-                  'dark:text-win11-text-disabled text-win11Light-text-disabled',
-                  'hover:dark:text-win11-text-primary hover:text-win11Light-text-primary',
-                  'hover:dark:bg-win11-bg-card-hover hover:bg-win11Light-bg-card-hover',
-                  'transition-colors duration-150'
-                )}
-                title="Clear search"
-              >
-                <X size={14} />
-              </button>
-            )}
+        <SearchBar
+          ref={inputRef}
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onClear={handleClearSearch}
+          placeholder="Search Tenor GIFs..."
+          aria-label="Search Tenor GIFs"
+          isDark={isDark}
+          opacity={opacity}
+          rightActions={
             <button
               onClick={refreshTrending}
               className={clsx(
@@ -464,8 +442,8 @@ export function GifPicker() {
             >
               <TrendingUp size={14} />
             </button>
-          </div>
-        </div>
+          }
+        />
       </div>
 
       {/* Category indicator */}

@@ -5,8 +5,9 @@
 import { useState, useCallback, memo, useRef, useLayoutEffect, useEffect } from 'react'
 import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
-import { Search, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEmojiPicker } from '../hooks/useEmojiPicker'
+import { SearchBar } from './SearchBar'
 import type { Emoji } from '../services/emojiService'
 
 /** Size of each emoji cell */
@@ -167,7 +168,12 @@ function EmojiGridCell({
   )
 }
 
-export function EmojiPicker() {
+export interface EmojiPickerProps {
+  isDark: boolean
+  opacity: number
+}
+
+export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
   const {
     searchQuery,
     setSearchQuery,
@@ -517,37 +523,14 @@ export function EmojiPicker() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Search bar */}
       <div className="px-3 pt-3 pb-2 flex-shrink-0">
-        <div
-          className={clsx(
-            'flex items-center gap-2 px-3 py-2',
-            'rounded-md',
-            'dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary',
-            'border dark:border-win11-border-subtle border-win11Light-border',
-            'focus-within:ring-2 focus-within:ring-win11-bg-accent'
-          )}
-        >
-          <Search className="w-4 h-4 dark:text-win11-text-tertiary text-win11Light-text-secondary flex-shrink-0" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search emojis..."
-            className={clsx(
-              'flex-1 bg-transparent border-none outline-none',
-              'text-sm',
-              'dark:text-win11-text-primary text-win11Light-text-primary',
-              'placeholder:dark:text-win11-text-tertiary placeholder:text-win11Light-text-secondary'
-            )}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="p-0.5 rounded dark:hover:bg-win11-bg-card-hover hover:bg-win11Light-bg-card-hover"
-            >
-              <X className="w-4 h-4 dark:text-win11-text-tertiary text-win11Light-text-secondary" />
-            </button>
-          )}
-        </div>
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search emojis..."
+          aria-label="Search emojis"
+          isDark={isDark}
+          opacity={opacity}
+        />
       </div>
 
       {/* Recent emojis (only show when not searching) */}
