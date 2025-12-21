@@ -1,5 +1,5 @@
 export function calculateSecondaryOpacity(baseOpacity: number): number {
-  if (baseOpacity <= 0.0) {
+  if (baseOpacity < 0) {
     return 0.2
   }
 
