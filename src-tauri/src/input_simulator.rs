@@ -136,7 +136,7 @@ fn simulate_paste_xdotool() -> Result<(), String> {
     // Send Ctrl+V to the currently focused window without specifying a target
     // Using --delay ensures proper timing between key events
     let output = std::process::Command::new("xdotool")
-        .args(["key", "--delay", "50", "ctrl+v"])
+        .args(["key", "--delay", "50", "--clearmodifiers", "ctrl+v"])
         .output()
         .map_err(|e| format!("Failed to run xdotool key: {}", e))?;
 
