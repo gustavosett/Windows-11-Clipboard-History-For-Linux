@@ -48,9 +48,9 @@ const EmojiCell = memo(function EmojiCell({
       className={clsx(
         'flex items-center justify-center',
         'w-full h-full text-2xl',
-        'rounded-md transition-all duration-100',
+        'rounded-md transition-transform duration-100',
         'hover:bg-win11Light-bg-tertiary dark:hover:bg-win11-bg-card-hover',
-        'hover:scale-110',
+        'hover:scale-110 transform-gpu will-change-transform',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
       )}
       title={emoji.name}
@@ -642,7 +642,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
           </div>
         )}
         {filteredEmojis.length > 0 && dimensions.width > 0 && (
-          <div ref={mainGridContainerRef} role="grid" aria-label="Emoji grid">
+          <div ref={mainGridContainerRef} role="grid" aria-label="Emoji grid" style={{ height: gridHeight }}>
             <Grid<EmojiGridData>
               gridRef={gridRef}
               columnCount={columnCount}
@@ -652,7 +652,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
               defaultHeight={gridHeight}
               defaultWidth={gridWidth}
               className="scrollbar-win11"
-              style={{ overflowX: 'hidden' }}
+              style={{ overflowX: 'hidden', overflowY: 'scroll' }}
               cellProps={{
                 emojis: filteredEmojis,
                 onSelect: handleSelect,

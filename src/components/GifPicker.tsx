@@ -51,8 +51,9 @@ const GifCell = memo(function GifCell({
         data-gif-index={gifIndex}
         className={clsx(
           'w-full h-full rounded-lg overflow-hidden',
-          'transition-all duration-150',
+          'transition-transform duration-150',
           'hover:ring-2 hover:ring-win11-bg-accent hover:scale-[1.02]',
+          'transform-gpu will-change-transform',
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent',
           'relative',
           'dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary'
@@ -378,7 +379,7 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
 
     if (dimensions.width > 0 && dimensions.height > 0) {
       return (
-        <div ref={gridContainerRef} role="grid" aria-label="GIF grid">
+        <div ref={gridContainerRef} role="grid" aria-label="GIF grid" style={{ height: gridHeight }}>
           <Grid<GifGridData>
             gridRef={gridRef}
             columnCount={COLUMN_COUNT}
@@ -387,7 +388,8 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
             rowHeight={CELL_HEIGHT}
             defaultHeight={gridHeight}
             defaultWidth={gridWidth}
-            className="scrollbar-thin scrollbar-thumb-win11-border-subtle scrollbar-track-transparent"
+            className="scrollbar-win11"
+            style={{ overflowY: 'scroll' }}
             cellProps={{
               gifs,
               onSelect: handleSelect,
