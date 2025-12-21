@@ -50,7 +50,7 @@ const EmojiCell = memo(function EmojiCell({
         'w-full h-full text-2xl',
         'rounded-md transition-transform duration-100',
         'hover:bg-win11Light-bg-tertiary dark:hover:bg-win11-bg-card-hover',
-        'hover:scale-110 transform-gpu will-change-transform',
+        'hover:scale-110 transform-gpu hover:will-change-transform',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
       )}
       title={emoji.name}
