@@ -1,6 +1,7 @@
 import { forwardRef, memo, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { Search, X } from 'lucide-react'
+import { getTertiaryBackgroundStyle } from '@/utils/themeUtils'
 
 export interface SearchBarProps {
   value: string
@@ -27,18 +28,7 @@ export const SearchBar = memo(
     },
     ref
   ) {
-    const getBackgroundColor = () => {
-      if (isDark) {
-        return opacity >= 1
-          ? 'rgb(56, 56, 56)' // win11-bg-tertiary solid
-          : `rgba(56, 56, 56, ${opacity})`
-      }
-      return opacity >= 1
-        ? 'rgb(229, 229, 229)' // win11Light-bg-tertiary solid
-        : `rgba(229, 229, 229, ${opacity})`
-    }
-
-    const backgroundColor = getBackgroundColor()
+    const backgroundColor = getTertiaryBackgroundStyle(isDark, opacity).backgroundColor
 
     const handleClear = () => {
       onChange('')
