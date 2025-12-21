@@ -8,6 +8,7 @@ import { clsx } from 'clsx'
 import { Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEmojiPicker } from '../hooks/useEmojiPicker'
 import { SearchBar } from './SearchBar'
+import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
 import type { Emoji } from '../services/emojiService'
 
 /** Size of each emoji cell */
@@ -48,7 +49,7 @@ const EmojiCell = memo(function EmojiCell({
         'flex items-center justify-center',
         'w-full h-full text-2xl',
         'rounded-md transition-all duration-100',
-        'hover:bg-win11-bg-tertiary dark:hover:bg-win11-bg-card-hover',
+        'hover:bg-win11Light-bg-tertiary dark:hover:bg-win11-bg-card-hover',
         'hover:scale-110',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
       )}
@@ -69,6 +70,8 @@ interface CategoryPillProps {
   onKeyDown?: (e: React.KeyboardEvent) => void
   onFocus?: () => void
   'data-category-index'?: number
+  isDark: boolean
+  opacity: number
 }
 
 const CategoryPill = memo(function CategoryPill({
@@ -79,6 +82,8 @@ const CategoryPill = memo(function CategoryPill({
   onKeyDown,
   onFocus,
   'data-category-index': index,
+  isDark,
+  opacity,
 }: CategoryPillProps) {
   return (
     <button
@@ -94,11 +99,11 @@ const CategoryPill = memo(function CategoryPill({
         isActive
           ? 'bg-win11-bg-accent text-white'
           : [
-              'dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary',
-              'dark:text-win11-text-secondary text-win11Light-text-secondary',
+              'text-win11Light-text-secondary dark:text-win11-text-secondary',
               'hover:dark:bg-win11-bg-card-hover hover:bg-win11Light-bg-card-hover',
             ]
       )}
+      style={!isActive ? getTertiaryBackgroundStyle(isDark, opacity) : undefined}
     >
       {category}
     </button>
@@ -559,7 +564,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
                 className={clsx(
                   'w-8 h-8 flex items-center justify-center text-xl',
                   'rounded-md transition-all duration-100',
-                  'hover:bg-win11-bg-tertiary dark:hover:bg-win11-bg-card-hover',
+                  'hover:bg-win11Light-bg-tertiary dark:hover:bg-win11-bg-card-hover',
                   'hover:scale-110',
                   'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
                 )}
@@ -578,7 +583,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
         <div className="px-3 pb-2 flex-shrink-0 flex items-center gap-1">
           <button
             onClick={() => scrollCategories('left')}
-            className="p-1 rounded-full hover:bg-win11-bg-tertiary dark:hover:bg-win11-bg-card-hover text-win11Light-text-secondary dark:text-win11-text-secondary"
+            className="p-1 rounded-full hover:bg-win11Light-bg-tertiary dark:hover:bg-win11-bg-card-hover text-win11Light-text-secondary dark:text-win11-text-secondary"
             tabIndex={-1}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -598,6 +603,8 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
               onKeyDown={(e) => handleCategoryKeyDown(e, 0)}
               onFocus={() => setCategoryFocusedIndex(0)}
               data-category-index={0}
+              isDark={isDark}
+              opacity={opacity}
             />
             {categories.map((cat, index) => (
               <CategoryPill
@@ -609,13 +616,15 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
                 onKeyDown={(e) => handleCategoryKeyDown(e, index + 1)}
                 onFocus={() => setCategoryFocusedIndex(index + 1)}
                 data-category-index={index + 1}
+                isDark={isDark}
+                opacity={opacity}
               />
             ))}
           </div>
 
           <button
             onClick={() => scrollCategories('right')}
-            className="p-1 rounded-full hover:bg-win11-bg-tertiary dark:hover:bg-win11-bg-card-hover text-win11Light-text-secondary dark:text-win11-text-secondary"
+            className="p-1 rounded-full hover:bg-win11Light-bg-tertiary dark:hover:bg-win11-bg-card-hover text-win11Light-text-secondary dark:text-win11-text-secondary"
             tabIndex={-1}
           >
             <ChevronRight className="w-4 h-4" />

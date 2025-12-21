@@ -2,6 +2,7 @@ import { useCallback, forwardRef } from 'react'
 import { clsx } from 'clsx'
 import { Pin, X, Image as ImageIcon, Type } from 'lucide-react'
 import type { ClipboardItem } from '../types/clipboard'
+import { getCardBackgroundStyle, getTertiaryBackgroundStyle } from '../utils/themeUtils'
 
 interface HistoryItemProps {
   item: ClipboardItem
@@ -11,10 +12,22 @@ interface HistoryItemProps {
   onFocus?: () => void
   index: number
   isFocused?: boolean
+  isDark: boolean
+  secondaryOpacity: number
 }
 
 export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function HistoryItem(
-  { item, onPaste, onDelete, onTogglePin, onFocus, index, isFocused = false },
+  {
+    item,
+    onPaste,
+    onDelete,
+    onTogglePin,
+    onFocus,
+    index,
+    isFocused = false,
+    isDark,
+    secondaryOpacity,
+  },
   ref
 ) {
   const isText = item.content.type === 'Text'
@@ -66,11 +79,9 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
         // Animation delay based on index
         'animate-in',
         // Dark mode styles
-        'dark:bg-win11-bg-card dark:hover:bg-win11-bg-card-hover',
-        'dark:border dark:border-win11-border-subtle',
-        // Light mode styles
-        'bg-win11Light-bg-card hover:bg-win11Light-bg-card-hover',
-        'border border-win11Light-border',
+        isDark
+          ? 'hover:bg-win11-bg-card-hover border border-win11-border-subtle'
+          : 'hover:bg-win11Light-bg-card-hover border border-win11Light-border',
         // Pinned indicator
         item.pinned && 'ring-1 ring-win11-bg-accent',
         // Focus styles
@@ -86,28 +97,44 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
           handleClick()
         }
       }}
-      style={{ animationDelay: `${index * 30}ms` }}
+      style={{
+        animationDelay: `${index * 30}ms`,
+        ...getCardBackgroundStyle(isDark, secondaryOpacity),
+      }}
     >
       {/* Content type indicator */}
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div
-          className={clsx(
-            'flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center',
-            'dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary'
-          )}
+          className={clsx('flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center')}
+          style={getTertiaryBackgroundStyle(isDark, secondaryOpacity)}
         >
           {isText ? (
-            <Type className="w-4 h-4 dark:text-win11-text-secondary text-win11Light-text-secondary" />
+            <Type
+              className={clsx(
+                'w-4 h-4',
+                isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
+              )}
+            />
           ) : (
-            <ImageIcon className="w-4 h-4 dark:text-win11-text-secondary text-win11Light-text-secondary" />
+            <ImageIcon
+              className={clsx(
+                'w-4 h-4',
+                isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
+              )}
+            />
           )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           {item.content.type === 'Text' && (
-            <p className="text-sm dark:text-win11-text-primary text-win11Light-text-primary line-clamp-3 break-words whitespace-pre-wrap">
+            <p
+              className={clsx(
+                'text-sm line-clamp-3 break-words whitespace-pre-wrap',
+                isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
+              )}
+            >
               {item.content.data}
             </p>
           )}
@@ -126,7 +153,12 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
           )}
 
           {/* Timestamp */}
-          <span className="text-xs dark:text-win11-text-tertiary text-win11Light-text-secondary mt-1 block">
+          <span
+            className={clsx(
+              'text-xs mt-1 block',
+              isDark ? 'text-win11-text-tertiary' : 'text-win11Light-text-secondary'
+            )}
+          >
             {formatTime(item.timestamp)}
           </span>
         </div>
@@ -143,10 +175,12 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
             onClick={handleTogglePin}
             className={clsx(
               'p-1.5 rounded-md transition-colors',
-              'hover:dark:bg-win11-bg-tertiary hover:bg-win11Light-bg-tertiary',
+              isDark ? 'hover:bg-win11-bg-tertiary' : 'hover:bg-win11Light-bg-tertiary',
               item.pinned
                 ? 'text-win11-bg-accent'
-                : 'dark:text-win11-text-tertiary text-win11Light-text-secondary'
+                : isDark
+                  ? 'text-win11-text-tertiary'
+                  : 'text-win11Light-text-secondary'
             )}
             title={item.pinned ? 'Unpin' : 'Pin'}
             tabIndex={-1}
@@ -159,8 +193,10 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
             onClick={handleDelete}
             className={clsx(
               'p-1.5 rounded-md transition-colors',
-              'dark:text-win11-text-tertiary text-win11Light-text-secondary',
-              'hover:text-win11-error hover:dark:bg-win11-bg-tertiary hover:bg-win11Light-bg-tertiary'
+              isDark
+                ? 'text-win11-text-tertiary hover:bg-win11-bg-tertiary'
+                : 'text-win11Light-text-secondary hover:bg-win11Light-bg-tertiary',
+              'hover:text-win11-error'
             )}
             title="Delete"
             tabIndex={-1}

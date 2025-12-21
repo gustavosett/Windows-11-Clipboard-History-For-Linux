@@ -9,6 +9,7 @@ import { Search, RefreshCw, TrendingUp } from 'lucide-react'
 import { useGifPicker } from '../hooks/useGifPicker'
 import { SearchBar } from './SearchBar'
 import type { Gif } from '../types/gif'
+import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
 
 /** Number of columns in the grid */
 const COLUMN_COUNT = 2
@@ -439,6 +440,7 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
                 'transition-colors duration-150'
               )}
               title="Show trending"
+              style={getTertiaryBackgroundStyle(isDark, opacity)}
             >
               <TrendingUp size={14} />
             </button>

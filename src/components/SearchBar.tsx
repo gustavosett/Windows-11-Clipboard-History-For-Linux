@@ -15,7 +15,16 @@ export interface SearchBarProps {
 
 export const SearchBar = memo(
   forwardRef<HTMLInputElement, SearchBarProps>(function SearchBar(
-    { value, onChange, placeholder = 'Search...', onClear, rightActions, 'aria-label': ariaLabel, isDark, opacity },
+    {
+      value,
+      onChange,
+      placeholder = 'Search...',
+      onClear,
+      rightActions,
+      'aria-label': ariaLabel,
+      isDark,
+      opacity,
+    },
     ref
   ) {
     const getBackgroundColor = () => {

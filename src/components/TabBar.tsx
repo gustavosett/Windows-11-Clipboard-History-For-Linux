@@ -1,11 +1,15 @@
-import { forwardRef, useRef, useImperativeHandle, useCallback } from 'react'
+import { forwardRef, useRef, useImperativeHandle, useCallback, useState } from 'react'
 import { clsx } from 'clsx'
 import { ClipboardList, Smile, Image } from 'lucide-react'
 import type { ActiveTab } from '../types/clipboard'
 
+import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
+
 interface TabBarProps {
   activeTab: ActiveTab
   onTabChange: (tab: ActiveTab) => void
+  isDark: boolean
+  tertiaryOpacity: number
 }
 
 export interface TabBarRef {
@@ -19,10 +23,11 @@ const tabs: { id: ActiveTab; label: string; icon: typeof ClipboardList }[] = [
 ]
 
 export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
-  { activeTab, onTabChange },
+  { activeTab, onTabChange, isDark, tertiaryOpacity },
   ref
 ) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const [hoveredTab, setHoveredTab] = useState<ActiveTab | null>(null)
 
   useImperativeHandle(ref, () => ({
     focusFirstTab: () => {
@@ -58,13 +63,17 @@ export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
 
   return (
     <div
-      className="flex items-center gap-1 p-2 px-4 border-b dark:border-win11-border-subtle border-win11Light-border"
+      className={clsx(
+        'flex items-center gap-1 p-2 px-4 border-b',
+        isDark ? 'border-win11-border-subtle' : 'border-win11Light-border'
+      )}
       data-tauri-drag-region
       role="tablist"
     >
       {tabs.map((tab, index) => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
+        const isHovered = hoveredTab === tab.id
 
         return (
           <button
@@ -74,6 +83,8 @@ export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
             }}
             onClick={() => onTabChange(tab.id)}
             onKeyDown={(e) => handleKeyDown(e, index)}
+            onMouseEnter={() => setHoveredTab(tab.id)}
+            onMouseLeave={() => setHoveredTab(null)}
             role="tab"
             aria-selected={isActive}
             tabIndex={isActive ? 0 : -1}
@@ -83,15 +94,18 @@ export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
               'text-sm font-medium transition-all duration-150',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent',
               isActive
-                ? [
-                    'dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary',
-                    'dark:text-win11-text-primary text-win11Light-text-primary',
-                  ]
+                ? [isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary']
                 : [
-                    'dark:text-win11-text-secondary text-win11Light-text-secondary',
-                    'hover:dark:bg-win11-bg-card-hover hover:bg-win11Light-bg-card-hover',
+                    isDark
+                      ? 'text-win11-text-secondary'
+                      : 'text-win11Light-text-secondary',
                   ]
             )}
+            style={
+              isActive || isHovered
+                ? getTertiaryBackgroundStyle(isDark, tertiaryOpacity)
+                : undefined
+            }
           >
             <Icon className="w-4 h-4" />
             <span className="hidden sm:inline">{tab.label}</span>
