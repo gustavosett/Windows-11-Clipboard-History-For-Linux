@@ -27,7 +27,6 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
         ("xdotool", simulate_paste_xdotool),
         ("XTest", simulate_paste_xtest),
         ("uinput", simulate_paste_uinput),
-        ("enigo", simulate_paste_enigo),
     ];
 
     const NON_X11_STRATEGIES: &[PasteStrategy] = &[("uinput", simulate_paste_uinput)];
@@ -276,33 +275,4 @@ fn simulate_paste_uinput() -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
-fn simulate_paste_enigo() -> Result<(), String> {
-    use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 
-    let mut enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
-
-    // Press Ctrl and wait for it to register
-    enigo
-        .key(Key::Control, Direction::Press)
-        .map_err(|e| e.to_string())?;
-    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
-
-    // Press and release V
-    enigo
-        .key(Key::Unicode('v'), Direction::Press)
-        .map_err(|e| e.to_string())?;
-    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
-
-    enigo
-        .key(Key::Unicode('v'), Direction::Release)
-        .map_err(|e| e.to_string())?;
-    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
-
-    // Release Ctrl
-    enigo
-        .key(Key::Control, Direction::Release)
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
-}
