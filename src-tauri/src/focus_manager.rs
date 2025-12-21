@@ -15,7 +15,7 @@ use x11rb::protocol::xproto::{AtomEnum, ClientMessageEvent, ConnectionExt, Event
 
 /// Time to wait after restoring focus before allowing the paste to proceed
 #[cfg(target_os = "linux")]
-const FOCUS_RESTORE_DELAY: Duration = Duration::from_millis(100);
+const FOCUS_RESTORE_DELAY: Duration = Duration::from_millis(150);
 
 /// Stores the ID of the window that had focus before we opened
 #[cfg(target_os = "linux")]

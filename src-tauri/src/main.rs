@@ -192,8 +192,7 @@ impl PasteHelper {
         if let Err(e) = restore_focused_window() {
             eprintln!("[PasteHelper] Warning: Focus restoration failed: {}", e);
         }
-        // Wait for OS window manager (especially Wayland/GNOME) to process focus change
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
         Ok(())
     }
 }

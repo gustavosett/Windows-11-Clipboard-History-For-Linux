@@ -4,17 +4,29 @@ use std::time::Duration;
 
 type PasteStrategy = (&'static str, fn() -> Result<(), String>);
 
+/// Delay before starting the paste sequence to ensure window focus is stable
+const PRE_PASTE_DELAY_MS: u64 = 50;
+
+/// Delay between key events to ensure proper registration
+const KEY_EVENT_DELAY_MS: u64 = 50;
+
+/// Delay after device creation for uinput to be recognized
+const UINPUT_DEVICE_SETTLE_MS: u64 = 100;
+
+/// Delay after paste sequence completes
+const POST_PASTE_DELAY_MS: u64 = 30;
+
 #[cfg(target_os = "linux")]
 pub fn simulate_paste_keystroke() -> Result<(), String> {
-    // Small delay before paste
-    thread::sleep(Duration::from_millis(30));
+    // Give window manager time to settle focus before sending keystrokes
+    thread::sleep(Duration::from_millis(PRE_PASTE_DELAY_MS));
 
     eprintln!("[SimulatePaste] Sending Ctrl+V...");
 
     const X11_STRATEGIES: &[PasteStrategy] = &[
         ("xdotool", simulate_paste_xdotool),
-        ("uinput", simulate_paste_uinput),
         ("XTest", simulate_paste_xtest),
+        ("uinput", simulate_paste_uinput),
         ("enigo", simulate_paste_enigo),
     ];
 
@@ -30,6 +42,8 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
         match func() {
             Ok(()) => {
                 eprintln!("[SimulatePaste] Ctrl+V sent via {}", name);
+                // Small delay after paste to let the target app process it
+                thread::sleep(Duration::from_millis(POST_PASTE_DELAY_MS));
                 return Ok(());
             }
             Err(err) => {
@@ -79,7 +93,7 @@ fn simulate_paste_xtest() -> Result<(), String> {
     conn.sync()
         .map_err(|e| format!("Sync setup failed: {}", e))?;
 
-    // Press Ctrl
+    // Press Ctrl and wait for it to be registered
     fake_key(
         &conn,
         2,
@@ -87,15 +101,18 @@ fn simulate_paste_xtest() -> Result<(), String> {
         root_window,
         "Failed to press Ctrl",
     )?;
-    thread::sleep(Duration::from_millis(30));
+    conn.sync().map_err(|e| format!("Sync after Ctrl press failed: {}", e))?;
+    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     // Press V
     fake_key(&conn, 2, V_KEYCODE, root_window, "Failed to press V")?;
-    thread::sleep(Duration::from_millis(30));
+    conn.sync().map_err(|e| format!("Sync after V press failed: {}", e))?;
+    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     // Release V
     fake_key(&conn, 3, V_KEYCODE, root_window, "Failed to release V")?;
-    thread::sleep(Duration::from_millis(30));
+    conn.sync().map_err(|e| format!("Sync after V release failed: {}", e))?;
+    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     // Release Ctrl
     fake_key(
@@ -106,36 +123,22 @@ fn simulate_paste_xtest() -> Result<(), String> {
         "Failed to release Ctrl",
     )?;
 
-    conn.sync().map_err(|e| format!("Sync failed: {}", e))?;
+    conn.sync().map_err(|e| format!("Final sync failed: {}", e))?;
     Ok(())
 }
 
-/// Simulate Ctrl+V using xdotool with the focused window
+/// Simulate Ctrl+V using xdotool
 #[cfg(target_os = "linux")]
 fn simulate_paste_xdotool() -> Result<(), String> {
-    // Get the currently focused window
-    let window_output = std::process::Command::new("xdotool")
-        .arg("getwindowfocus")
-        .output()
-        .map_err(|e| format!("Failed to run xdotool getwindowfocus: {}", e))?;
-
-    if !window_output.status.success() {
-        return Err("xdotool getwindowfocus failed".to_string());
-    }
-
-    let window_id = String::from_utf8_lossy(&window_output.stdout)
-        .trim()
-        .to_string();
-
-    eprintln!("[SimulatePaste] xdotool targeting window: {}", window_id);
-
-    // Send key to the specific window
+    // Send Ctrl+V to the currently focused window without specifying a target
+    // Using --delay ensures proper timing between key events
     let output = std::process::Command::new("xdotool")
-        .args(["key", "--window", &window_id, "--clearmodifiers", "ctrl+v"])
+        .args(["key", "--delay", "50", "ctrl+v"])
         .output()
         .map_err(|e| format!("Failed to run xdotool key: {}", e))?;
 
     if output.status.success() {
+        eprintln!("[SimulatePaste] xdotool sent ctrl+v to focused window");
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -213,7 +216,9 @@ fn simulate_paste_uinput() -> Result<(), String> {
         }
     }
 
-    thread::sleep(Duration::from_millis(50));
+    // Wait longer for the virtual device to be recognized by the system
+    // This is critical for some desktop environments (Cinnamon, GNOME)
+    thread::sleep(Duration::from_millis(UINPUT_DEVICE_SETTLE_MS));
 
     // Press Ctrl
     uinput
@@ -223,7 +228,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    thread::sleep(Duration::from_millis(30));
+    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     // Press V
     uinput
@@ -233,7 +238,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    thread::sleep(Duration::from_millis(30));
+    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     // Release V
     uinput
@@ -243,7 +248,7 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    thread::sleep(Duration::from_millis(30));
+    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     // Release Ctrl
     uinput
@@ -253,12 +258,16 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    thread::sleep(Duration::from_millis(50));
+    
+    // Wait for events to be processed before destroying device
+    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     unsafe {
         libc::ioctl(uinput.as_raw_fd(), UI_DEV_DESTROY);
     }
-    thread::sleep(Duration::from_millis(20));
+    
+    // Small delay after device destruction
+    thread::sleep(Duration::from_millis(POST_PASTE_DELAY_MS));
 
     Ok(())
 }
@@ -269,12 +278,24 @@ fn simulate_paste_enigo() -> Result<(), String> {
 
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
 
+    // Press Ctrl and wait for it to register
     enigo
         .key(Key::Control, Direction::Press)
         .map_err(|e| e.to_string())?;
+    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
+    
+    // Press and release V
     enigo
-        .key(Key::Unicode('v'), Direction::Click)
+        .key(Key::Unicode('v'), Direction::Press)
         .map_err(|e| e.to_string())?;
+    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
+    
+    enigo
+        .key(Key::Unicode('v'), Direction::Release)
+        .map_err(|e| e.to_string())?;
+    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
+    
+    // Release Ctrl
     enigo
         .key(Key::Control, Direction::Release)
         .map_err(|e| e.to_string())?;
