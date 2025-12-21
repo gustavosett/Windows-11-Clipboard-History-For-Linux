@@ -101,17 +101,20 @@ fn simulate_paste_xtest() -> Result<(), String> {
         root_window,
         "Failed to press Ctrl",
     )?;
-    conn.sync().map_err(|e| format!("Sync after Ctrl press failed: {}", e))?;
+    conn.sync()
+        .map_err(|e| format!("Sync after Ctrl press failed: {}", e))?;
     thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     // Press V
     fake_key(&conn, 2, V_KEYCODE, root_window, "Failed to press V")?;
-    conn.sync().map_err(|e| format!("Sync after V press failed: {}", e))?;
+    conn.sync()
+        .map_err(|e| format!("Sync after V press failed: {}", e))?;
     thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     // Release V
     fake_key(&conn, 3, V_KEYCODE, root_window, "Failed to release V")?;
-    conn.sync().map_err(|e| format!("Sync after V release failed: {}", e))?;
+    conn.sync()
+        .map_err(|e| format!("Sync after V release failed: {}", e))?;
     thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     // Release Ctrl
@@ -123,7 +126,8 @@ fn simulate_paste_xtest() -> Result<(), String> {
         "Failed to release Ctrl",
     )?;
 
-    conn.sync().map_err(|e| format!("Final sync failed: {}", e))?;
+    conn.sync()
+        .map_err(|e| format!("Final sync failed: {}", e))?;
     Ok(())
 }
 
@@ -258,14 +262,14 @@ fn simulate_paste_uinput() -> Result<(), String> {
         .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
         .map_err(|e| e.to_string())?;
     uinput.flush().map_err(|e| e.to_string())?;
-    
+
     // Wait for events to be processed before destroying device
     thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
 
     unsafe {
         libc::ioctl(uinput.as_raw_fd(), UI_DEV_DESTROY);
     }
-    
+
     // Small delay after device destruction
     thread::sleep(Duration::from_millis(POST_PASTE_DELAY_MS));
 
@@ -283,18 +287,18 @@ fn simulate_paste_enigo() -> Result<(), String> {
         .key(Key::Control, Direction::Press)
         .map_err(|e| e.to_string())?;
     thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
-    
+
     // Press and release V
     enigo
         .key(Key::Unicode('v'), Direction::Press)
         .map_err(|e| e.to_string())?;
     thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
-    
+
     enigo
         .key(Key::Unicode('v'), Direction::Release)
         .map_err(|e| e.to_string())?;
     thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
-    
+
     // Release Ctrl
     enigo
         .key(Key::Control, Direction::Release)

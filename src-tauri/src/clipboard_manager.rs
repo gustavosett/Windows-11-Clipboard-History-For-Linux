@@ -187,24 +187,18 @@ impl ClipboardManager {
             return None;
         }
 
-        // Deduplicate against history
+        // Check if this exact text is already the most recent non-pinned item
+        // If so, skip entirely - no need to add or move
         if self.is_duplicate_text(&text) {
-            // If it exists but isn't the immediate top, move it to top
-            self.move_text_to_top(&text);
             self.last_added_text_hash = Some(text_hash);
-            // We return None because we didn't create a *new* item,
-            // but we updated the view.
-            // Note: If the UI needs to know about the move, this logic might need adjustment,
-            // but based on original code, it removes then adds.
-        } else {
-            // Clean remove if exists elsewhere (non-pinned) to re-add at top
-            self.remove_duplicate_text_from_history(&text);
+            return None;
         }
 
-        // If we reached here, we might have just moved it, or it's new.
-        // The original code logic was slightly intertwined.
-        // Let's stick to the behavior: Remove duplicates, then add new.
+        // Check if this text exists elsewhere in history (not at top)
+        // If so, remove the old entry so we can add fresh at top
+        self.remove_duplicate_text_from_history(&text);
 
+        // Create new item and add to history
         let item = ClipboardItem::new_text(text);
         self.insert_item(item.clone());
 
@@ -294,13 +288,6 @@ impl ClipboardManager {
         }) {
             self.history.remove(pos);
         }
-    }
-
-    /// Moves existing text item to top if found (helper for logic above)
-    fn move_text_to_top(&mut self, text: &str) {
-        // This essentially does remove_duplicate then add,
-        // but strictly implemented via `add_text` logic flow
-        self.remove_duplicate_text_from_history(text);
     }
 
     fn convert_image_to_base64(&self, image_data: &ImageData<'_>) -> Option<String> {

@@ -49,7 +49,11 @@ fn delete_item(state: State<AppState>, id: String) {
 
 #[tauri::command]
 fn toggle_pin(state: State<AppState>, id: String) -> Option<ClipboardItem> {
-    state.clipboard_manager.lock().toggle_pin(&id)
+    let result = state.clipboard_manager.lock().toggle_pin(&id);
+    if result.is_none() {
+        eprintln!("[toggle_pin] Item with id '{}' not found in history.", id);
+    }
+    result
 }
 
 #[tauri::command]
@@ -97,14 +101,26 @@ async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> R
         manager.get_item(&id).cloned()
     };
 
-    if let Some(item) = item {
-        // 2. Prepare Environment (Hide Window -> Restore Focus)
-        WindowController::hide(&app);
-        PasteHelper::prepare_target_window().await?;
+    match item {
+        Some(item) => {
+            // 2. Prepare Environment (Hide Window -> Restore Focus)
+            WindowController::hide(&app);
+            PasteHelper::prepare_target_window().await?;
 
-        // 3. Perform Paste
-        let mut manager = state.clipboard_manager.lock();
-        manager.paste_item(&item).map_err(|e| e.to_string())?;
+            // 3. Perform Paste
+            let mut manager = state.clipboard_manager.lock();
+            manager.paste_item(&item).map_err(|e| e.to_string())?;
+        }
+        None => {
+            eprintln!(
+                "[paste_item] Item with id '{}' not found in history. Syncing frontend...",
+                id
+            );
+            // Emit event to trigger frontend refresh
+            let history = state.clipboard_manager.lock().get_history();
+            let _ = app.emit("history-sync", &history);
+            return Err(format!("Item '{}' not found. History has been synced.", id));
+        }
     }
     Ok(())
 }

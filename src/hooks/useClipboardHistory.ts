@@ -46,25 +46,42 @@ export function useClipboardHistory() {
   }, [])
 
   // Toggle pin status
-  const togglePin = useCallback(async (id: string) => {
-    try {
-      const updatedItem = await invoke<ClipboardItem>('toggle_pin', { id })
-      if (updatedItem) {
-        setHistory((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
+  const togglePin = useCallback(
+    async (id: string) => {
+      try {
+        const updatedItem = await invoke<ClipboardItem>('toggle_pin', { id })
+        if (updatedItem) {
+          setHistory((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
+        } else {
+          // Item not found - refresh history
+          console.warn('[useClipboardHistory] Toggle pin returned null, refreshing history')
+          await fetchHistory()
+        }
+      } catch (err) {
+        console.warn('[useClipboardHistory] Toggle pin failed, refreshing history')
+        await fetchHistory()
+        setError(err instanceof Error ? err.message : 'Failed to toggle pin')
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle pin')
-    }
-  }, [])
+    },
+    [fetchHistory]
+  )
 
   // Paste an item
-  const pasteItem = useCallback(async (id: string) => {
-    try {
-      await invoke('paste_item', { id })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to paste item')
-    }
-  }, [])
+  const pasteItem = useCallback(
+    async (id: string) => {
+      try {
+        await invoke('paste_item', { id })
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        console.warn('[useClipboardHistory] Paste failed, refreshing history:', errorMessage)
+        // If paste failed due to item not found, refresh history
+        // The backend already emits history-sync event, but we fetch as backup
+        await fetchHistory()
+        setError(errorMessage)
+      }
+    },
+    [fetchHistory]
+  )
 
   // Listen for clipboard changes
   useEffect(() => {
@@ -72,6 +89,7 @@ export function useClipboardHistory() {
 
     let unlistenChanged: UnlistenFn | undefined
     let unlistenCleared: UnlistenFn | undefined
+    let unlistenSync: UnlistenFn | undefined
 
     const setupListeners = async () => {
       unlistenChanged = await listen<ClipboardItem>('clipboard-changed', (event) => {
@@ -106,6 +124,12 @@ export function useClipboardHistory() {
       unlistenCleared = await listen('history-cleared', () => {
         setHistory((prev) => prev.filter((item) => item.pinned))
       })
+
+      // Listen for history sync events (triggered when backend detects desync)
+      unlistenSync = await listen<ClipboardItem[]>('history-sync', (event) => {
+        console.log('[useClipboardHistory] Received history-sync event, refreshing history')
+        setHistory(event.payload)
+      })
     }
 
     setupListeners()
@@ -113,6 +137,7 @@ export function useClipboardHistory() {
     return () => {
       unlistenChanged?.()
       unlistenCleared?.()
+      unlistenSync?.()
     }
   }, [fetchHistory])
 
