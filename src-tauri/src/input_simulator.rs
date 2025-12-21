@@ -274,5 +274,3 @@ fn simulate_paste_uinput() -> Result<(), String> {
 
     Ok(())
 }
-
-
