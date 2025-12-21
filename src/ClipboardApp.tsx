@@ -280,7 +280,6 @@ function ClipboardApp() {
               onClearHistory={clearHistory}
               itemCount={history.filter((i) => !i.pinned).length}
               isDark={isDark}
-              secondaryOpacity={secondaryOpacity}
               tertiaryOpacity={tertiaryOpacity}
             />
             <div className="flex flex-col gap-2 p-3" role="listbox" aria-label="Clipboard history">

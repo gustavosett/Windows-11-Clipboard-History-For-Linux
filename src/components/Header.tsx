@@ -6,20 +6,13 @@ interface HeaderProps {
   onClearHistory: () => void
   itemCount: number
   isDark: boolean
-  secondaryOpacity: number
   tertiaryOpacity: number
 }
 
 /**
  * Header component with title and action buttons
  */
-export function Header({
-  onClearHistory,
-  itemCount,
-  isDark,
-  secondaryOpacity,
-  tertiaryOpacity,
-}: HeaderProps) {
+export function Header({ onClearHistory, itemCount, isDark, tertiaryOpacity }: HeaderProps) {
   const [isHovered, setIsHovered] = useState(false)
 
   return (
