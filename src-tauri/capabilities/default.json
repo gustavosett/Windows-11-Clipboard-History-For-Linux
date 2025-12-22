@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
+  "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main and settings windows",
   "windows": ["main", "settings"],
@@ -27,12 +27,21 @@
     "core:event:allow-emit",
     "core:event:allow-listen",
     "core:app:default",
+    "core:app:allow-version",
     "core:tray:default",
     "core:tray:allow-set-icon",
     "core:tray:allow-set-tooltip",
     "core:resources:default",
     "shell:default",
-    "shell:allow-open"
+    "shell:allow-open",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled",
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-register-all",
+    "global-shortcut:allow-unregister",
+    "global-shortcut:allow-unregister-all"
   ],
   "platforms": ["linux", "windows", "macOS"]
 }

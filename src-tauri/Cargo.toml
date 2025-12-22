@@ -1,19 +1,19 @@
 [package]
-name = "win11-clipboard-history"
+name = "win11-clipboard-history-lib"
 version = "1.0.0"
 description = "A Windows 11-style Clipboard History Manager for Linux"
 authors = ["gustavosett"]
 license = "MIT"
 repository = "https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux"
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.77"
 
 [lib]
 name = "win11_clipboard_history_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "win11-clipboard-history"
+name = "win11-clipboard-history-bin"
 path = "src/main.rs"
 
 [build-dependencies]
@@ -50,6 +50,15 @@ dirs = "6.0"
 
 tauri-plugin-single-instance = "2"
 
+# Autostart plugin for first-party autostart support
+tauri-plugin-autostart = "2"
+
+# Global shortcut plugin for cross-platform hotkeys
+tauri-plugin-global-shortcut = "2"
+
+# System information
+whoami = "1.5"
+
 # X11 Simulation for paste injection (Linux)
 [target.'cfg(target_os = "linux")'.dependencies]
 x11rb = { version = "0.13", features = ["allow-unsafe-code", "xtest"] }
@@ -65,4 +74,3 @@ panic = "abort"
 codegen-units = 1
 lto = true
 opt-level = "z"
-strip = true
