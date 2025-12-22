@@ -56,7 +56,7 @@ install_via_package_manager() {
         ubuntu|debian|pop|linuxmint|elementary|zorin|kali|neon)
             install_deb
             ;;
-        fedora|rhel|centos|rocky|alma)
+        fedora|rhel|centos|rocky|almalinux)
             install_rpm
             ;;
         arch|manjaro|endeavouros|garuda)
@@ -340,8 +340,16 @@ main() {
     detect_arch
     log "Detected: $DISTRO_ID ${DISTRO_VERSION:-}"
     
+    # Check WebKitGTK compatibility
+    check_webkit_compatibility
+    webkit_status=$?
+    
+    # Prefer AppImage if only legacy WebKitGTK 4.0 is available
+    if [ "$webkit_status" -eq 1 ]; then
+        warn "Legacy WebKitGTK detected. Preferring AppImage for better compatibility."
+        install_appimage
     # Try package manager first
-    if install_via_package_manager; then
+    elif install_via_package_manager; then
         success "Package installation complete!"
     else
         warn "No native package available for $DISTRO_ID"
