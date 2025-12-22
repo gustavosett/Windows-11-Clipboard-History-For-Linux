@@ -33,6 +33,34 @@ detect_distro() {
     fi
 }
 
+# Detect system architecture and set DEB_ARCH/RPM_ARCH
+detect_arch() {
+    local arch
+    arch=$(uname -m)
+    
+    case "$arch" in
+        x86_64|amd64)
+            DEB_ARCH="amd64"
+            RPM_ARCH="x86_64"
+            ;;
+        aarch64|arm64)
+            DEB_ARCH="arm64"
+            RPM_ARCH="aarch64"
+            ;;
+        armv7l|armhf)
+            DEB_ARCH="armhf"
+            RPM_ARCH="armv7hl"
+            ;;
+        *)
+            warn "Unknown architecture: $arch. Defaulting to x86_64."
+            DEB_ARCH="amd64"
+            RPM_ARCH="x86_64"
+            ;;
+    esac
+    
+    log "Architecture: $arch (DEB: $DEB_ARCH, RPM: $RPM_ARCH)"
+}
+
 # Check WebKitGTK compatibility
 check_webkit_compatibility() {
     log "Checking WebKitGTK compatibility..."
