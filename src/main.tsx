@@ -1,9 +1,48 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { invoke } from '@tauri-apps/api/core'
 import ClipboardApp from './ClipboardApp'
 import SettingsApp from './SettingsApp'
+import { SetupWizard } from './components/SetupWizard'
 import './index.css'
+
+/**
+ * Main app wrapper that handles first-run setup wizard
+ */
+function ClipboardAppWithSetup() {
+  const [showWizard, setShowWizard] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Check if this is first run
+    invoke<boolean>('is_first_run')
+      .then((isFirst) => {
+        setShowWizard(isFirst)
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error('Failed to check first run:', err)
+        setLoading(false)
+      })
+  }, [])
+
+  const handleWizardComplete = () => {
+    setShowWizard(false)
+  }
+
+  if (loading) {
+    // Show nothing while checking first run status
+    return null
+  }
+
+  return (
+    <>
+      {showWizard && <SetupWizard onComplete={handleWizardComplete} />}
+      <ClipboardApp />
+    </>
+  )
+}
 
 /**
  * Root component that routes to either ClipboardApp or SettingsApp
@@ -17,8 +56,8 @@ export default function Root() {
     return <SettingsApp />
   }
 
-  // Default to ClipboardApp for 'main' and any other window
-  return <ClipboardApp />
+  // Default to ClipboardApp with setup wizard for 'main' and any other window
+  return <ClipboardAppWithSetup />
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
