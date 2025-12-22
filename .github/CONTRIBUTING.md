@@ -36,6 +36,10 @@ This project and everyone participating in it is governed by our commitment to c
 
 Make sure you have the required dependencies installed:
 
+- **Rust 1.77+** (for autostart plugin compatibility)
+- **Node.js 20+**
+- System build dependencies
+
 ```bash
 # Install system dependencies (auto-detects your distro)
 make deps
