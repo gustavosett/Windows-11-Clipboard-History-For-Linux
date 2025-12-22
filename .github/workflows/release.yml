@@ -144,11 +144,11 @@ jobs:
           VERSION=${{ steps.get_version.outputs.VERSION }}
           
           # Upload .deb
-          cloudsmith push deb gustavosett/clipboard/any-distro/any-version \
+          cloudsmith push deb gustavosett/clipboard-manager/any-distro/any-version \
             src-tauri/target/release/bundle/deb/*.deb \
             --api-key $CLOUDSMITH_API_KEY || echo "Cloudsmith .deb upload failed (may already exist)"
           
           # Upload .rpm
-          cloudsmith push rpm gustavosett/clipboard/any-distro/any-version \
+          cloudsmith push rpm gustavosett/clipboard-manager/any-distro/any-version \
             src-tauri/target/release/bundle/rpm/*.rpm \
             --api-key $CLOUDSMITH_API_KEY || echo "Cloudsmith .rpm upload failed (may already exist)"
