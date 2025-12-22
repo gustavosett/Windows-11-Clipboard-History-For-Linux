@@ -58,9 +58,17 @@ jobs:
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }}
           echo "Syncing version to $VERSION"
-          npm version $VERSION --no-git-tag-version
-          sed -i "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
-          sed -i "s/^version = \"[0-9]*\.[0-9]*\.[0-9]*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+          # Update package.json
+          npm version $VERSION --no-git-tag-version --allow-same-version
+          # Update tauri.conf.json (handles semver with pre-release like 1.0.0-beta.1)
+          sed -i 's/"version": "[^"]*"/"version": "'"$VERSION"'"/' src-tauri/tauri.conf.json
+          # Update Cargo.toml (first occurrence only, handles semver with pre-release)
+          sed -i '0,/^version = "[^"]*"/s//version = "'"$VERSION"'"/' src-tauri/Cargo.toml
+          # Verify versions were updated
+          echo "=== Versions after sync ==="
+          echo "package.json: $(grep '"version"' package.json | head -1)"
+          echo "tauri.conf.json: $(grep '"version"' src-tauri/tauri.conf.json | head -1)"
+          echo "Cargo.toml: $(grep '^version' src-tauri/Cargo.toml | head -1)"
 
       - name: Install npm dependencies
         run: npm ci
@@ -88,7 +96,13 @@ jobs:
             
             A Windows 11-style Clipboard History Manager for Linux.
             
-            ### Installation
+            ### Quick Installation (Recommended)
+            
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/gustavosett/Windows-11-Clipboard-History-For-Linux/main/scripts/install.sh | bash
+            ```
+            
+            ### Manual Installation
             
             #### Ubuntu/Debian
             Download the `.deb` file and install:
@@ -102,6 +116,11 @@ jobs:
             sudo rpm -i win11-clipboard-history-${{ steps.get_version.outputs.VERSION }}-1.x86_64.rpm
             ```
             
+            #### Arch Linux (AUR)
+            ```bash
+            yay -S win11-clipboard-history-bin
+            ```
+            
             #### Any Linux (AppImage)
             Download the `.AppImage` file, make it executable, and run:
             ```bash
@@ -109,16 +128,27 @@ jobs:
             ./win11-clipboard-history_${{ steps.get_version.outputs.VERSION }}_amd64.AppImage
             ```
             
-            ### ⚠️ Important: Post-Installation Steps
+            ### Usage
             
-            This app requires access to input devices for global hotkeys. After installation:
-            
-            1. Add your user to the `input` group:
-               ```bash
-               sudo usermod -aG input $USER
-               ```
-            2. **Log out and log back in** for permissions to take effect
-            
-            The `.deb` and `.rpm` packages do this automatically during installation.
+            Press **Super+V** to open the clipboard history.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Cloudsmith
+        if: env.CLOUDSMITH_API_KEY != ''
+        continue-on-error: true
+        env:
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+        run: |
+          pip install cloudsmith-cli
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          
+          # Upload .deb
+          cloudsmith push deb gustavosett/clipboard/any-distro/any-version \
+            src-tauri/target/release/bundle/deb/*.deb \
+            --api-key $CLOUDSMITH_API_KEY || echo "Cloudsmith .deb upload failed (may already exist)"
+          
+          # Upload .rpm
+          cloudsmith push rpm gustavosett/clipboard/any-distro/any-version \
+            src-tauri/target/release/bundle/rpm/*.rpm \
+            --api-key $CLOUDSMITH_API_KEY || echo "Cloudsmith .rpm upload failed (may already exist)"
