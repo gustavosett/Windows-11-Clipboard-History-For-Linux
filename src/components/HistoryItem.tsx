@@ -1,12 +1,10 @@
-import { useCallback, forwardRef, useMemo, useState, useRef, useEffect } from 'react'
+import { useCallback, forwardRef, useMemo } from 'react'
 import { clsx } from 'clsx'
-import { Pin, X, Image as ImageIcon, Type, Wrench, ExternalLink, Mail } from 'lucide-react'
+import { Pin, X, Image as ImageIcon, Type, ExternalLink, Mail } from 'lucide-react'
 import type { ClipboardItem } from '../types/clipboard'
 import { getCardBackgroundStyle, getTertiaryBackgroundStyle } from '../utils/themeUtils'
-import { transformerService } from '../services/transformerService'
 import { smartActionService } from '../services/smartActionService'
 import type { SmartAction } from '../services/smartActionService'
-import type { TransformerActionType } from '../services/transformerService'
 
 interface HistoryItemProps {
   item: ClipboardItem
@@ -14,7 +12,6 @@ interface HistoryItemProps {
   onDelete: (id: string) => void
   onTogglePin: (id: string) => void
   onFocus?: () => void
-  onTransform?: (originalItem: ClipboardItem, newContent: string) => void
   index: number
   isFocused?: boolean
   isDark: boolean
@@ -22,7 +19,6 @@ interface HistoryItemProps {
   isCompact?: boolean
   // Feature flags passed from parent
   enableSmartActions: boolean
-  enableDevTools: boolean
   enableUiPolish: boolean
 }
 
@@ -33,34 +29,20 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
     onDelete,
     onTogglePin,
     onFocus,
-    onTransform,
     index,
     isFocused = false,
     isDark,
     secondaryOpacity,
     isCompact = false,
     enableSmartActions,
-    enableDevTools,
     enableUiPolish,
   },
   ref
 ) {
   const isText = item.content.type === 'Text'
-  const [showTools, setShowTools] = useState(false)
-  const [toolsMenuPos, setToolsMenuPos] = useState({ top: 0, left: 0 })
-  const toolsButtonRef = useRef<HTMLButtonElement>(null)
   
   // Use compact mode only if enabled by flag
   const effectiveCompact = enableUiPolish ? isCompact : false
-
-  // Detect available transformer actions (memoized)
-  const actions = useMemo(() => {
-    if (!enableDevTools) return []
-    if (item.content.type === 'Text') {
-      return transformerService.detectActions(item.content.data)
-    }
-    return []
-  }, [item.content, enableDevTools])
 
   // Detect smart actions (memoized)
   const smartActions = useMemo(() => {
@@ -117,44 +99,6 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
       e.stopPropagation()
       await smartActionService.execute(action)
   }, [])
-
-  // Toggle tools menu
-  const handleToggleTools = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation()
-      if (showTools) {
-        setShowTools(false)
-      } else {
-        // Calculate position relative to viewport due to overflow issues if nested
-        const rect = toolsButtonRef.current?.getBoundingClientRect()
-        if (rect) {
-            // Position slightly below and to the left of the button
-            setToolsMenuPos({ top: rect.bottom + 5, left: rect.left - 100 })
-        }
-        setShowTools(true)
-      }
-    },
-    [showTools]
-  )
-  
-  // Close menu on click outside
-  useEffect(() => {
-      if (!showTools) return
-      
-      const listener = () => setShowTools(false)
-      window.addEventListener('click', listener)
-      return () => window.removeEventListener('click', listener)
-  }, [showTools])
-
-  // Handle transformation
-  const handleAction = useCallback((e: React.MouseEvent, actionId: string) => {
-    e.stopPropagation()
-    if (item.content.type === 'Text') {
-        const newContent = transformerService.transform(item.content.data, actionId as TransformerActionType)
-        onTransform?.(item, newContent)
-    }
-    setShowTools(false)
-  }, [item, onTransform])
 
   return (
     <div
@@ -277,8 +221,6 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
           className={clsx(
             'flex items-center gap-1 opacity-0 group-hover:opacity-100',
             'transition-opacity duration-150',
-            // Also visible if tools menu is open for THIS item
-            showTools && 'opacity-100'
           )}
         >
            {/* Smart Actions Buttons */}
@@ -314,24 +256,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
                </button>
            )}
 
-          {/* Tools button (Only if actions available) */}
-          {actions.length > 0 && (
-              <button
-                ref={toolsButtonRef}
-                onClick={handleToggleTools}
-                className={clsx(
-                  'p-1.5 rounded-md transition-colors',
-                  isDark
-                    ? 'text-win11-text-tertiary hover:bg-win11-bg-tertiary'
-                    : 'text-win11Light-text-secondary hover:bg-win11Light-bg-tertiary',
-                   showTools && 'bg-win11-bg-tertiary text-win11-text-primary'
-                )}
-                title="Tools"
-                tabIndex={-1}
-              >
-                  <Wrench className="w-4 h-4" />
-              </button>
-          )}
+
 
           {/* Pin button */}
           <button
@@ -374,40 +299,13 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
         <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-win11-bg-accent" />
       )}
 
-      {/* Tools Menu (Portal or Fixed position) */}
-      {showTools && (
-        <div 
-          className={clsx(
-              "fixed z-50 py-1 rounded-md shadow-lg border backdrop-blur-md min-w-[150px]",
-               isDark 
-                ? "bg-win11-bg-card/90 border-win11-border-subtle text-win11-text-primary" 
-                : "bg-win11Light-bg-card/90 border-win11Light-border text-win11Light-text-primary"
-          )}
-          style={{
-              top: toolsMenuPos.top,
-              left: Math.max(10, Math.min(window.innerWidth - 170, toolsMenuPos.left)), // Keep within bounds
-          }}
-          onClick={(e) => e.stopPropagation()} // Prevent click through to item
-        >
-            <div className={clsx("px-3 py-1.5 text-xs font-semibold opacity-70", isDark ? "text-win11-text-tertiary" : "text-win11Light-text-secondary")}>
-                Tools
-            </div>
-            {actions.map(action => (
-                <button
-                    key={action.id}
-                    onClick={(e) => handleAction(e, action.id)}
-                    className={clsx(
-                        "w-full text-left px-3 py-1.5 text-sm transition-colors",
-                         isDark 
-                          ? "hover:bg-win11-bg-card-hover" 
-                          : "hover:bg-win11Light-bg-card-hover"
-                    )}
-                >
-                    {action.label}
-                </button>
-            ))}
-        </div>
-      )}
+
+
+// ... (imports)
+
+// ... (component code)
+
+
     </div>
   )
 })

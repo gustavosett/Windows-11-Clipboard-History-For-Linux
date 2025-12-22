@@ -11,8 +11,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   dark_background_opacity: 0.7,
   light_background_opacity: 0.7,
   enable_smart_actions: true,
-  enable_dev_tools: true,
-  enable_favorites: true,
+
   enable_ui_polish: true,
   custom_kaomojis: [],
 }
@@ -597,10 +596,9 @@ function SettingsApp() {
             </div>
             <div className="p-6 space-y-6">
                 {[
-                    { key: 'enable_smart_actions', label: 'Smart Actions', desc: 'Detect URLs, emails, colors, and provide quick actions.' },
-                    { key: 'enable_dev_tools', label: 'Developer Tools', desc: 'Advanced transformation tools (JWT, Timestamp, JSON, etc.) and Regex search.' },
-                    { key: 'enable_favorites', label: 'Favorites', desc: 'Enable the Favorites tab to pin important items.' },
-                    { key: 'enable_ui_polish', label: 'UI Enhancements', desc: 'Enable animations, toast notifications, and compact mode.' },
+                    { key: 'enable_smart_actions', label: 'Smart Actions', desc: 'Automatically detect links, colors, and emails.' },
+
+                    { key: 'enable_ui_polish', label: 'UI Polish', desc: 'Enable animations, toast notifications, and compact mode support.' },
                 ].map(feature => (
                     <div key={feature.key} className="flex items-center justify-between">
                         <div>

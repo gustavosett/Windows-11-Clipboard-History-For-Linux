@@ -1,6 +1,6 @@
 import { forwardRef, useRef, useImperativeHandle, useCallback, useState } from 'react'
 import { clsx } from 'clsx'
-import { ClipboardList, Smile, Image, Star, Type } from 'lucide-react'
+import { ClipboardList, Smile, Image, Type } from 'lucide-react'
 import type { ActiveTab } from '../types/clipboard'
 
 import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
@@ -10,7 +10,7 @@ interface TabBarProps {
   onTabChange: (tab: ActiveTab) => void
   isDark: boolean
   tertiaryOpacity: number
-  enableFavorites: boolean
+
 }
 
 export interface TabBarRef {
@@ -19,23 +19,20 @@ export interface TabBarRef {
 
 const ALL_TABS: { id: ActiveTab; label: string; icon: typeof ClipboardList }[] = [
   { id: 'clipboard', label: 'Clipboard', icon: ClipboardList },
-  { id: 'favorites', label: 'Favorites', icon: Star },
+
   { id: 'emoji', label: 'Emoji', icon: Smile },
   { id: 'kaomoji', label: 'Kaomoji', icon: Type },
   { id: 'gifs', label: 'GIFs', icon: Image },
 ]
 
 export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
-  { activeTab, onTabChange, isDark, tertiaryOpacity, enableFavorites },
+  { activeTab, onTabChange, isDark, tertiaryOpacity },
   ref
 ) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const [hoveredTab, setHoveredTab] = useState<ActiveTab | null>(null)
   
-  const visibleTabs = ALL_TABS.filter(tab => {
-    if (tab.id === 'favorites' && !enableFavorites) return false
-    return true
-  })
+  const visibleTabs = ALL_TABS
 
   useImperativeHandle(ref, () => ({
     focusFirstTab: () => {

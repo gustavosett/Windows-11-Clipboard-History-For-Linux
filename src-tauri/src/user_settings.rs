@@ -23,12 +23,8 @@ pub struct UserSettings {
     /// Enable Smart Actions (URL, Color, Email detection)
     #[serde(default = "default_true")]
     pub enable_smart_actions: bool,
-    /// Enable Developer Tools (Transformers, Regex, JWT, Time)
-    #[serde(default = "default_true")]
-    pub enable_dev_tools: bool,
-    /// Enable Favorites Tab
-    #[serde(default = "default_true")]
-    pub enable_favorites: bool,
+
+
     /// Enable UI Polish (Toast, Compact Mode capability)
     #[serde(default = "default_true")]
     pub enable_ui_polish: bool,
@@ -58,8 +54,7 @@ impl Default for UserSettings {
             dark_background_opacity: 0.70,
             light_background_opacity: 0.70,
             enable_smart_actions: true,
-            enable_dev_tools: true,
-            enable_favorites: true,
+
             enable_ui_polish: true,
             custom_kaomojis: Vec::new(),
         }
@@ -179,6 +174,7 @@ mod tests {
             theme_mode: "invalid".to_string(),
             dark_background_opacity: 1.5,
             light_background_opacity: -0.5,
+            ..Default::default()
         };
         settings.validate();
 

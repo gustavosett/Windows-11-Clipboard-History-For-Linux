@@ -30,7 +30,7 @@ export interface ClipboardItem {
 }
 
 /** Active tab in the UI */
-export type ActiveTab = 'clipboard' | 'favorites' | 'gifs' | 'emoji' | 'kaomoji'
+export type ActiveTab = 'clipboard' | 'gifs' | 'emoji' | 'kaomoji'
 
 /** Theme mode */
 export type ThemeMode = 'light' | 'dark' | 'system'
@@ -46,8 +46,7 @@ export interface UserSettings {
   dark_background_opacity: number
   light_background_opacity: number
   enable_smart_actions: boolean
-  enable_dev_tools: boolean
-  enable_favorites: boolean
+
   enable_ui_polish: boolean
   custom_kaomojis: CustomKaomoji[]
 }

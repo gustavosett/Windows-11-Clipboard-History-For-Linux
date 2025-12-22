@@ -217,6 +217,8 @@ async fn paste_gif_from_url(
     Ok(())
 }
 
+// ... (existing paste commands)
+
 #[tauri::command]
 async fn finish_paste(app: AppHandle) -> Result<(), String> {
     WindowController::hide(&app);
@@ -224,6 +226,21 @@ async fn finish_paste(app: AppHandle) -> Result<(), String> {
     simulate_paste_keystroke().map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[tauri::command]
+async fn copy_text_to_clipboard(_state: State<'_, AppState>, text: String) -> Result<(), String> {
+    // 1. Update Internal Manager Manager (for history consistency, optional but good)
+    // Actually we might NOT want to add this to history immediately as "new" if it's just a transform of existing?
+    // But the watcher will pick it up anyway if monitoring.
+    // Let's just write to system clipboard.
+    
+    use arboard::Clipboard;
+    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
+    clipboard.set_text(text).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
 
 // --- Helper for Paste Logic ---
 
@@ -744,6 +761,7 @@ fn main() {
             get_user_settings,
             set_user_settings,
             is_settings_window_visible,
+            copy_text_to_clipboard,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
