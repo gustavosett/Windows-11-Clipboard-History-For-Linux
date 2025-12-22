@@ -177,6 +177,18 @@ fn detect_handler() -> Box<dyn ShortcutHandler> {
     if combined.contains("cosmic") {
         return Box::new(CosmicHandler);
     }
+    if combined.contains("lxqt") {
+        return Box::new(LxqtHandler);
+    }
+    if combined.contains("lxde") {
+        return Box::new(LxdeHandler);
+    }
+    if combined.contains("budgie") {
+        return Box::new(GnomeHandler); // Budgie uses gsettings like GNOME
+    }
+    if combined.contains("deepin") {
+        return Box::new(GnomeHandler); // Deepin uses gsettings like GNOME
+    }
 
     // Heuristic Fallback
     if Utils::command_exists("kwriteconfig5") || Utils::command_exists("kwriteconfig6") {
@@ -740,5 +752,175 @@ impl ShortcutHandler for CosmicHandler {
     fn unregister(&self, _s: &ShortcutConfig) -> Result<()> {
         // Requires real RON parser
         Ok(())
+    }
+}
+
+// --- LXQt ---
+
+struct LxqtHandler;
+impl ShortcutHandler for LxqtHandler {
+    fn name(&self) -> &str {
+        "LXQt"
+    }
+
+    fn register(&self, s: &ShortcutConfig) -> Result<()> {
+        let home = env::var("HOME")
+            .map_err(|_| ShortcutError::UnsupportedEnvironment("HOME not set".into()))?;
+        let path = PathBuf::from(home).join(".config/lxqt/globalkeyshortcuts.conf");
+
+        // LXQt uses INI format for shortcuts
+        let section = format!("Meta+V%2F{}", s.id);
+        let entry = format!(
+            "\n[{}]\nComment={}\nEnabled=true\nExec={}",
+            section, s.name, s.command
+        );
+
+        Utils::modify_file_atomic(&path, |content| {
+            if content.contains(&format!("[{}]", section)) {
+                return Ok(None); // Already exists
+            }
+
+            let mut new_content = content.clone();
+            new_content.push_str(&entry);
+            Ok(Some(new_content))
+        })
+    }
+
+    fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
+        let home = env::var("HOME")
+            .map_err(|_| ShortcutError::UnsupportedEnvironment("HOME not set".into()))?;
+        let path = PathBuf::from(home).join(".config/lxqt/globalkeyshortcuts.conf");
+
+        if !path.exists() {
+            return Ok(());
+        }
+
+        let section = format!("Meta+V%2F{}", s.id);
+
+        Utils::modify_file_atomic(&path, |content| {
+            if !content.contains(&format!("[{}]", section)) {
+                return Ok(None);
+            }
+
+            let lines: Vec<&str> = content.lines().collect();
+            let mut new_lines = Vec::new();
+            let mut skip_block = false;
+
+            for line in lines {
+                if line.trim() == format!("[{}]", section) {
+                    skip_block = true;
+                    continue;
+                }
+                if line.starts_with('[') && skip_block {
+                    skip_block = false;
+                }
+                if !skip_block {
+                    new_lines.push(line.to_string());
+                }
+            }
+            Ok(Some(new_lines.join("\n")))
+        })
+    }
+}
+
+// --- LXDE (Openbox) ---
+
+struct LxdeHandler;
+impl ShortcutHandler for LxdeHandler {
+    fn name(&self) -> &str {
+        "LXDE/Openbox"
+    }
+
+    fn register(&self, s: &ShortcutConfig) -> Result<()> {
+        let home = env::var("HOME")
+            .map_err(|_| ShortcutError::UnsupportedEnvironment("HOME not set".into()))?;
+
+        // LXDE uses Openbox for window management
+        let path = PathBuf::from(&home).join(".config/openbox/lxde-rc.xml");
+
+        // Fallback to default openbox config if LXDE-specific doesn't exist
+        let path = if path.exists() {
+            path
+        } else {
+            PathBuf::from(&home).join(".config/openbox/rc.xml")
+        };
+
+        if !path.exists() {
+            return Err(ShortcutError::Io(io::Error::new(
+                io::ErrorKind::NotFound,
+                "Openbox config not found",
+            )));
+        }
+
+        // The keybind XML to add
+        let keybind = format!(
+            r#"    <keybind key="W-v">
+      <action name="Execute">
+        <command>{}</command>
+      </action>
+    </keybind>"#,
+            s.command
+        );
+
+        Utils::modify_file_atomic(&path, |content| {
+            if content.contains(&format!("<command>{}</command>", s.command)) {
+                return Ok(None); // Already exists
+            }
+
+            // Find the </keyboard> closing tag and insert before it
+            if let Some(pos) = content.find("</keyboard>") {
+                let mut new_content = content.clone();
+                new_content.insert_str(pos, &format!("{}\n  ", keybind));
+
+                // Trigger openbox reconfigure
+                let _ = Utils::run("openbox", &["--reconfigure"]);
+
+                return Ok(Some(new_content));
+            }
+
+            Err(ShortcutError::ParseError(
+                "Could not find </keyboard> in Openbox config".into(),
+            ))
+        })
+    }
+
+    fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
+        let home = env::var("HOME")
+            .map_err(|_| ShortcutError::UnsupportedEnvironment("HOME not set".into()))?;
+
+        let path = PathBuf::from(&home).join(".config/openbox/lxde-rc.xml");
+        let path = if path.exists() {
+            path
+        } else {
+            PathBuf::from(&home).join(".config/openbox/rc.xml")
+        };
+
+        if !path.exists() {
+            return Ok(());
+        }
+
+        Utils::modify_file_atomic(&path, |content| {
+            if !content.contains(&format!("<command>{}</command>", s.command)) {
+                return Ok(None);
+            }
+
+            // Remove the keybind block - this is a simplified approach
+            // A proper XML parser would be better but adds dependency
+            let pattern = format!(
+                r#"    <keybind key="W-v">
+      <action name="Execute">
+        <command>{}</command>
+      </action>
+    </keybind>"#,
+                s.command
+            );
+
+            let new_content = content.replace(&pattern, "");
+
+            // Trigger openbox reconfigure
+            let _ = Utils::run("openbox", &["--reconfigure"]);
+
+            Ok(Some(new_content))
+        })
     }
 }
