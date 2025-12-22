@@ -668,8 +668,7 @@ impl ShortcutHandler for MateHandler {
                 return Ok(());
             }
         }
-        Err(ShortcutError::Io(io::Error::new(
-            io::ErrorKind::Other,
+        Err(ShortcutError::Io(io::Error::other(
             "MATE keybinding slots full",
         )))
     }
