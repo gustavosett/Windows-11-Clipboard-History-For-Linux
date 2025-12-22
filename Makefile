@@ -240,14 +240,16 @@ install:
 	@# Create udev rules for input devices and uinput
 	@mkdir -p $(DESTDIR)/etc/udev/rules.d
 	install -Dm644 src-tauri/bundle/linux/99-win11-clipboard-input.rules $(DESTDIR)/etc/udev/rules.d/
-	@# Load uinput module
-	@modprobe uinput 2>/dev/null || true
-	@# Ensure uinput loads on boot
+	@# Ensure uinput loads on boot (use same filename as postinst/postrm)
 	@mkdir -p $(DESTDIR)/etc/modules-load.d
-	@echo "uinput" > $(DESTDIR)/etc/modules-load.d/uinput.conf
-	@udevadm control --reload-rules 2>/dev/null || true
-	@udevadm trigger 2>/dev/null || true
-	@udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true
+	@echo "uinput" > $(DESTDIR)/etc/modules-load.d/win11-clipboard.conf
+	@# Load module and reload udev only when installing on live system (not in DESTDIR/fakeroot)
+	@if [ -z "$$(printf '%s' "$(DESTDIR)")" ]; then \
+		modprobe uinput 2>/dev/null || true; \
+		udevadm control --reload-rules 2>/dev/null || true; \
+		udevadm trigger 2>/dev/null || true; \
+		udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true; \
+	fi
 	@# Ensure input group exists
 	@getent group input >/dev/null 2>&1 || groupadd input
 	@# Add user to input group if running with sudo
