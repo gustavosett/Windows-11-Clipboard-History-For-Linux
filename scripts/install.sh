@@ -27,7 +27,7 @@ detect_distro() {
         . /etc/os-release
         DISTRO_ID="${ID}"
         DISTRO_ID_LIKE="${ID_LIKE:-}"
-        DISTRO_VERSION="${VERSION_ID:-}"
+        SYSTEM_FAMILY_INFO=$(echo "$ID $ID_LIKE" | tr '[:upper:]' '[:lower:]')
     else
         error "Cannot detect distribution. /etc/os-release not found."
     fi
@@ -78,37 +78,39 @@ check_webkit_compatibility() {
     fi
 }
 
-# Installation via package manager
+# Installation via package manage
 install_via_package_manager() {
-    case "$DISTRO_ID" in
-        ubuntu|debian|pop|linuxmint|elementary|zorin|kali|neon)
-            install_deb
-            ;;
-        fedora|rhel|centos|rocky|almalinux)
-            install_rpm
-            ;;
-        arch|manjaro|endeavouros|garuda|cachyos)
-            install_aur
-            ;;
-        opensuse*|suse)
-            install_rpm_suse
-            ;;
-        *)
-            return 1  # Unknown distro
-            ;;
-    esac
+    # 1. Check for Arch Family (Arch, Manjaro, CachyOS, Endeavour, etc)
+    if [[ "$SYSTEM_FAMILY_INFO" =~ "arch" ]] || command -v pacman &>/dev/null; then
+        install_aur
+        return 0
+    
+    # 2. Check for Debian/Ubuntu Family
+    elif [[ "$SYSTEM_FAMILY_INFO" =~ "debian" || "$SYSTEM_FAMILY_INFO" =~ "ubuntu" ]] || command -v apt-get &>/dev/null; then
+        install_deb
+        return 0
+        
+    # 3. Check for Fedora/RHEL Family
+    elif [[ "$SYSTEM_FAMILY_INFO" =~ "fedora" || "$SYSTEM_FAMILY_INFO" =~ "rhel" || "$SYSTEM_FAMILY_INFO" =~ "centos" ]] || command -v dnf &>/dev/null; then
+        install_rpm
+        return 0
+        
+    # 4. Check for OpenSUSE Family
+    elif [[ "$SYSTEM_FAMILY_INFO" =~ "suse" ]] || command -v zypper &>/dev/null; then
+        install_rpm_suse
+        return 0
+    fi
+
+    return 1  # Unknown system family
 }
 
 install_deb() {
     log "Installing from GitHub releases (.deb)..."
-    
-    # Fetch latest version
     LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
     RELEASE_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -cd '[:alnum:]._-')
     [ -z "$RELEASE_TAG" ] && error "Failed to fetch version."
     CLEAN_VERSION="${RELEASE_TAG#v}"
     
-    # Setup temp directory
     TEMP_DIR=$(mktemp -d)
     chmod 755 "$TEMP_DIR"
     cd "$TEMP_DIR"
@@ -229,10 +231,15 @@ install_appimage() {
     mkdir -p "$HOME/.local/share/applications"
     mkdir -p "$HOME/.local/share/icons/hicolor/128x128/apps"
     
-    # Download
+    # Download AppImage
     log "Downloading AppImage..."
     curl -fsSL -o "$HOME/.local/bin/win11-clipboard-history.AppImage" "$LATEST_URL"
     chmod +x "$HOME/.local/bin/win11-clipboard-history.AppImage"
+    
+    # Download app icon for proper menu integration
+    log "Downloading app icon..."
+    curl -fsSL -o "$HOME/.local/share/icons/hicolor/128x128/apps/win11-clipboard-history.png" \
+        "https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/main/src-tauri/icons/128x128.png" 2>/dev/null || true
     
     # Wrapper script
     cat > "$HOME/.local/bin/win11-clipboard-history" << 'EOF'
@@ -253,14 +260,14 @@ exec env -i \
 EOF
     chmod +x "$HOME/.local/bin/win11-clipboard-history"
     
-    # .desktop file
+    # .desktop file with proper icon
     cat > "$HOME/.local/share/applications/win11-clipboard-history.desktop" << EOF
 [Desktop Entry]
 Type=Application
 Name=Clipboard History
 Comment=Windows 11-style Clipboard History Manager
 Exec=$HOME/.local/bin/win11-clipboard-history
-Icon=edit-paste
+Icon=win11-clipboard-history
 Terminal=false
 Categories=Utility;
 StartupWMClass=win11-clipboard-history
@@ -366,7 +373,7 @@ main() {
     
     detect_distro
     detect_arch
-    log "Detected: $DISTRO_ID ${DISTRO_VERSION:-}"
+    log "Detected: $DISTRO_ID (Family: $SYSTEM_FAMILY_INFO)"
     
     # Check WebKitGTK compatibility
     check_webkit_compatibility
@@ -380,8 +387,7 @@ main() {
     elif install_via_package_manager; then
         success "Package installation complete!"
     else
-        warn "No native package available for $DISTRO_ID"
-        log "Falling back to AppImage..."
+        warn "No native package found for your system family. Using AppImage."
         install_appimage
     fi
     
