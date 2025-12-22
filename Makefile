@@ -7,7 +7,6 @@
 
 SHELL := /bin/bash
 APP_NAME := win11-clipboard-history
-VERSION := 1.0.0
 PREFIX ?= /usr/local
 LIBDIR := $(PREFIX)/lib
 BINDIR := $(PREFIX)/bin
