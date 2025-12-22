@@ -250,15 +250,16 @@ install:
 		udevadm trigger 2>/dev/null || true; \
 		udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true; \
 	fi
-	@# Ensure input group exists
-	@getent group input >/dev/null 2>&1 || groupadd input
-	@# Add user to input group if running with sudo
-	@if [ -n "$$SUDO_USER" ]; then \
-		if groups $$SUDO_USER 2>/dev/null | grep -q '\binput\b'; then \
-			echo -e "$(GREEN)✓ User $$SUDO_USER already in input group$(RESET)"; \
-		else \
-			usermod -aG input $$SUDO_USER; \
-			echo -e "$(GREEN)✓ Added $$SUDO_USER to input group$(RESET)"; \
+	@# Ensure input group exists and add user (only on live system, not in DESTDIR/fakeroot)
+	@if [ -z "$$(printf '%s' "$(DESTDIR)")" ]; then \
+		getent group input >/dev/null 2>&1 || groupadd input; \
+		if [ -n "$$SUDO_USER" ]; then \
+			if groups $$SUDO_USER 2>/dev/null | grep -q '\binput\b'; then \
+				echo -e "$(GREEN)✓ User $$SUDO_USER already in input group$(RESET)"; \
+			else \
+				usermod -aG input $$SUDO_USER; \
+				echo -e "$(GREEN)✓ Added $$SUDO_USER to input group$(RESET)"; \
+			fi; \
 		fi; \
 	fi
 	@# Install desktop entry
