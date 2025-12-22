@@ -1,6 +1,6 @@
 [package]
 name = "win11-clipboard-history-lib"
-version = "1.0.0"
+version = "0.4.0"
 description = "A Windows 11-style Clipboard History Manager for Linux"
 authors = ["gustavosett"]
 license = "MIT"
