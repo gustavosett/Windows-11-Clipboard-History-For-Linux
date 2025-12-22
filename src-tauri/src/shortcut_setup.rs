@@ -45,11 +45,17 @@ pub fn get_desktop_environment() -> String {
 pub fn register_de_shortcut() -> Result<String, String> {
     #[cfg(target_os = "linux")]
     {
-        // Run in a separate thread to avoid blocking
-        std::thread::spawn(|| {
+        // Run in a separate thread but wait for completion to avoid race conditions
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
             crate::linux_shortcut_manager::register_global_shortcut();
+            let _ = tx.send(());
         });
-        Ok("Shortcut registration initiated. Check the app logs for details.".to_string())
+        
+        match rx.recv() {
+            Ok(()) => Ok("Shortcut registration completed. Check the app logs for details.".to_string()),
+            Err(_) => Err("Shortcut registration thread failed unexpectedly.".to_string()),
+        }
     }
 
     #[cfg(not(target_os = "linux"))]
