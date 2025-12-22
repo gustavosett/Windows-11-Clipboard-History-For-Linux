@@ -28,7 +28,8 @@ if [ -z "$BINARY" ]; then
         echo "  - $loc" >&2
     done
     echo "" >&2
-    echo "If you installed the binary elsewhere, move it to one of the locations above or reinstall the package." >&2
+    echo "If you installed via package manager, try reinstalling the package." >&2
+    echo "If you installed manually with a custom PREFIX, ensure the binary is in one of the locations above." >&2
     exit 1
 fi
 
