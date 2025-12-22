@@ -186,7 +186,7 @@ function ClipboardApp() {
         return false
       }
     })
-  }, [history, searchQuery, isRegexMode, activeTab])
+  }, [history, searchQuery, isRegexMode])
 
   // Use refs to store current values for the focus handler (to avoid re-registering listener)
   const activeTabRef = useRef(activeTab)
