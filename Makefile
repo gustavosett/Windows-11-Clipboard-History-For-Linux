@@ -1,10 +1,15 @@
 # Windows 11 Clipboard History For Linux - Makefile
 # Cross-distro build and install for Ubuntu, Debian, Fedora, and Arch Linux
+#
+# Note: PREFIX defaults to /usr/local for manual installs (Linux convention).
+#       Package managers (deb/rpm) use PREFIX=/usr automatically during build.
+#       To install system-wide like a package: sudo make install PREFIX=/usr
 
 SHELL := /bin/bash
 APP_NAME := win11-clipboard-history
 VERSION := 1.0.0
 PREFIX ?= /usr/local
+LIBDIR := $(PREFIX)/lib
 BINDIR := $(PREFIX)/bin
 DATADIR := $(PREFIX)/share
 DESTDIR ?=
@@ -31,7 +36,7 @@ RED := \033[0;31m
 RESET := \033[0m
 
 .PHONY: all help deps deps-ubuntu deps-debian deps-fedora deps-arch \
-        rust node check-deps dev build install uninstall clean run \
+        rust node check-deps dev build install uninstall clean clean-first-run run \
         lint format test
 
 all: build
@@ -62,8 +67,9 @@ help:
 	@echo "  make uninstall   - Remove from system (requires sudo)"
 	@echo ""
 	@echo -e "$(GREEN)Maintenance:$(RESET)"
-	@echo "  make clean       - Remove build artifacts"
-	@echo "  make check-deps  - Verify all dependencies are installed"
+	@echo "  make clean          - Remove build artifacts and first-run config"
+	@echo "  make clean-first-run - Reset first-run config (shows Setup Wizard again)"
+	@echo "  make check-deps     - Verify all dependencies are installed"
 	@echo ""
 	@echo -e "$(YELLOW)Detected distro: $(DISTRO)$(RESET)"
 
@@ -223,143 +229,65 @@ build: node_modules
 
 install:
 	@echo -e "$(CYAN)Installing $(APP_NAME)...$(RESET)"
-	@# Install binary to lib directory and wrapper to bin
-	@mkdir -p $(DESTDIR)/usr/lib/$(APP_NAME)
-	install -Dm755 src-tauri/target/release/$(APP_NAME) $(DESTDIR)/usr/lib/$(APP_NAME)/$(APP_NAME)-bin
+	@# Install binary to lib directory
+	@mkdir -p $(DESTDIR)$(LIBDIR)/$(APP_NAME)
+	install -Dm755 src-tauri/target/release/$(APP_NAME)-bin $(DESTDIR)$(LIBDIR)/$(APP_NAME)/$(APP_NAME)-bin
+	@# Install wrapper script to bin
 	install -Dm755 src-tauri/bundle/linux/wrapper.sh $(DESTDIR)$(BINDIR)/$(APP_NAME)
+	@# Install icons
 	install -Dm644 src-tauri/icons/128x128.png $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
 	install -Dm644 src-tauri/icons/icon.png $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/$(APP_NAME).png
-	@# Create comprehensive udev rules for input devices and uinput
-	@# Uses TAG+="uaccess" for systemd-logind permission handling
-	@# with GROUP="input" as fallback for non-systemd systems
-	@mkdir -p /etc/udev/rules.d
-	@echo '# udev rules for Windows 11 Clipboard History' > /etc/udev/rules.d/99-win11-clipboard-input.rules
-	@echo '# TAG+="uaccess" grants access to the active session user via systemd-logind' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
-	@echo '# GROUP="input" serves as fallback for non-systemd systems' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
-	@echo 'KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input", TAG+="uaccess"' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
-	@echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput", TAG+="uaccess"' >> /etc/udev/rules.d/99-win11-clipboard-input.rules
+	@# Create udev rules for input devices and uinput
+	@mkdir -p $(DESTDIR)/etc/udev/rules.d
+	install -Dm644 src-tauri/bundle/linux/99-win11-clipboard-input.rules $(DESTDIR)/etc/udev/rules.d/
 	@# Load uinput module
 	@modprobe uinput 2>/dev/null || true
 	@# Ensure uinput loads on boot
-	@mkdir -p /etc/modules-load.d
-	@echo "uinput" > /etc/modules-load.d/uinput.conf
+	@mkdir -p $(DESTDIR)/etc/modules-load.d
+	@echo "uinput" > $(DESTDIR)/etc/modules-load.d/uinput.conf
 	@udevadm control --reload-rules 2>/dev/null || true
 	@udevadm trigger 2>/dev/null || true
 	@udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true
-	@# Ensure input group exists and check/add user
+	@# Ensure input group exists
 	@getent group input >/dev/null 2>&1 || groupadd input
-	@USER_IN_GROUP=false; \
-	if [ -n "$$SUDO_USER" ]; then \
+	@# Add user to input group if running with sudo
+	@if [ -n "$$SUDO_USER" ]; then \
 		if groups $$SUDO_USER 2>/dev/null | grep -q '\binput\b'; then \
-			USER_IN_GROUP=true; \
 			echo -e "$(GREEN)✓ User $$SUDO_USER already in input group$(RESET)"; \
 		else \
 			usermod -aG input $$SUDO_USER; \
 			echo -e "$(GREEN)✓ Added $$SUDO_USER to input group$(RESET)"; \
 		fi; \
 	fi
-	@# Create desktop entry
+	@# Install desktop entry
 	@mkdir -p $(DESTDIR)$(DATADIR)/applications
-	@echo "[Desktop Entry]" > $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo "Name=Clipboard History" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo "Comment=Windows 11-style Clipboard History Manager" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo "Exec=$(BINDIR)/$(APP_NAME)" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo "Icon=$(APP_NAME)" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo "Terminal=false" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo "Type=Application" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo "Categories=Utility;" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo "Keywords=clipboard;history;paste;copy;" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@echo "StartupWMClass=$(APP_NAME)" >> $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	@# Ask user about autostart and create entry if desired
-	@if [ -n "$$SUDO_USER" ]; then \
-		AUTOSTART_DIR=$$(getent passwd $$SUDO_USER | cut -d: -f6)/.config/autostart; \
-		AUTOSTART_FILE="$$AUTOSTART_DIR/$(APP_NAME).desktop"; \
-		if [ -f "$$AUTOSTART_FILE" ]; then \
-			echo -e "$(GREEN)✓ Autostart already configured$(RESET)"; \
-		else \
-			echo ""; \
-			echo -e "$(CYAN)Would you like the app to start automatically on login? [Y/n]$(RESET)"; \
-			read -r AUTOSTART_RESPONSE; \
-			case "$$AUTOSTART_RESPONSE" in \
-				[nN]|[nN][oO]) \
-					echo -e "$(YELLOW)! Autostart skipped$(RESET)"; \
-					;; \
-				*) \
-					mkdir -p "$$AUTOSTART_DIR"; \
-					cp $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop "$$AUTOSTART_FILE"; \
-					echo "X-GNOME-Autostart-enabled=true" >> "$$AUTOSTART_FILE"; \
-					echo "X-GNOME-Autostart-Delay=2" >> "$$AUTOSTART_FILE"; \
-					chown -R $$SUDO_USER:$$SUDO_USER "$$AUTOSTART_DIR"; \
-					echo -e "$(GREEN)✓ Autostart enabled$(RESET)"; \
-					;; \
-			esac; \
-		fi; \
-	fi
-	@# Grant immediate access with ACLs and determine if logout is needed
-	@NEEDS_LOGOUT=false; \
-	APP_LAUNCHED=false; \
-	if [ -n "$$SUDO_USER" ]; then \
-		if groups $$SUDO_USER 2>/dev/null | grep -q '\binput\b'; then \
-			NEEDS_LOGOUT=false; \
-		elif command -v setfacl >/dev/null 2>&1; then \
-			for dev in /dev/input/event*; do \
-				setfacl -m "u:$$SUDO_USER:rw" "$$dev" 2>/dev/null || true; \
-			done; \
-			setfacl -m "u:$$SUDO_USER:rw" /dev/uinput 2>/dev/null || true; \
-			echo -e "$(GREEN)✓ Granted immediate access$(RESET)"; \
-			NEEDS_LOGOUT=false; \
-		else \
-			NEEDS_LOGOUT=true; \
-		fi; \
-	fi; \
-	if [ "$$NEEDS_LOGOUT" = false ] && [ -n "$$SUDO_USER" ] && command -v gtk-launch >/dev/null 2>&1; then \
-		USER_ID=$$(id -u $$SUDO_USER 2>/dev/null); \
-		if [ -n "$$USER_ID" ] && [ -n "$$DISPLAY" -o -n "$$WAYLAND_DISPLAY" ]; then \
-			sudo -u $$SUDO_USER \
-				DISPLAY="$${DISPLAY:-:0}" \
-				WAYLAND_DISPLAY="$$WAYLAND_DISPLAY" \
-				XDG_RUNTIME_DIR="/run/user/$$USER_ID" \
-				DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$$USER_ID/bus" \
-				gtk-launch $(APP_NAME) 2>/dev/null & \
-			sleep 1; \
-			if pgrep -u $$SUDO_USER -x "$(APP_NAME)" > /dev/null 2>&1; then \
-				APP_LAUNCHED=true; \
-			fi; \
-		fi; \
-	fi; \
-	echo -e "$(GREEN)✓ Installed successfully$(RESET)"; \
-	echo ""; \
-	if [ "$$NEEDS_LOGOUT" = true ]; then \
-		echo -e "$(YELLOW)╔════════════════════════════════════════════════════════════════╗$(RESET)"; \
-		echo -e "$(YELLOW)║     ⚠ Please log out and log back in for permissions           ║$(RESET)"; \
-		echo -e "$(YELLOW)╚════════════════════════════════════════════════════════════════╝$(RESET)"; \
-		echo ""; \
-		echo "After logging back in, the app will start automatically."; \
-	elif [ "$$APP_LAUNCHED" = true ]; then \
-		echo -e "$(GREEN)╔════════════════════════════════════════════════════════════════╗$(RESET)"; \
-		echo -e "$(GREEN)║     ✓ App is now running! Press Super+V to open.               ║$(RESET)"; \
-		echo -e "$(GREEN)╚════════════════════════════════════════════════════════════════╝$(RESET)"; \
-	else \
-		echo -e "$(GREEN)╔════════════════════════════════════════════════════════════════╗$(RESET)"; \
-		echo -e "$(GREEN)║     ✓ Installed! Find 'Clipboard History' in your app menu.    ║$(RESET)"; \
-		echo -e "$(GREEN)╚════════════════════════════════════════════════════════════════╝$(RESET)"; \
-	fi
+	install -Dm644 src-tauri/bundle/linux/$(APP_NAME).desktop $(DESTDIR)$(DATADIR)/applications/
+	@update-desktop-database $(DESTDIR)$(DATADIR)/applications 2>/dev/null || true
+	@gtk-update-icon-cache -f -t $(DESTDIR)$(DATADIR)/icons/hicolor 2>/dev/null || true
+	@echo -e "$(GREEN)✓ Installed successfully$(RESET)"
+	@echo ""
+	@echo -e "$(GREEN)╔════════════════════════════════════════════════════════════════╗$(RESET)"
+	@echo -e "$(GREEN)║     ✓ Installed! Find 'Clipboard History' in your app menu.    ║$(RESET)"
+	@echo -e "$(GREEN)╚════════════════════════════════════════════════════════════════╝$(RESET)"
+	@echo ""
+	@echo "The app will guide you through setup on first run."
+	@echo "You may need to log out and back in for input permissions to take effect."
 	@echo ""
 
 uninstall:
 	@echo -e "$(CYAN)Uninstalling $(APP_NAME)...$(RESET)"
 	@# Stop any running instances first
 	@if [ -n "$$SUDO_USER" ]; then \
-		pkill -u $$SUDO_USER -x "$(APP_NAME)" 2>/dev/null || true; \
+		pkill -u $$SUDO_USER -f "$(APP_NAME)-bin" 2>/dev/null || true; \
 	fi
-	@pkill -x "$(APP_NAME)" 2>/dev/null || true
+	@pkill -f "$(APP_NAME)-bin" 2>/dev/null || true
 	rm -f $(DESTDIR)$(BINDIR)/$(APP_NAME)
-	rm -rf $(DESTDIR)/usr/lib/$(APP_NAME)
+	rm -rf $(DESTDIR)$(LIBDIR)/$(APP_NAME)
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/$(APP_NAME).png
 	rm -f $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
-	rm -f /etc/udev/rules.d/99-win11-clipboard-input.rules
-	rm -f /etc/modules-load.d/uinput.conf
+	rm -f $(DESTDIR)/etc/udev/rules.d/99-win11-clipboard-input.rules
+	rm -f $(DESTDIR)/etc/modules-load.d/uinput.conf
 	@# Remove autostart entry for the user
 	@if [ -n "$$SUDO_USER" ]; then \
 		AUTOSTART_FILE=$$(getent passwd $$SUDO_USER | cut -d: -f6)/.config/autostart/$(APP_NAME).desktop; \
@@ -371,6 +299,8 @@ uninstall:
 			rm -f "$$user_home/.config/autostart/$(APP_NAME).desktop" 2>/dev/null || true; \
 		fi; \
 	done
+	@update-desktop-database $(DESTDIR)$(DATADIR)/applications 2>/dev/null || true
+	@gtk-update-icon-cache -f -t $(DESTDIR)$(DATADIR)/icons/hicolor 2>/dev/null || true
 	@echo -e "$(GREEN)✓ Uninstalled successfully$(RESET)"
 
 # ============================================================================
@@ -391,7 +321,12 @@ format:
 # Clean
 # ============================================================================
 
-clean:
+clean-first-run:
+	@echo -e "$(CYAN)Cleaning first-run config...$(RESET)"
+	@rm -f ~/.config/win11-clipboard-history/setup.json
+	@echo -e "$(GREEN)✓ First-run config cleaned (Setup Wizard will show on next launch)$(RESET)"
+
+clean: clean-first-run
 	@echo -e "$(CYAN)Cleaning build artifacts...$(RESET)"
 	rm -rf node_modules
 	rm -rf dist
