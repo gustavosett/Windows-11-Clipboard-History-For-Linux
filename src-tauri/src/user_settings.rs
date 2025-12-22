@@ -18,6 +18,24 @@ pub struct UserSettings {
     /// Background opacity for light mode (0.0 to 1.0)
     /// Default matches the original glass-effect-light alpha of 0.85
     pub light_background_opacity: f32,
+    
+    // --- Feature Flags ---
+    /// Enable Smart Actions (URL, Color, Email detection)
+    #[serde(default = "default_true")]
+    pub enable_smart_actions: bool,
+    /// Enable Developer Tools (Transformers, Regex, JWT, Time)
+    #[serde(default = "default_true")]
+    pub enable_dev_tools: bool,
+    /// Enable Favorites Tab
+    #[serde(default = "default_true")]
+    pub enable_favorites: bool,
+    /// Enable UI Polish (Toast, Compact Mode capability)
+    #[serde(default = "default_true")]
+    pub enable_ui_polish: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for UserSettings {
@@ -26,6 +44,10 @@ impl Default for UserSettings {
             theme_mode: "system".to_string(),
             dark_background_opacity: 0.70,
             light_background_opacity: 0.70,
+            enable_smart_actions: true,
+            enable_dev_tools: true,
+            enable_favorites: true,
+            enable_ui_polish: true,
         }
     }
 }

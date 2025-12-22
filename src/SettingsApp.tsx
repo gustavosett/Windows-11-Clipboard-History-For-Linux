@@ -9,12 +9,20 @@ interface UserSettings {
   theme_mode: 'system' | 'dark' | 'light'
   dark_background_opacity: number
   light_background_opacity: number
+  enable_smart_actions: boolean
+  enable_dev_tools: boolean
+  enable_favorites: boolean
+  enable_ui_polish: boolean
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_mode: 'system',
   dark_background_opacity: 0.7,
   light_background_opacity: 0.7,
+  enable_smart_actions: true,
+  enable_dev_tools: true,
+  enable_favorites: true,
+  enable_ui_polish: true,
 }
 
 type ThemeMode = 'system' | 'dark' | 'light'
@@ -116,6 +124,25 @@ const ResetIcon = () => (
   </svg>
 )
 
+const Switch = ({ checked, onChange, isDark }: { checked: boolean; onChange: (v: boolean) => void, isDark: boolean }) => (
+    <button
+        onClick={() => onChange(!checked)}
+        className={clsx(
+            "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-win11-bg-accent focus:ring-offset-2",
+             checked ? 'bg-win11-bg-accent' : (isDark ? 'bg-white/10' : 'bg-gray-300'),
+             // Focus ring offset color fix for dark mode
+             isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white'
+        )}
+    >
+        <span
+            className={clsx(
+                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                checked ? 'translate-x-6' : 'translate-x-1'
+            )}
+        />
+    </button>
+)
+
 /**
  * Settings App Component - Configuration UI for Win11 Clipboard History
  */
@@ -209,6 +236,14 @@ function SettingsApp() {
   // Commit opacity changes to disk (called on mouseUp/touchEnd)
   const commitOpacityChange = () => {
     saveSettings(settings)
+  }
+
+  // Handle Feature Toggles
+  const handleToggle = (key: keyof UserSettings) => {
+      const newVal = !settings[key]
+      const newSettings = { ...settings, [key]: newVal }
+      setSettings(newSettings)
+      saveSettings(newSettings)
   }
 
   // Handle window close
@@ -444,6 +479,41 @@ function SettingsApp() {
               />
             </div>
           </div>
+        </section>
+
+        {/* Features Section */}
+        <section
+          className={clsx(
+            'rounded-xl border shadow-sm overflow-hidden',
+            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
+          )}
+        >
+            <div className="p-6 border-b border-inherit">
+                <h2 className="text-base font-semibold mb-1">Features</h2>
+                <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                    Customize the functionality of the application
+                </p>
+            </div>
+            <div className="p-6 space-y-6">
+                {[
+                    { key: 'enable_smart_actions', label: 'Smart Actions', desc: 'Detect URLs, emails, colors, and provide quick actions.' },
+                    { key: 'enable_dev_tools', label: 'Developer Tools', desc: 'Advanced transformation tools (JWT, Timestamp, JSON, etc.) and Regex search.' },
+                    { key: 'enable_favorites', label: 'Favorites', desc: 'Enable the Favorites tab to pin important items.' },
+                    { key: 'enable_ui_polish', label: 'UI Enhancements', desc: 'Enable animations, toast notifications, and compact mode.' },
+                ].map(feature => (
+                    <div key={feature.key} className="flex items-center justify-between">
+                        <div>
+                            <div className="text-sm font-medium">{feature.label}</div>
+                            <div className={clsx("text-xs", isDark ? "text-gray-400" : "text-gray-500")}>{feature.desc}</div>
+                        </div>
+                        <Switch 
+                            checked={!!settings[feature.key as keyof UserSettings]} 
+                            onChange={() => handleToggle(feature.key as keyof UserSettings)}
+                            isDark={isDark}
+                        />
+                    </div>
+                ))}
+            </div>
         </section>
 
         {/* Reset Section */}
