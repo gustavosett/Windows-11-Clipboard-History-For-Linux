@@ -1,6 +1,6 @@
 import { forwardRef, useRef, useImperativeHandle, useCallback, useState } from 'react'
 import { clsx } from 'clsx'
-import { ClipboardList, Smile, Image } from 'lucide-react'
+import { ClipboardList, Smile, Image, Star, Type } from 'lucide-react'
 import type { ActiveTab } from '../types/clipboard'
 
 import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
@@ -10,24 +10,32 @@ interface TabBarProps {
   onTabChange: (tab: ActiveTab) => void
   isDark: boolean
   tertiaryOpacity: number
+  enableFavorites: boolean
 }
 
 export interface TabBarRef {
   focusFirstTab: () => void
 }
 
-const tabs: { id: ActiveTab; label: string; icon: typeof ClipboardList }[] = [
+const ALL_TABS: { id: ActiveTab; label: string; icon: typeof ClipboardList }[] = [
   { id: 'clipboard', label: 'Clipboard', icon: ClipboardList },
+  { id: 'favorites', label: 'Favorites', icon: Star },
   { id: 'emoji', label: 'Emoji', icon: Smile },
+  { id: 'kaomoji', label: 'Kaomoji', icon: Type },
   { id: 'gifs', label: 'GIFs', icon: Image },
 ]
 
 export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
-  { activeTab, onTabChange, isDark, tertiaryOpacity },
+  { activeTab, onTabChange, isDark, tertiaryOpacity, enableFavorites },
   ref
 ) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const [hoveredTab, setHoveredTab] = useState<ActiveTab | null>(null)
+  
+  const visibleTabs = ALL_TABS.filter(tab => {
+    if (tab.id === 'favorites' && !enableFavorites) return false
+    return true
+  })
 
   useImperativeHandle(ref, () => ({
     focusFirstTab: () => {
@@ -41,24 +49,24 @@ export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
 
       if (e.key === 'ArrowRight') {
         e.preventDefault()
-        newIndex = (index + 1) % tabs.length
+        newIndex = (index + 1) % visibleTabs.length
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
-        newIndex = (index - 1 + tabs.length) % tabs.length
+        newIndex = (index - 1 + visibleTabs.length) % visibleTabs.length
       } else if (e.key === 'Home') {
         e.preventDefault()
         newIndex = 0
       } else if (e.key === 'End') {
         e.preventDefault()
-        newIndex = tabs.length - 1
+        newIndex = visibleTabs.length - 1
       }
 
       if (newIndex !== index) {
         tabRefs.current[newIndex]?.focus()
-        onTabChange(tabs[newIndex].id)
+        onTabChange(visibleTabs[newIndex].id)
       }
     },
-    [onTabChange]
+    [onTabChange, visibleTabs]
   )
 
   return (
@@ -70,7 +78,7 @@ export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
       data-tauri-drag-region
       role="tablist"
     >
-      {tabs.map((tab, index) => {
+      {visibleTabs.map((tab, index) => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
         const isHovered = hoveredTab === tab.id
