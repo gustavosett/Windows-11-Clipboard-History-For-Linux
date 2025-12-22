@@ -16,18 +16,7 @@ import { SearchBar } from './components/SearchBar'
 import { Toast } from './components/Toast'
 import { KaomojiPicker } from './components/KaomojiPicker'
 import { calculateSecondaryOpacity, calculateTertiaryOpacity } from './utils/themeUtils'
-import type { ActiveTab, ClipboardItem } from './types/clipboard'
-
-/** User settings type matching the Rust struct */
-interface UserSettings {
-  theme_mode: 'system' | 'dark' | 'light'
-  dark_background_opacity: number
-  light_background_opacity: number
-  enable_smart_actions: boolean
-  enable_dev_tools: boolean
-  enable_favorites: boolean
-  enable_ui_polish: boolean
-}
+import type { ActiveTab, ClipboardItem, UserSettings } from './types/clipboard'
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_mode: 'system',
@@ -37,6 +26,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   enable_dev_tools: true,
   enable_favorites: true,
   enable_ui_polish: true,
+  custom_kaomojis: [],
 }
 
 /**
@@ -435,7 +425,7 @@ function ClipboardApp() {
         return <GifPicker isDark={isDark} opacity={secondaryOpacity} />
 
       case 'kaomoji':
-        return <KaomojiPicker isDark={isDark} opacity={secondaryOpacity} onShowToast={showToast} />
+        return <KaomojiPicker isDark={isDark} opacity={secondaryOpacity} onShowToast={showToast} customKaomojis={settings.custom_kaomojis} />
 
       default:
         return null

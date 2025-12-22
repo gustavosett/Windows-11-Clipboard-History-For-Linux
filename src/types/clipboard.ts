@@ -34,3 +34,20 @@ export type ActiveTab = 'clipboard' | 'favorites' | 'gifs' | 'emoji' | 'kaomoji'
 
 /** Theme mode */
 export type ThemeMode = 'light' | 'dark' | 'system'
+
+export interface CustomKaomoji {
+  text: string
+  category: string
+  keywords: string[]
+}
+
+export interface UserSettings {
+  theme_mode: ThemeMode
+  dark_background_opacity: number
+  light_background_opacity: number
+  enable_smart_actions: boolean
+  enable_dev_tools: boolean
+  enable_favorites: boolean
+  enable_ui_polish: boolean
+  custom_kaomojis: CustomKaomoji[]
+}

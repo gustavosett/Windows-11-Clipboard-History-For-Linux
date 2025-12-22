@@ -4,16 +4,7 @@ import { getCurrentWindow, Window } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
 import { clsx } from 'clsx'
 
-/** User settings type matching the Rust struct */
-interface UserSettings {
-  theme_mode: 'system' | 'dark' | 'light'
-  dark_background_opacity: number
-  light_background_opacity: number
-  enable_smart_actions: boolean
-  enable_dev_tools: boolean
-  enable_favorites: boolean
-  enable_ui_polish: boolean
-}
+import type { UserSettings, CustomKaomoji } from './types/clipboard'
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_mode: 'system',
@@ -23,6 +14,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   enable_dev_tools: true,
   enable_favorites: true,
   enable_ui_polish: true,
+  custom_kaomojis: [],
 }
 
 type ThemeMode = 'system' | 'dark' | 'light'
@@ -479,6 +471,115 @@ function SettingsApp() {
               />
             </div>
           </div>
+        </section>
+
+        {/* Custom Kaomoji Section */}
+        <section
+          className={clsx(
+            'rounded-xl border shadow-sm overflow-hidden',
+            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
+          )}
+        >
+             <div className="p-6 border-b border-inherit">
+                <h2 className="text-base font-semibold mb-1">Custom Kaomoji</h2>
+                <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                    Add your own personal kaomojis to the collection
+                </p>
+            </div>
+            
+            <div className="p-6 space-y-6">
+                {/* Add New */}
+                <div className="flex gap-2">
+                    <input 
+                        type="text" 
+                        id="new-kaomoji"
+                        placeholder="( ˘ ³˘)♥"
+                        className={clsx(
+                            "flex-1 px-3 py-2 rounded-md border text-sm focus:outline-none focus:ring-2 focus:ring-win11-bg-accent/50 transition-all",
+                            isDark 
+                             ? "bg-white/5 border-white/10 text-white placeholder-gray-500" 
+                             : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400"
+                        )}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                const val = (e.target as HTMLInputElement).value.trim()
+                                if (val) {
+                                    const newItem: CustomKaomoji = { 
+                                        text: val, 
+                                        category: 'Custom', 
+                                        keywords: ['custom'] 
+                                    }
+                                    const newSettings = { 
+                                        ...settings, 
+                                        custom_kaomojis: [...settings.custom_kaomojis, newItem] 
+                                    }
+                                    setSettings(newSettings)
+                                    saveSettings(newSettings)
+                                    ;(e.target as HTMLInputElement).value = ''
+                                }
+                            }
+                        }}
+                    />
+                    <button 
+                        onClick={() => {
+                           const input = document.getElementById('new-kaomoji') as HTMLInputElement
+                           const val = input.value.trim()
+                           if (val) {
+                                const newItem: CustomKaomoji = { 
+                                    text: val, 
+                                    category: 'Custom', 
+                                    keywords: ['custom'] 
+                                }
+                                const newSettings = { 
+                                    ...settings, 
+                                    custom_kaomojis: [...settings.custom_kaomojis, newItem] 
+                                }
+                                setSettings(newSettings)
+                                saveSettings(newSettings)
+                                input.value = ''
+                           }
+                        }}
+                        className="px-4 py-2 bg-win11-bg-accent text-white rounded-md text-sm font-medium hover:opacity-90 active:scale-95 transition-all"
+                    >
+                        Add
+                    </button>
+                </div>
+
+                {/* List */}
+                {settings.custom_kaomojis.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                        {settings.custom_kaomojis.map((item, idx) => (
+                            <div 
+                                key={idx}
+                                className={clsx(
+                                    "group flex items-center justify-between px-3 py-2 rounded-md border transition-colors",
+                                    isDark 
+                                     ? "bg-white/5 border-white/10" 
+                                     : "bg-gray-50 border-gray-200"
+                                )}
+                            >
+                                <span className="font-mono text-sm truncate mr-2" title={item.text}>{item.text}</span>
+                                <button
+                                    onClick={() => {
+                                        const newList = settings.custom_kaomojis.filter((_, i) => i !== idx)
+                                        const newSettings = { ...settings, custom_kaomojis: newList }
+                                        setSettings(newSettings)
+                                        saveSettings(newSettings)
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:bg-red-500/10 rounded transition-all"
+                                    title="Delete"
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className={clsx("text-center py-4 text-sm italic opacity-60", isDark ? "text-gray-500" : "text-gray-400")}>
+                        No custom kaomojis yet
+                    </div>
+                )}
+            </div>
         </section>
 
         {/* Features Section */}

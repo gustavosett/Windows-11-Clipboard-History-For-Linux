@@ -416,8 +416,10 @@ export const KAOMOJI_LIST: Kaomoji[] = [
   { id: 'fr10', text: '(((￣(￣(￣▽￣)￣)￣)))', category: 'Friends', keywords: ['crowd'] },
 ]
 
-export function getKaomojis(category?: string | null, search?: string): Kaomoji[] {
-  let list = KAOMOJI_LIST
+export function getKaomojis(category?: string | null, search?: string, customList: Kaomoji[] = []): Kaomoji[] {
+  // Merge static list with custom list (custom first or last? let's do last but clearly categorized)
+  // Ensure custom items map to the Kaomoji interface if needed, but they should match.
+  let list = [...customList, ...KAOMOJI_LIST]
   
   if (category && category !== 'All') {
     list = list.filter(k => k.category === category)

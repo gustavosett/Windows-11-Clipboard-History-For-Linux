@@ -32,6 +32,19 @@ pub struct UserSettings {
     /// Enable UI Polish (Toast, Compact Mode capability)
     #[serde(default = "default_true")]
     pub enable_ui_polish: bool,
+    
+    // --- Custom Data ---
+    /// User-defined Kaomojis
+    #[serde(default = "Vec::new")]
+    pub custom_kaomojis: Vec<CustomKaomoji>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CustomKaomoji {
+    pub text: String,
+    pub category: String, // Default "Custom"
+    #[serde(default)]
+    pub keywords: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -48,6 +61,7 @@ impl Default for UserSettings {
             enable_dev_tools: true,
             enable_favorites: true,
             enable_ui_polish: true,
+            custom_kaomojis: Vec::new(),
         }
     }
 }

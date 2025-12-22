@@ -6,25 +6,30 @@ import { invoke } from '@tauri-apps/api/core'
 import { KAOMOJI_CATEGORIES, getKaomojis } from '../services/kaomojiService'
 
 
+import type { CustomKaomoji } from '../types/clipboard'
+
 interface KaomojiPickerProps {
   isDark: boolean
   opacity: number
   onShowToast: (msg: string) => void
+  customKaomojis?: CustomKaomoji[]
 }
 
-export function KaomojiPicker({ isDark, opacity, onShowToast }: KaomojiPickerProps) {
+export function KaomojiPicker({ isDark, opacity, onShowToast, customKaomojis = [] }: KaomojiPickerProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
   const kaomojis = useMemo(() => {
-    // Wait, getKaomojis defined in service had a typo in previous step 'keywords.بعض' -> 'keywords.some'
-    // I will fix it here in logic or update service file. 
-    // Actually, I should update the service file because 'بعض' is Arabic for 'some', likely a typo/hallucination.
-    // Assuming I will fix service file next, or use inline logic here.
-    // Let's rely on import but I must check if I can fix the service file first.
-    // For now, I will assume the service returns an array.
-    return getKaomojis(selectedCategory, searchQuery)
-  }, [selectedCategory, searchQuery])
+    // Map CustomKaomoji to Kaomoji if structures differ (they are compatible: text, category, keywords)
+    // Add IDs to custom items
+    const mappedCustom = customKaomojis.map((c, i) => ({
+        id: `custom-${i}`,
+        text: c.text,
+        category: c.category,
+        keywords: c.keywords
+    }))
+    return getKaomojis(selectedCategory, searchQuery, mappedCustom)
+  }, [selectedCategory, searchQuery, customKaomojis])
 
   const handlePaste = useCallback(
     async (text: string) => {
@@ -66,6 +71,20 @@ export function KaomojiPicker({ isDark, opacity, onShowToast }: KaomojiPickerPro
         >
             All
         </button>
+        {customKaomojis.length > 0 && (
+            <button
+                onClick={() => setSelectedCategory('Custom')}
+                className={clsx(
+                    "px-3 py-1 text-xs rounded-full whitespace-nowrap transition-colors",
+                    selectedCategory === 'Custom'
+                        ? "bg-win11-bg-accent text-white" 
+                        : "text-win11-text-secondary hover:bg-win11-bg-tertiary"
+                )}
+                style={selectedCategory !== 'Custom' ? getTertiaryBackgroundStyle(isDark, opacity) : undefined}
+            >
+                Custom
+            </button>
+        )}
         {KAOMOJI_CATEGORIES.map(cat => (
              <button
                 key={cat}
