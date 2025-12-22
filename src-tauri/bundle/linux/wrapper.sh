@@ -22,11 +22,13 @@ done
 
 # Verify binary was found
 if [ -z "$BINARY" ]; then
-    echo "Error: Binary not found in any of these locations:" >&2
+    echo "Error: win11-clipboard-history binary not found." >&2
+    echo "The wrapper searched for an executable in the following locations (in order):" >&2
     for loc in "${BINARY_LOCATIONS[@]}"; do
         echo "  - $loc" >&2
     done
-    echo "Please reinstall the package." >&2
+    echo "" >&2
+    echo "If you installed the binary elsewhere, move it to one of the locations above or reinstall the package." >&2
     exit 1
 fi
 
