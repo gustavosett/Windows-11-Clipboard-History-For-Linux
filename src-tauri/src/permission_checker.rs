@@ -57,9 +57,26 @@ pub fn check_permissions() -> PermissionStatus {
     }
 }
 
+/// Check if a command exists in PATH
+fn command_exists(cmd: &str) -> bool {
+    Command::new("which")
+        .arg(cmd)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
 /// Apply ACL for immediate access (requires pkexec/sudo)
 #[tauri::command]
 pub fn fix_permissions_now() -> Result<String, String> {
+    // Check required commands exist
+    if !command_exists("pkexec") {
+        return Err("pkexec not found. Install polkit or run manually: sudo setfacl -m u:$USER:rw /dev/uinput".to_string());
+    }
+    if !command_exists("setfacl") {
+        return Err("setfacl not found. Install acl package (e.g., 'sudo apt install acl') or add yourself to the input group: sudo usermod -aG input $USER".to_string());
+    }
+
     let username = whoami::username();
 
     // Use pkexec for graphical password prompt
