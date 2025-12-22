@@ -175,14 +175,14 @@ fn get_manual_instructions(de: &str) -> String {
         "LXDE" => r#"**LXDE/Openbox:**
 1. Edit ~/.config/openbox/lxde-rc.xml
 2. Add in <keyboard> section:
-```xml
+
 <keybind key="Super_L+v">
   <action name="Execute">
     <command>win11-clipboard-history</command>
   </action>
 </keybind>
-```
-3. Run: `openbox --reconfigure`"#
+
+3. Run: openbox --reconfigure"#
             .to_string(),
 
         "COSMIC" => r#"**COSMIC Settings:**
