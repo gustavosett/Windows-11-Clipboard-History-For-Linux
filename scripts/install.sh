@@ -87,7 +87,7 @@ install_via_package_manager() {
         fedora|rhel|centos|rocky|almalinux)
             install_rpm
             ;;
-        arch|manjaro|endeavouros|garuda)
+        arch|manjaro|endeavouros|garuda|cachyos)
             install_aur
             ;;
         opensuse*|suse)
