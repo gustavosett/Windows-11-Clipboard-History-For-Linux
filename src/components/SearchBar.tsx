@@ -1,6 +1,6 @@
 import { forwardRef, memo, type ReactNode } from 'react'
 import { clsx } from 'clsx'
-import { Search, X } from 'lucide-react'
+import { Search, X, Regex } from 'lucide-react'
 import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
 
 export interface SearchBarProps {
@@ -12,6 +12,8 @@ export interface SearchBarProps {
   'aria-label'?: string
   isDark: boolean
   opacity: number
+  isRegex?: boolean
+  onToggleRegex?: () => void
 }
 
 export const SearchBar = memo(
@@ -25,6 +27,8 @@ export const SearchBar = memo(
       'aria-label': ariaLabel,
       isDark,
       opacity,
+      isRegex = false,
+      onToggleRegex,
     },
     ref
   ) {
@@ -50,12 +54,20 @@ export const SearchBar = memo(
           placeholder={placeholder}
           aria-label={ariaLabel ?? placeholder}
           className={clsx(
-            'w-full h-9 pl-9 pr-16 rounded-lg',
+            'w-full h-9 pl-9 rounded-lg',
             'text-sm',
             'dark:text-win11-text-primary text-win11Light-text-primary',
             'placeholder:dark:text-win11-text-disabled placeholder:text-win11Light-text-disabled',
             'focus:outline-none focus:ring-2 focus:ring-win11-bg-accent',
-            'transition-all duration-150'
+            'transition-all duration-150',
+            // Adjust padding-right based on what buttons are present
+            rightActions
+              ? onToggleRegex
+                ? 'pr-24'
+                : 'pr-16'
+              : onToggleRegex
+                ? 'pr-16'
+                : 'pr-8'
           )}
           style={{ backgroundColor }}
         />
@@ -77,6 +89,25 @@ export const SearchBar = memo(
               <X size={14} />
             </button>
           )}
+
+          {onToggleRegex && (
+            <button
+              type="button"
+              onClick={onToggleRegex}
+              className={clsx(
+                'p-1 rounded',
+                'transition-colors duration-150',
+                isRegex
+                  ? 'text-win11-bg-accent bg-win11-bg-accent/10'
+                  : 'dark:text-win11-text-secondary text-win11Light-text-secondary hover:dark:bg-win11-bg-card-hover hover:bg-win11Light-bg-card-hover'
+              )}
+              title="Toggle Regex search"
+              aria-label="Toggle Regex search"
+            >
+              <Regex size={14} />
+            </button>
+          )}
+
           {rightActions}
         </div>
       </div>

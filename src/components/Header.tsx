@@ -1,5 +1,6 @@
 import { clsx } from 'clsx'
 import { useState } from 'react'
+import { LayoutList } from 'lucide-react'
 import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
 
 interface HeaderProps {
@@ -7,13 +8,17 @@ interface HeaderProps {
   itemCount: number
   isDark: boolean
   tertiaryOpacity: number
+  isCompact: boolean
+  onToggleCompact: () => void
+  showCompactToggle?: boolean
 }
 
 /**
  * Header component with title and action buttons
  */
-export function Header({ onClearHistory, itemCount, isDark, tertiaryOpacity }: HeaderProps) {
+export function Header({ onClearHistory, itemCount, isDark, tertiaryOpacity, isCompact, onToggleCompact, showCompactToggle = true }: HeaderProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [isCompactHovered, setIsCompactHovered] = useState(false)
 
   return (
     <div className="flex items-center justify-between px-4 py-3" data-tauri-drag-region>
@@ -42,6 +47,31 @@ export function Header({ onClearHistory, itemCount, isDark, tertiaryOpacity }: H
       </div>
 
       <div className="flex items-center gap-1">
+        {/* Compact Mode Toggle */}
+        {showCompactToggle && (
+            <button
+              onClick={onToggleCompact}
+              tabIndex={-1}
+              onMouseEnter={() => setIsCompactHovered(true)}
+              onMouseLeave={() => setIsCompactHovered(false)}
+              className={clsx(
+                'no-drag',
+                'p-2 rounded-md transition-colors',
+                'select-none',
+                 isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
+              )}
+               style={
+                 isCompactHovered
+                   ? getTertiaryBackgroundStyle(isDark, tertiaryOpacity)
+                   : undefined
+               }
+               title={isCompact ? "Detail View" : "Compact View"}
+            >
+                {isCompact ? <LayoutList size={16} /> : <LayoutList size={16} className="opacity-50" />}
+            </button>
+        )}
+        
         {/* Clear history button */}
         <button
           onClick={onClearHistory}
