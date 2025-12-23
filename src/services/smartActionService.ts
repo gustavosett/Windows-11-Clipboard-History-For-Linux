@@ -59,6 +59,7 @@ export const smartActionService = {
       }
     } catch (e) {
       console.error('Failed to execute smart action', e)
+      throw e // Propagate error for UI handling
     }
   },
 }

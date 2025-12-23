@@ -15,7 +15,13 @@ export function useSmartActions(item: ClipboardItem, enableSmartActions: boolean
 
   const handleSmartAction = useCallback(async (e: MouseEvent, action: SmartAction) => {
     e.stopPropagation()
-    await smartActionService.execute(action)
+    try {
+      await smartActionService.execute(action)
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        alert(`Failed to execute action "${action.label}": ${err}`)
+      }
+    }
   }, [])
 
   return {
