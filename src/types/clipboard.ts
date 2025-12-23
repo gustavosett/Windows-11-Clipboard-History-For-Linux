@@ -35,11 +35,14 @@ export type ActiveTab = 'clipboard' | 'gifs' | 'emoji' | 'kaomoji' | 'symbols'
 /** Theme mode */
 export type ThemeMode = 'light' | 'dark' | 'system'
 
-export interface CustomKaomoji {
+export interface Kaomoji {
+  id: string
   text: string
   category: string
   keywords: string[]
 }
+
+export type CustomKaomoji = Omit<Kaomoji, 'id'>
 
 export interface UserSettings {
   theme_mode: ThemeMode

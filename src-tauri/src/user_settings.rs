@@ -25,7 +25,7 @@ pub struct UserSettings {
     pub enable_smart_actions: bool,
 
 
-    /// Enable UI Polish (Toast, Compact Mode capability)
+    /// Enable UI Polish (Compact Mode capability)
     #[serde(default = "default_true")]
     pub enable_ui_polish: bool,
     

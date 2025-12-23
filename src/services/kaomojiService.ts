@@ -1,9 +1,4 @@
-export interface Kaomoji {
-  id: string
-  text: string
-  category: string
-  keywords: string[]
-}
+import type { Kaomoji } from '../types/clipboard'
 
 import kaomojisData from '../data/kaomojis.json'
 
