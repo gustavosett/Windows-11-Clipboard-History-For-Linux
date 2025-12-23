@@ -105,7 +105,26 @@ install_via_package_manager() {
 }
 
 install_deb() {
+    log "Setting up APT repository (Cloudsmith)..."
+    
+    # Install prerequisites for HTTPS repos
+    sudo apt-get update -qq
+    sudo apt-get install -y apt-transport-https curl || true
+    
+    # Try Cloudsmith repository first (enables auto-updates)
+    if curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.deb.sh" | sudo -E bash 2>/dev/null; then
+        log "Installing win11-clipboard-history from repository..."
+        sudo apt-get update -qq
+        if sudo apt-get install -y win11-clipboard-history; then
+            success "Installed via APT repository! (auto-updates enabled)"
+            return 0
+        fi
+    fi
+    
+    # Fallback: download from GitHub releases
+    warn "Repository not available, falling back to GitHub release..."
     log "Installing from GitHub releases (.deb)..."
+    
     LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
     RELEASE_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -cd '[:alnum:]._-')
     [ -z "$RELEASE_TAG" ] && error "Failed to fetch version."
@@ -124,25 +143,35 @@ install_deb() {
     chmod 644 "$FILE"
     
     log "Installing dependencies..."
-    sudo apt-get update -qq 2>/dev/null || true
     sudo apt-get install -y xclip wl-clipboard acl || true
     
     log "Installing .deb package..."
     yes | sudo apt-get install -y "./$FILE"
     
-    success "Installed via APT!"
+    success "Installed via APT (from GitHub release)"
 }
 
 install_rpm() {
+    log "Setting up RPM repository (Cloudsmith)..."
+    
+    # Try Cloudsmith repository first (enables auto-updates)
+    if curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh" | sudo -E bash 2>/dev/null; then
+        log "Installing win11-clipboard-history from repository..."
+        if sudo dnf install -y win11-clipboard-history; then
+            success "Installed via DNF repository! (auto-updates enabled)"
+            return 0
+        fi
+    fi
+    
+    # Fallback: download from GitHub releases
+    warn "Repository not available, falling back to GitHub release..."
     log "Installing from GitHub releases (.rpm)..."
     
-    # Fetch latest version
     LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
     RELEASE_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -cd '[:alnum:]._-')
     [ -z "$RELEASE_TAG" ] && error "Failed to fetch version."
     CLEAN_VERSION="${RELEASE_TAG#v}"
     
-    # Setup temp directory
     TEMP_DIR=$(mktemp -d)
     chmod 755 "$TEMP_DIR"
     cd "$TEMP_DIR"
@@ -161,19 +190,30 @@ install_rpm() {
     log "Installing .rpm package..."
     sudo dnf install -y "./$FILE"
     
-    success "Installed via DNF!"
+    success "Installed via DNF (from GitHub release)"
 }
 
 install_rpm_suse() {
+    log "Setting up RPM repository (Cloudsmith)..."
+    
+    # Try Cloudsmith repository first (enables auto-updates)
+    if curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh" | sudo -E bash 2>/dev/null; then
+        log "Installing win11-clipboard-history from repository..."
+        if sudo zypper install -y win11-clipboard-history; then
+            success "Installed via Zypper repository! (auto-updates enabled)"
+            return 0
+        fi
+    fi
+    
+    # Fallback: download from GitHub releases
+    warn "Repository not available, falling back to GitHub release..."
     log "Installing from GitHub releases (.rpm)..."
     
-    # Fetch latest version
     LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
     RELEASE_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -cd '[:alnum:]._-')
     [ -z "$RELEASE_TAG" ] && error "Failed to fetch version."
     CLEAN_VERSION="${RELEASE_TAG#v}"
     
-    # Setup temp directory
     TEMP_DIR=$(mktemp -d)
     chmod 755 "$TEMP_DIR"
     cd "$TEMP_DIR"
@@ -192,7 +232,7 @@ install_rpm_suse() {
     log "Installing .rpm package..."
     sudo zypper install -y "./$FILE"
     
-    success "Installed via Zypper!"
+    success "Installed via Zypper (from GitHub release)"
 }
 
 install_aur() {
