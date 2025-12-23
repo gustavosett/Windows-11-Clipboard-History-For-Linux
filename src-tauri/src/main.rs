@@ -219,7 +219,7 @@ async fn paste_gif_from_url(
     Ok(())
 }
 
-// ... (existing paste commands)
+
 
 #[tauri::command]
 async fn finish_paste(app: AppHandle) -> Result<(), String> {

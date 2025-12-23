@@ -32,7 +32,7 @@ export const KAOMOJI_CATEGORIES = [
   'Sympathy',
 ] as const
 
-export type KaomojiCategory = typeof KAOMOJI_CATEGORIES[number]
+export type KaomojiCategory = (typeof KAOMOJI_CATEGORIES)[number]
 
 export const KAOMOJI_LIST: Kaomoji[] = [
   // Happy (30+)
@@ -94,7 +94,7 @@ export const KAOMOJI_LIST: Kaomoji[] = [
   { id: 's19', text: 'o(TヘTo)', category: 'Sad', keywords: ['holding back tears'] },
   { id: 's20', text: '(´；д；`)', category: 'Sad', keywords: ['pain'] },
   { id: 's21', text: '(´•̥̥̥д•̥̥̥`)', category: 'Sad', keywords: ['crying'] },
-  { id: 's22', text: '(unknown)', category: 'Sad', keywords: ['sad'] },
+  { id: 's22', text: '(ಥ﹏ಥ)', category: 'Sad', keywords: ['sad'] },
   { id: 's23', text: '( ≧Д≦)', category: 'Sad', keywords: ['screaming'] },
   { id: 's24', text: '((´д｀))', category: 'Sad', keywords: ['shaking'] },
   { id: 's25', text: '(´Ａ｀。)', category: 'Sad', keywords: ['sigh'] },
@@ -416,23 +416,28 @@ export const KAOMOJI_LIST: Kaomoji[] = [
   { id: 'fr10', text: '(((￣(￣(￣▽￣)￣)￣)))', category: 'Friends', keywords: ['crowd'] },
 ]
 
-export function getKaomojis(category?: string | null, search?: string, customList: Kaomoji[] = []): Kaomoji[] {
+export function getKaomojis(
+  category?: string | null,
+  search?: string,
+  customList: Kaomoji[] = []
+): Kaomoji[] {
   // Merge static list with custom list (custom first or last? let's do last but clearly categorized)
   // Ensure custom items map to the Kaomoji interface if needed, but they should match.
   let list = [...customList, ...KAOMOJI_LIST]
-  
+
   if (category && category !== 'All') {
-    list = list.filter(k => k.category === category)
+    list = list.filter((k) => k.category === category)
   }
 
   if (search) {
     const term = search.toLowerCase()
-    list = list.filter(k => 
-      k.text.toLowerCase().includes(term) || 
-      k.keywords.some(key => key.includes(term)) ||
-      k.category.toLowerCase().includes(term)
+    list = list.filter(
+      (k) =>
+        k.text.toLowerCase().includes(term) ||
+        k.keywords.some((key) => key.includes(term)) ||
+        k.category.toLowerCase().includes(term)
     )
   }
-  
+
   return list
 }

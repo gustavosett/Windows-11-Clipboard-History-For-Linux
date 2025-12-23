@@ -137,8 +137,7 @@ function SymbolGridCell({
   columnIndex: number
   rowIndex: number
   style: React.CSSProperties
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ariaAttributes: any
+  ariaAttributes: React.AriaAttributes
 } & SymbolGridData) {
   const index = rowIndex * columnCount + columnIndex
   if (index >= symbols.length) {
