@@ -12,11 +12,10 @@ import type { CustomKaomoji } from '../types/clipboard'
 interface KaomojiPickerProps {
   isDark: boolean
   opacity: number
-  onShowToast: (msg: string) => void
   customKaomojis?: CustomKaomoji[]
 }
 
-export function KaomojiPicker({ isDark, opacity, onShowToast, customKaomojis = [] }: KaomojiPickerProps) {
+export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiPickerProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [categoryFocusedIndex, setCategoryFocusedIndex] = useState(0)
@@ -119,10 +118,9 @@ export function KaomojiPicker({ isDark, opacity, onShowToast, customKaomojis = [
         // No need for toast or close_window here, backend handles it
       } catch (err) {
         console.error('Failed to paste kaomoji', err)
-        onShowToast('Failed to paste')
       }
     },
-    [onShowToast]
+    []
   )
 
   return (

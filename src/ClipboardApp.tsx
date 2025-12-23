@@ -13,7 +13,7 @@ import { SymbolPicker } from './components/SymbolPicker'
 import { calculateSecondaryOpacity, calculateTertiaryOpacity } from './utils/themeUtils'
 import type { ActiveTab, UserSettings } from './types/clipboard'
 import { ClipboardTab } from './components/ClipboardTab'
-import { useToast } from './hooks/useToast'
+
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_mode: 'system',
@@ -195,17 +195,6 @@ function ClipboardApp() {
     invoke('set_mouse_state', { inside: false }).catch(console.error)
   }
   
-  // Toast Logic
-  const { showToast, ToastContainer } = useToast()
-  
-  // Override paste to show toast
-  const handlePaste = useCallback((id: string) => {
-      pasteItem(id)
-      if (settings.enable_ui_polish) {
-          showToast('Copied to clipboard!')
-      }
-  }, [pasteItem, showToast, settings.enable_ui_polish])
-
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
@@ -220,7 +209,7 @@ function ClipboardApp() {
             clearHistory={clearHistory}
             deleteItem={deleteItem}
             togglePin={togglePin}
-            onPaste={handlePaste}
+            onPaste={pasteItem}
             settings={settings}
             tabBarRef={tabBarRef}
           />
@@ -233,7 +222,7 @@ function ClipboardApp() {
         return <GifPicker isDark={isDark} opacity={secondaryOpacity} />
 
       case 'kaomoji':
-        return <KaomojiPicker isDark={isDark} opacity={secondaryOpacity} onShowToast={showToast} customKaomojis={settings.custom_kaomojis} />
+        return <KaomojiPicker isDark={isDark} opacity={secondaryOpacity} customKaomojis={settings.custom_kaomojis} />
 
       case 'symbols':
         return <SymbolPicker isDark={isDark} opacity={secondaryOpacity} />
@@ -259,10 +248,6 @@ function ClipboardApp() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Toast Notification */}
-      {settings.enable_ui_polish && (
-          <ToastContainer isDark={isDark} opacity={secondaryOpacity} />
-      )}
 
       {/* Drag Handle */}
       <DragHandle isDark={isDark} />
