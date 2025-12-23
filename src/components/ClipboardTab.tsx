@@ -90,7 +90,7 @@ export function ClipboardTab(props: {
 
   
   
-  // Let's use a ref for filteredHistory to access it inside the stable listener
+  // Ref for stable access to filtered history in event listener
   const filteredHistoryRef = useRef(filteredHistory)
   useEffect(() => {
       filteredHistoryRef.current = filteredHistory

@@ -11,7 +11,7 @@ const FEATURES = [
   {
     key: 'enable_ui_polish',
     label: 'UI Polish',
-    desc: 'Enable animations, toast notifications, and compact mode support.',
+    desc: 'Enable animations and compact mode support.',
   },
 ] as const
 

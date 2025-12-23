@@ -209,10 +209,8 @@ async fn finish_paste(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 async fn copy_text_to_clipboard(_state: State<'_, AppState>, text: String) -> Result<(), String> {
-    // 1. Update Internal Manager Manager (for history consistency, optional but good)
-    // Actually we might NOT want to add this to history immediately as "new" if it's just a transform of existing?
-    // But the watcher will pick it up anyway if monitoring.
-    // Let's just write to system clipboard.
+    // 1. Update Internal Manager (for history consistency, optional but good)
+    // Only write to the system clipboard; the history manager is updated by the clipboard watcher if enabled.
     
     use arboard::Clipboard;
     let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;

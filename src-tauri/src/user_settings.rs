@@ -54,7 +54,6 @@ impl Default for UserSettings {
             dark_background_opacity: 0.70,
             light_background_opacity: 0.70,
             enable_smart_actions: true,
-
             enable_ui_polish: true,
             custom_kaomojis: Vec::new(),
         }

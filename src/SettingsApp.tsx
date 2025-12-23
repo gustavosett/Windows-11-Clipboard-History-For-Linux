@@ -12,7 +12,6 @@ const DEFAULT_SETTINGS: UserSettings = {
   dark_background_opacity: 0.7,
   light_background_opacity: 0.7,
   enable_smart_actions: true,
-
   enable_ui_polish: true,
   custom_kaomojis: [],
 }
