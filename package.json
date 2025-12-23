@@ -1,7 +1,7 @@
 {
   "name": "win11-clipboard-history",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.4.4",
   "type": "module",
   "description": "A Windows 11-style Clipboard History Manager for Linux built with Tauri",
   "author": "gustavosett",
@@ -30,11 +30,13 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-autostart": "^2.5.1",
+    "@tauri-apps/plugin-global-shortcut": "^2.0.0",
     "@tauri-apps/plugin-shell": "^2.0.0",
     "clsx": "^2.1.0",
     "emojilib": "^4.0.2",
     "fuse.js": "^7.0.0",
-    "lucide-react": "^0.561.0",
+    "lucide-react": "^0.562.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-window": "^2.2.3"
@@ -45,18 +47,18 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@types/react-window": "^2.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.50.0",
-    "@typescript-eslint/parser": "^8.50.0",
+    "@typescript-eslint/eslint-plugin": "^8.50.1",
+    "@typescript-eslint/parser": "^8.50.1",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.23",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.25",
+    "eslint-plugin-react-refresh": "^0.4.26",
     "postcss": "^8.4.49",
     "prettier": "^3.3.3",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.50.0",
+    "typescript-eslint": "^8.50.1",
     "vite": "^7.3.0"
   }
 }

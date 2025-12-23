@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "win11-clipboard-history",
-  "version": "1.0.0",
-  "identifier": "com.clipboard.win11history",
+  "version": "0.4.4",
+  "identifier": "dev.gustavosett.clipboard-history",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -50,29 +50,45 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "appimage", "rpm"],
+    "targets": ["deb", "rpm", "appimage"],
     "icon": [
       "icons/32x32.png",
       "icons/64x64.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/icon.ico",
+      "icons/icon.png"
     ],
     "category": "Utility",
     "shortDescription": "Windows 11-style Clipboard History Manager",
     "longDescription": "A modern, beautiful clipboard history manager for Linux that mimics the Windows 11 Win+V clipboard experience. Built with Tauri, React, and Rust.",
     "linux": {
       "deb": {
-        "depends": ["xclip", "wl-clipboard", "acl"],
+        "depends": [
+          "xclip",
+          "wl-clipboard",
+          "acl",
+          "libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37"
+        ],
         "files": {
-          "/etc/udev/rules.d/99-win11-clipboard-input.rules": "bundle/linux/99-win11-clipboard-input.rules"
+          "/usr/bin/win11-clipboard-history": "bundle/linux/wrapper.sh",
+          "/etc/udev/rules.d/99-win11-clipboard-input.rules": "bundle/linux/99-win11-clipboard-input.rules",
+          "/usr/share/applications/win11-clipboard-history.desktop": "bundle/linux/win11-clipboard-history.desktop",
+          "/usr/share/icons/hicolor/128x128/apps/win11-clipboard-history.png": "icons/128x128.png",
+          "/usr/share/icons/hicolor/256x256/apps/win11-clipboard-history.png": "icons/icon.png",
+          "/usr/share/icons/hicolor/scalable/apps/win11-clipboard-history.svg": "icons/icon.svg"
         },
         "postInstallScript": "bundle/linux/postinst.sh",
         "preRemoveScript": "bundle/linux/postrm.sh"
       },
       "rpm": {
-        "depends": ["xclip", "wl-clipboard", "acl"],
+        "depends": [
+          "xclip",
+          "wl-clipboard",
+          "acl",
+          "webkit2gtk4.1"
+        ],
         "postInstallScript": "bundle/linux/postinst.sh",
         "preRemoveScript": "bundle/linux/postrm.sh"
       }

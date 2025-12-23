@@ -1,10 +1,9 @@
 # udev rules for Windows 11 Clipboard History
-# Allows non-root users to access input devices for global hotkeys and paste simulation
+# Allows non-root access to uinput for keyboard simulation (paste)
 
-# Input devices (keyboards) - needed for evdev global hotkey detection
-# TAG+="uaccess" grants access to the active session user via systemd-logind
-# GROUP="input" with MODE="0660" serves as fallback for non-systemd systems
-KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input", TAG+="uaccess"
+# Load module automatically
+ACTION=="add", SUBSYSTEM=="misc", KERNEL=="uinput", OPTIONS+="static_node=uinput"
 
-# uinput device - needed for kernel-level keyboard simulation (paste injection)
-KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput", TAG+="uaccess"
+# Give access to the logged-in user in the active session (systemd)
+# GROUP="input" is a fallback for systems without systemd
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", TAG+="uaccess"

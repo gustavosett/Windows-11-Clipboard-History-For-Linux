@@ -1,0 +1,31 @@
+post_install() {
+    echo "==> Loading uinput module..."
+    modprobe uinput 2>/dev/null || true
+    
+    echo "==> Reloading udev rules..."
+    udevadm control --reload-rules 2>/dev/null || true
+    udevadm trigger --subsystem-match=misc 2>/dev/null || true
+    
+    echo ""
+    echo "╔════════════════════════════════════════════════════════════════╗"
+    echo "║  Win11 Clipboard History installed!                            ║"
+    echo "╠════════════════════════════════════════════════════════════════╣"
+    echo "║  IMPORTANT: You may need to log out and back in for input     ║"
+    echo "║  permissions to take effect.                                   ║"
+    echo "║                                                                ║"
+    echo "║  Quick fix (no logout needed):                                 ║"
+    echo "║    sudo setfacl -m u:\$USER:rw /dev/uinput                      ║"
+    echo "║                                                                ║"
+    echo "║  Launch the app and follow the Setup Wizard!                   ║"
+    echo "╚════════════════════════════════════════════════════════════════╝"
+    echo ""
+}
+
+post_upgrade() {
+    post_install
+}
+
+post_remove() {
+    echo "==> Win11 Clipboard History has been removed."
+    echo "==> Note: udev rules in /usr/lib/udev/rules.d/ may still exist."
+}

@@ -19,7 +19,9 @@ use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
 use win11_clipboard_history_lib::focus_manager::x11_robust_activate;
 use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
 use win11_clipboard_history_lib::input_simulator::simulate_paste_keystroke;
+use win11_clipboard_history_lib::permission_checker;
 use win11_clipboard_history_lib::session::is_wayland;
+use win11_clipboard_history_lib::shortcut_setup;
 use win11_clipboard_history_lib::user_settings::{UserSettings, UserSettingsManager};
 
 /// Application state shared across all handlers
@@ -636,6 +638,13 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        // Autostart plugin for managing startup on login
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--background"]),
+        ))
+        // Global shortcut plugin for cross-platform hotkeys
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         // Single Instance Plugin: When user triggers shortcut and app is already running,
         // the OS launches a new instance which signals the existing one to toggle
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
@@ -762,6 +771,13 @@ fn main() {
             set_user_settings,
             is_settings_window_visible,
             copy_text_to_clipboard,
+            permission_checker::check_permissions,
+            permission_checker::fix_permissions_now,
+            permission_checker::is_first_run,
+            permission_checker::mark_first_run_complete,
+            shortcut_setup::get_desktop_environment,
+            shortcut_setup::register_de_shortcut,
+            shortcut_setup::check_shortcut_tools,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

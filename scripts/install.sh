@@ -1,188 +1,452 @@
 #!/bin/bash
-
-# Windows 11 Clipboard History Installer
-# Author: Gustavo Sett
-# License: MIT
+# install.sh - Smart installer for Win11 Clipboard History
+# Usage: curl -fsSL https://raw.githubusercontent.com/gustavosett/Windows-11-Clipboard-History-For-Linux/master/scripts/install.sh | bash
 
 set -e
 
-# --- Configuration ---
-REPO_OWNER="gustavosett"
-REPO_NAME="Windows-11-Clipboard-History-For-Linux"
-
 # Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
 RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
-log() { echo -e "${BLUE}[INFO]${NC} $1"; }
-success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
-warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+log()     { echo -e "${BLUE}[*]${NC} $1"; }
+success() { echo -e "${GREEN}[✓]${NC} $1"; }
+warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
+error()   { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
-# --- 1. Cleanup & Prep ---
+# Configuration
+REPO_OWNER="gustavosett"
+REPO_NAME="Windows-11-Clipboard-History-For-Linux"
+CLOUDSMITH_REPO="gustavosett/clipboard-manager"
 
-log "Preparing installation..."
-
-# Kill existing instances to prevent conflicts during update
-pkill -f "win11-clipboard-history" || true
-sleep 1
-
-command -v curl >/dev/null 2>&1 || error "curl is required."
-
-# Detect Distro
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    DISTRO=$ID
-else
-    DISTRO="unknown"
-fi
-
-# Fetch Version
-log "Fetching latest version info..."
-LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
-RELEASE_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -cd '[:alnum:]._-')
-[ -z "$RELEASE_TAG" ] && error "Failed to fetch version."
-CLEAN_VERSION="${RELEASE_TAG#v}"
-
-# Setup Temp Directory
-# We explicitly set 755 permissions so the '_apt' user can read files inside it
-TEMP_DIR=$(mktemp -d)
-chmod 755 "$TEMP_DIR"
-cd "$TEMP_DIR"
-trap 'rm -rf "$TEMP_DIR"' EXIT
-
-BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
-
-# --- 2. Dependencies ---
-
-install_deps() {
-    log "Installing dependencies..."
-    case "$DISTRO" in
-        ubuntu|debian|linuxmint|pop|kali|neon)
-            sudo apt-get update -qq 2>/dev/null || {
-                warn "apt-get update had issues (likely from external repos). Continuing anyway..."
-            }
-            sudo apt-get install -y xclip wl-clipboard acl || {
-                warn "Retrying dependency installation..."
-                sudo apt-get install -y --no-install-recommends xclip wl-clipboard acl
-            }
-        ;;
-        fedora|rhel|centos|almalinux|rocky)
-            sudo dnf install -y xclip wl-clipboard acl
-        ;;
-        arch|manjaro|endeavouros)
-            command -v pacman >/dev/null && sudo pacman -S --needed --noconfirm xclip wl-clipboard acl
-        ;;
-        opensuse*)
-            sudo zypper install -y xclip wl-clipboard acl
-        ;;
-    esac
-}
-
-download_file() {
-    log "Downloading $2..."
-    curl -L -o "$2" "$1" --progress-bar
-    # Fix permissions so apt/dnf can read the file without warnings
-    chmod 644 "$2"
-}
-
-# --- 3. Installation ---
-
-case "$DISTRO" in
-    ubuntu|debian|linuxmint|pop|kali|neon)
-        FILE="win11-clipboard-history_${CLEAN_VERSION}_amd64.deb"
-        download_file "$BASE_URL/$FILE" "$FILE"
-        install_deps
-        
-        log "Installing .deb package..."
-        # 'yes' handles the prompt. 2>/dev/null hides the apt "download is unsandboxed" warning if it still appears
-        yes | sudo apt-get install -y "./$FILE"
-    ;;
-    
-    fedora|rhel|centos|almalinux|rocky)
-        FILE="win11-clipboard-history-${CLEAN_VERSION}-1.x86_64.rpm"
-        download_file "$BASE_URL/$FILE" "$FILE"
-        install_deps
-        sudo dnf install -y "./$FILE"
-    ;;
-    
-    *)
-        log "Installing AppImage..."
-        FILE="win11-clipboard-history_${CLEAN_VERSION}_amd64.AppImage"
-        download_file "$BASE_URL/$FILE" "$FILE"
-        chmod +x "$FILE"
-        install_deps
-        
-        mkdir -p "$HOME/.local/bin" "$HOME/.local/lib/win11-clipboard-history"
-        mv "$FILE" "$HOME/.local/lib/win11-clipboard-history/win11-clipboard-history.AppImage"
-        
-        # Create Wrapper
-        cat > "$HOME/.local/bin/win11-clipboard-history" << 'WRAPPER'
-#!/bin/bash
-exec env -i HOME="$HOME" USER="$USER" DISPLAY="${DISPLAY:-:0}" \
-    WAYLAND_DISPLAY="$WAYLAND_DISPLAY" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
-    GDK_BACKEND="x11" \
-    "$HOME/.local/lib/win11-clipboard-history/win11-clipboard-history.AppImage" "$@"
-WRAPPER
-        chmod +x "$HOME/.local/bin/win11-clipboard-history"
-        
-        # Manual Permission Setup for AppImage
-        if ! [ -f /etc/udev/rules.d/99-win11-clipboard-input.rules ]; then
-            log "Configuring input permissions (with uaccess support)..."
-            getent group input >/dev/null || sudo groupadd input
-            groups "$USER" | grep -q input || sudo usermod -aG input "$USER"
-            cat << 'EOF' | sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules > /dev/null
-# udev rules for Windows 11 Clipboard History
-# TAG+="uaccess" grants access to the active session user via systemd-logind
-# GROUP="input" serves as fallback for non-systemd systems
-KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input", TAG+="uaccess"
-KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput", TAG+="uaccess"
-EOF
-            sudo modprobe uinput 2>/dev/null || true
-            sudo udevadm control --reload-rules && sudo udevadm trigger
-        fi
-    ;;
-esac
-
-# --- 4. Final Permissions ---
-
-# Check if systemd-logind uaccess is working, otherwise use ACL fallback
-if loginctl show-session $(loginctl --no-legend 2>/dev/null | grep "$USER" | head -1 | awk '{print $1}') -p Active 2>/dev/null | grep -q "Active=yes"; then
-    log "Using systemd-logind uaccess for automatic permission management"
-    # Trigger udev to apply uaccess tags
-    sudo udevadm trigger --subsystem-match=input --action=change 2>/dev/null || true
-    sudo udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true
-else
-    log "Applying ACL fallback for immediate access..."
-    # ACL fallback for non-systemd systems or when uaccess isn't working
-    if command -v setfacl &>/dev/null; then
-        for dev in /dev/input/event*; do
-            [ -e "$dev" ] && sudo setfacl -m "u:${USER}:rw" "$dev" 2>/dev/null || true
-        done
-        [ -e /dev/uinput ] && sudo setfacl -m "u:${USER}:rw" /dev/uinput 2>/dev/null || true
+# Detect the distribution
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        DISTRO_ID="${ID}"
+        DISTRO_ID_LIKE="${ID_LIKE:-}"
+        SYSTEM_FAMILY_INFO=$(echo "$ID $ID_LIKE" | tr '[:upper:]' '[:lower:]')
+    else
+        error "Cannot detect distribution. /etc/os-release not found."
     fi
-fi
+}
 
-# --- 5. Launch ---
+# Detect system architecture and set DEB_ARCH/RPM_ARCH
+detect_arch() {
+    local arch
+    arch=$(uname -m)
+    
+    case "$arch" in
+        x86_64|amd64)
+            DEB_ARCH="amd64"
+            RPM_ARCH="x86_64"
+            ;;
+        aarch64|arm64)
+            DEB_ARCH="arm64"
+            RPM_ARCH="aarch64"
+            ;;
+        armv7l|armhf)
+            DEB_ARCH="armhf"
+            RPM_ARCH="armv7hl"
+            ;;
+        *)
+            warn "Unknown architecture: $arch. Defaulting to x86_64."
+            DEB_ARCH="amd64"
+            RPM_ARCH="x86_64"
+            ;;
+    esac
+    
+    log "Architecture: $arch (DEB: $DEB_ARCH, RPM: $RPM_ARCH)"
+}
 
-log "Starting application..."
+# Check WebKitGTK compatibility
+check_webkit_compatibility() {
+    log "Checking WebKitGTK compatibility..."
+    
+    if ldconfig -p 2>/dev/null | grep -q "libwebkit2gtk-4.1"; then
+        success "WebKitGTK 4.1 found (modern)"
+        return 0
+    elif ldconfig -p 2>/dev/null | grep -q "libwebkit2gtk-4.0"; then
+        warn "WebKitGTK 4.0 found (legacy)"
+        warn "Package manager installation may fail. AppImage fallback available."
+        return 1
+    else
+        warn "WebKitGTK not found. Will be installed with the package."
+        return 0
+    fi
+}
 
-# Double check cleanup
-pkill -f "win11-clipboard-history" || true
-sleep 1
+# Installation via package manage
+install_via_package_manager() {
+    # 1. Check for Arch Family (Arch, Manjaro, CachyOS, Endeavour, etc)
+    if [[ "$SYSTEM_FAMILY_INFO" =~ "arch" ]] || command -v pacman &>/dev/null; then
+        install_aur
+        return 0
+    
+    # 2. Check for Debian/Ubuntu Family
+    elif [[ "$SYSTEM_FAMILY_INFO" =~ "debian" || "$SYSTEM_FAMILY_INFO" =~ "ubuntu" ]] || command -v apt-get &>/dev/null; then
+        install_deb
+        return 0
+        
+    # 3. Check for Fedora/RHEL Family
+    elif [[ "$SYSTEM_FAMILY_INFO" =~ "fedora" || "$SYSTEM_FAMILY_INFO" =~ "rhel" || "$SYSTEM_FAMILY_INFO" =~ "centos" ]] || command -v dnf &>/dev/null; then
+        install_rpm
+        return 0
+        
+    # 4. Check for OpenSUSE Family
+    elif [[ "$SYSTEM_FAMILY_INFO" =~ "suse" ]] || command -v zypper &>/dev/null; then
+        install_rpm_suse
+        return 0
+    fi
 
-# Launch detached from terminal to prevent freezing
-# Redirecting input/output to /dev/null is critical here
-nohup win11-clipboard-history >/dev/null 2>&1 < /dev/null & disown
+    return 1  # Unknown system family
+}
 
-sleep 2
+install_deb() {
+    log "Setting up APT repository (Cloudsmith)..."
+    
+    # Install prerequisites for HTTPS repos
+    sudo apt-get update -qq
+    sudo apt-get install -y apt-transport-https curl || true
+    
+    # Try Cloudsmith repository first (enables auto-updates)
+    if curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.deb.sh" | sudo -E bash 2>/dev/null; then
+        log "Installing win11-clipboard-history from repository..."
+        sudo apt-get update -qq
+        if sudo apt-get install -y win11-clipboard-history; then
+            success "Installed via APT repository! (auto-updates enabled)"
+            return 0
+        fi
+    fi
+    
+    # Fallback: download from GitHub releases
+    warn "Repository not available, falling back to GitHub release..."
+    log "Installing from GitHub releases (.deb)..."
+    
+    LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
+    RELEASE_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -cd '[:alnum:]._-')
+    [ -z "$RELEASE_TAG" ] && error "Failed to fetch version."
+    CLEAN_VERSION="${RELEASE_TAG#v}"
+    
+    TEMP_DIR=$(mktemp -d)
+    chmod 755 "$TEMP_DIR"
+    cd "$TEMP_DIR"
+    trap 'rm -rf "$TEMP_DIR"' EXIT
+    
+    FILE="win11-clipboard-history_${CLEAN_VERSION}_${DEB_ARCH}.deb"
+    BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
+    
+    log "Downloading $FILE..."
+    curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar
+    chmod 644 "$FILE"
+    
+    log "Installing dependencies..."
+    sudo apt-get install -y xclip wl-clipboard acl || true
+    
+    log "Installing .deb package..."
+    yes | sudo apt-get install -y "./$FILE"
+    
+    success "Installed via APT (from GitHub release)"
+}
 
-if pgrep -f "win11-clipboard-history" > /dev/null; then
-    success "App is running! Press Super+V to open."
-else
-    # Fallback check: sometimes pgrep fails on specific distros immediately
-    warn "App installed. If it didn't open, run 'win11-clipboard-history' or find it in your menu."
-fi
+install_rpm() {
+    log "Setting up RPM repository (Cloudsmith)..."
+    
+    # Try Cloudsmith repository first (enables auto-updates)
+    if curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh" | sudo -E bash 2>/dev/null; then
+        log "Installing win11-clipboard-history from repository..."
+        if sudo dnf install -y win11-clipboard-history; then
+            success "Installed via DNF repository! (auto-updates enabled)"
+            return 0
+        fi
+    fi
+    
+    # Fallback: download from GitHub releases
+    warn "Repository not available, falling back to GitHub release..."
+    log "Installing from GitHub releases (.rpm)..."
+    
+    LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
+    RELEASE_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -cd '[:alnum:]._-')
+    [ -z "$RELEASE_TAG" ] && error "Failed to fetch version."
+    CLEAN_VERSION="${RELEASE_TAG#v}"
+    
+    TEMP_DIR=$(mktemp -d)
+    chmod 755 "$TEMP_DIR"
+    cd "$TEMP_DIR"
+    trap 'rm -rf "$TEMP_DIR"' EXIT
+    
+    FILE="win11-clipboard-history-${CLEAN_VERSION}-1.${RPM_ARCH}.rpm"
+    BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
+    
+    log "Downloading $FILE..."
+    curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar
+    chmod 644 "$FILE"
+    
+    log "Installing dependencies..."
+    sudo dnf install -y xclip wl-clipboard acl || true
+    
+    log "Installing .rpm package..."
+    sudo dnf install -y "./$FILE"
+    
+    success "Installed via DNF (from GitHub release)"
+}
+
+install_rpm_suse() {
+    log "Setting up RPM repository (Cloudsmith)..."
+    
+    # Try Cloudsmith repository first (enables auto-updates)
+    if curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh" | sudo -E bash 2>/dev/null; then
+        log "Installing win11-clipboard-history from repository..."
+        if sudo zypper install -y win11-clipboard-history; then
+            success "Installed via Zypper repository! (auto-updates enabled)"
+            return 0
+        fi
+    fi
+    
+    # Fallback: download from GitHub releases
+    warn "Repository not available, falling back to GitHub release..."
+    log "Installing from GitHub releases (.rpm)..."
+    
+    LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
+    RELEASE_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -cd '[:alnum:]._-')
+    [ -z "$RELEASE_TAG" ] && error "Failed to fetch version."
+    CLEAN_VERSION="${RELEASE_TAG#v}"
+    
+    TEMP_DIR=$(mktemp -d)
+    chmod 755 "$TEMP_DIR"
+    cd "$TEMP_DIR"
+    trap 'rm -rf "$TEMP_DIR"' EXIT
+    
+    FILE="win11-clipboard-history-${CLEAN_VERSION}-1.${RPM_ARCH}.rpm"
+    BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
+    
+    log "Downloading $FILE..."
+    curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar
+    chmod 644 "$FILE"
+    
+    log "Installing dependencies..."
+    sudo zypper install -y xclip wl-clipboard acl || true
+    
+    log "Installing .rpm package..."
+    sudo zypper install -y "./$FILE"
+    
+    success "Installed via Zypper (from GitHub release)"
+}
+
+install_aur() {
+    log "Installing from AUR..."
+    
+    # Detect AUR helper
+    if command -v yay &>/dev/null; then
+        yay -S --noconfirm win11-clipboard-history-bin
+    elif command -v paru &>/dev/null; then
+        paru -S --noconfirm win11-clipboard-history-bin
+    else
+        warn "No AUR helper found. Installing yay first..."
+        sudo pacman -S --needed --noconfirm git base-devel
+        git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
+        cd /tmp/yay-bin && makepkg -si --noconfirm
+        yay -S --noconfirm win11-clipboard-history-bin
+    fi
+    
+    success "Installed via AUR!"
+}
+
+install_appimage() {
+    log "Installing AppImage (universal fallback)..."
+    
+    # Fetch latest version
+    LATEST_URL=$(curl -s https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest \
+        | grep "browser_download_url.*AppImage" \
+        | cut -d '"' -f 4)
+    
+    if [ -z "$LATEST_URL" ]; then
+        error "Could not find AppImage download URL"
+    fi
+    
+    # Create directories
+    mkdir -p "$HOME/.local/bin"
+    mkdir -p "$HOME/.local/share/applications"
+    mkdir -p "$HOME/.local/share/icons/hicolor/128x128/apps"
+    
+    # Download AppImage
+    log "Downloading AppImage..."
+    curl -fsSL -o "$HOME/.local/bin/win11-clipboard-history.AppImage" "$LATEST_URL"
+    chmod +x "$HOME/.local/bin/win11-clipboard-history.AppImage"
+    
+    # Download app icon for proper menu integration
+    log "Downloading app icon..."
+    curl -fsSL -o "$HOME/.local/share/icons/hicolor/128x128/apps/win11-clipboard-history.png" \
+        "https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/master/src-tauri/icons/128x128.png" 2>/dev/null || true
+    
+    # Wrapper script
+    cat > "$HOME/.local/bin/win11-clipboard-history" << 'EOF'
+#!/bin/bash
+exec env -i \
+    HOME="$HOME" USER="$USER" SHELL="$SHELL" \
+    DISPLAY="${DISPLAY:-:0}" XAUTHORITY="$XAUTHORITY" \
+    WAYLAND_DISPLAY="$WAYLAND_DISPLAY" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+    XDG_SESSION_TYPE="$XDG_SESSION_TYPE" XDG_CURRENT_DESKTOP="$XDG_CURRENT_DESKTOP" \
+    XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" \
+    DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
+    PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin" \
+    LANG="${LANG:-en_US.UTF-8}" \
+    GDK_BACKEND="x11" \
+    GDK_SCALE="${GDK_SCALE:-1}" GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}" \
+    NO_AT_BRIDGE=1 \
+    "$HOME/.local/bin/win11-clipboard-history.AppImage" "$@"
+EOF
+    chmod +x "$HOME/.local/bin/win11-clipboard-history"
+    
+    # .desktop file with proper icon
+    cat > "$HOME/.local/share/applications/win11-clipboard-history.desktop" << EOF
+[Desktop Entry]
+Type=Application
+Name=Clipboard History
+Comment=Windows 11-style Clipboard History Manager
+Exec=$HOME/.local/bin/win11-clipboard-history
+Icon=win11-clipboard-history
+Terminal=false
+Categories=Utility;
+StartupWMClass=win11-clipboard-history
+EOF
+    
+    # Ask about udev rules for AppImage (optional - maintains portability)
+    setup_udev_appimage_optional
+    
+    success "AppImage installed to ~/.local/bin/"
+    warn "Add ~/.local/bin to your PATH if not already there"
+}
+
+setup_udev_appimage_optional() {
+    echo ""
+    warn "For paste simulation to work, the app needs access to /dev/uinput."
+    echo ""
+    echo "You have two options:"
+    echo "  1. Quick fix (no logout required): Run this command:"
+    echo "     sudo setfacl -m u:$USER:rw /dev/uinput"
+    echo ""
+    echo "  2. Permanent fix (requires sudo, then logout/login):"
+    echo "     The installer can set up udev rules for you."
+    echo ""
+    
+    # Check if running interactively
+    if [ -t 0 ]; then
+        read -p "Set up permanent udev rules now? [y/N] " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            setup_udev_appimage
+        else
+            log "Skipping udev setup. You can run this later if paste doesn't work:"
+            echo "  sudo setfacl -m u:$USER:rw /dev/uinput"
+        fi
+    else
+        # Non-interactive: just use ACL for immediate access
+        log "Non-interactive mode: Using ACL for immediate access..."
+        if command -v setfacl &>/dev/null && [ -e /dev/uinput ]; then
+            sudo setfacl -m "u:${USER}:rw" /dev/uinput 2>/dev/null || true
+            success "Permissions configured via ACL"
+        else
+            warn "Run 'sudo setfacl -m u:$USER:rw /dev/uinput' if paste doesn't work"
+        fi
+    fi
+}
+
+setup_udev_appimage() {
+    log "Setting up permanent uinput permissions (requires sudo)..."
+    
+    # Create udev rule
+    sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules > /dev/null << 'EOF'
+# udev rules for Windows 11 Clipboard History
+ACTION=="add", SUBSYSTEM=="misc", KERNEL=="uinput", OPTIONS+="static_node=uinput"
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", TAG+="uaccess"
+EOF
+    
+    # Configure module to load on boot
+    echo "uinput" | sudo tee /etc/modules-load.d/win11-clipboard.conf > /dev/null
+    
+    # Load now
+    sudo modprobe uinput 2>/dev/null || true
+    sudo udevadm control --reload-rules 2>/dev/null || true
+    sudo udevadm trigger --subsystem-match=misc 2>/dev/null || true
+    
+    # ACL for immediate access
+    if command -v setfacl &>/dev/null && [ -e /dev/uinput ]; then
+        sudo setfacl -m "u:${USER}:rw" /dev/uinput 2>/dev/null || true
+        success "Permissions configured (immediate access via ACL)"
+    else
+        warn "You may need to log out and back in for permissions to take effect"
+    fi
+}
+
+launch_app() {
+    log "Starting application..."
+    
+    # Kill any existing instances (matches both wrapper and -bin binary)
+    pkill -f "win11-clipboard-history-bin" 2>/dev/null || true
+    pkill -f "win11-clipboard-history.AppImage" 2>/dev/null || true
+    sleep 1
+    
+    # Launch detached from terminal
+    nohup win11-clipboard-history >/dev/null 2>&1 < /dev/null & disown
+    
+    sleep 2
+    
+    if pgrep -f "win11-clipboard-history" > /dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Main
+main() {
+    echo ""
+    echo "╔═══════════════════════════════════════════════════════════╗"
+    echo "║     Win11 Clipboard History - Linux Installer             ║"
+    echo "╚═══════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    command -v curl >/dev/null 2>&1 || error "curl is required."
+    
+    detect_distro
+    detect_arch
+    log "Detected: $DISTRO_ID (Family: $SYSTEM_FAMILY_INFO)"
+    
+    # Check WebKitGTK compatibility
+    check_webkit_compatibility
+    webkit_status=$?
+    
+    # Prefer AppImage if only legacy WebKitGTK 4.0 is available
+    if [ "$webkit_status" -eq 1 ]; then
+        warn "Legacy WebKitGTK detected. Preferring AppImage for better compatibility."
+        install_appimage
+    # Try package manager first
+    elif install_via_package_manager; then
+        success "Package installation complete!"
+    else
+        warn "No native package found for your system family. Using AppImage."
+        install_appimage
+    fi
+    
+    # Try to launch
+    if launch_app; then
+        echo ""
+        success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        success " Installation complete! App is running."
+        success " Press Super+V to open your clipboard history."
+        success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    else
+        echo ""
+        success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        success " Installation complete!"
+        success " Run 'win11-clipboard-history' or find it in your menu."
+        success " Press Super+V to open your clipboard history."
+        success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    fi
+    echo ""
+}
+
+main "$@"

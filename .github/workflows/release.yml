@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -37,7 +37,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -58,9 +58,17 @@ jobs:
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }}
           echo "Syncing version to $VERSION"
-          npm version $VERSION --no-git-tag-version
-          sed -i "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
-          sed -i "s/^version = \"[0-9]*\.[0-9]*\.[0-9]*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+          # Update package.json
+          npm version $VERSION --no-git-tag-version --allow-same-version
+          # Update tauri.conf.json (handles semver with pre-release like 1.0.0-beta.1)
+          sed -i 's/"version": "[^"]*"/"version": "'"$VERSION"'"/' src-tauri/tauri.conf.json
+          # Update Cargo.toml (first occurrence only, handles semver with pre-release)
+          sed -i '0,/^version = "[^"]*"/s//version = "'"$VERSION"'"/' src-tauri/Cargo.toml
+          # Verify versions were updated
+          echo "=== Versions after sync ==="
+          echo "package.json: $(grep '"version"' package.json | head -1)"
+          echo "tauri.conf.json: $(grep '"version"' src-tauri/tauri.conf.json | head -1)"
+          echo "Cargo.toml: $(grep '^version' src-tauri/Cargo.toml | head -1)"
 
       - name: Install npm dependencies
         run: npm ci
@@ -78,7 +86,7 @@ jobs:
           name: Release ${{ github.ref_name }}
           generate_release_notes: true
           draft: false
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'dev') }}
           files: |
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/appimage/*.AppImage
@@ -88,7 +96,13 @@ jobs:
             
             A Windows 11-style Clipboard History Manager for Linux.
             
-            ### Installation
+            ### Quick Installation (Recommended)
+            
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/gustavosett/Windows-11-Clipboard-History-For-Linux/master/scripts/install.sh | bash
+            ```
+            
+            ### Manual Installation
             
             #### Ubuntu/Debian
             Download the `.deb` file and install:
@@ -102,6 +116,11 @@ jobs:
             sudo rpm -i win11-clipboard-history-${{ steps.get_version.outputs.VERSION }}-1.x86_64.rpm
             ```
             
+            #### Arch Linux (AUR)
+            ```bash
+            yay -S win11-clipboard-history-bin
+            ```
+            
             #### Any Linux (AppImage)
             Download the `.AppImage` file, make it executable, and run:
             ```bash
@@ -109,16 +128,103 @@ jobs:
             ./win11-clipboard-history_${{ steps.get_version.outputs.VERSION }}_amd64.AppImage
             ```
             
-            ### ⚠️ Important: Post-Installation Steps
+            ### Usage
             
-            This app requires access to input devices for global hotkeys. After installation:
-            
-            1. Add your user to the `input` group:
-               ```bash
-               sudo usermod -aG input $USER
-               ```
-            2. **Log out and log back in** for permissions to take effect
-            
-            The `.deb` and `.rpm` packages do this automatically during installation.
+            Press **Super+V** to open the clipboard history.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Cloudsmith (stable releases only)
+        if: ${{ env.CLOUDSMITH_API_KEY != '' && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'dev') }}
+        continue-on-error: true
+        env:
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+        run: |
+          pip install cloudsmith-cli
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          
+          echo "Uploading STABLE release v$VERSION to Cloudsmith..."
+          
+          # Upload .deb
+          cloudsmith push deb gustavosett/clipboard-manager/any-distro/any-version \
+            src-tauri/target/release/bundle/deb/*.deb \
+            --api-key $CLOUDSMITH_API_KEY || echo "Cloudsmith .deb upload failed (may already exist)"
+          
+          # Upload .rpm
+          cloudsmith push rpm gustavosett/clipboard-manager/any-distro/any-version \
+            src-tauri/target/release/bundle/rpm/*.rpm \
+            --api-key $CLOUDSMITH_API_KEY || echo "Cloudsmith .rpm upload failed (may already exist)"
+
+      - name: Update AUR Package
+        if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'dev') }}
+        continue-on-error: true
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "AUR_SSH_KEY not set, skipping AUR update"
+            exit 0
+          fi
+          
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          DEB_FILE=$(ls src-tauri/target/release/bundle/deb/*.deb | head -1)
+          SHA256=$(sha256sum "$DEB_FILE" | cut -d' ' -f1)
+          
+          echo "Updating AUR package to version $VERSION with checksum $SHA256"
+          
+          # Setup SSH for AUR
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          echo "Host aur.archlinux.org
+            User aur
+            IdentityFile ~/.ssh/aur
+            StrictHostKeyChecking no" > ~/.ssh/config
+          
+          # Clone AUR repo
+          git clone ssh://aur@aur.archlinux.org/win11-clipboard-history-bin.git /tmp/aur-pkg
+          cd /tmp/aur-pkg
+          
+          # Update PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=$VERSION/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s/sha256sums_x86_64=.*/sha256sums_x86_64=('$SHA256')/" PKGBUILD
+          
+          # Generate .SRCINFO
+          docker run --rm -v "$PWD:/pkg" archlinux bash -c "
+            pacman -Sy --noconfirm pacman-contrib
+            cd /pkg
+            makepkg --printsrcinfo > .SRCINFO
+          " || {
+            # Fallback: generate manually if docker fails
+            echo "pkgbase = win11-clipboard-history-bin
+          pkgdesc = Windows 11-style Clipboard History Manager for Linux
+          pkgver = $VERSION
+          pkgrel = 1
+          url = https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux
+          arch = x86_64
+          license = MIT
+          depends = webkit2gtk-4.1
+          depends = gtk3
+          depends = libayatana-appindicator
+          depends = xclip
+          depends = wl-clipboard
+          depends = acl
+          optdepends = libappindicator-gtk3: Legacy tray icon support
+          provides = win11-clipboard-history
+          conflicts = win11-clipboard-history
+          options = !strip
+          options = !debug
+          source_x86_64 = https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/releases/download/v$VERSION/win11-clipboard-history_${VERSION}_amd64.deb
+          sha256sums_x86_64 = $SHA256
+          install = win11-clipboard-history-bin.install
+
+          pkgname = win11-clipboard-history-bin" > .SRCINFO
+          }
+          
+          # Commit and push
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to version $VERSION" || echo "No changes to commit"
+          git push || echo "Push failed - may need manual intervention"

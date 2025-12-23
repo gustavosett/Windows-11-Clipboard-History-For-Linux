@@ -3,7 +3,7 @@
 <div align="center">
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)
+![Rust](https://img.shields.io/badge/rust-1.77+-orange.svg)
 ![Tauri](https://img.shields.io/badge/tauri-v2-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)
 ![Version](https://img.shields.io/github/v/release/gustavosett/Windows-11-Clipboard-History-For-Linux?color=green)
@@ -32,6 +32,7 @@ Built with 🦀 **Rust** + ⚡ **Tauri v2** + ⚛️ **React** + 🎨 **Tailwind
 - 🤩 **Emoji Picker** - Built-in searchable emoji keyboard.
 - 🏎️ **Performance** - Native Rust backend ensures minimal resource usage.
 - 🛡️ **Privacy Focused** - History is stored locally and never leaves your machine.
+- 🧙 **Setup Wizard** - First-run wizard guides you through permission setup and autostart configuration.
 
 ---
 
@@ -39,48 +40,110 @@ Built with 🦀 **Rust** + ⚡ **Tauri v2** + ⚛️ **React** + 🎨 **Tailwind
 
 ### 🚀 Recommended: One-Line Install
 
-This script automatically detects your distro, downloads the correct package (DEB, RPM, or AppImage), sets up permissions, and configures autostart.
+This script automatically detects your distro and architecture (x86_64, ARM64), downloads the correct package, and sets up permissions.
 
 ```bash
-curl -sL http://install-clipboard.gustavosett.dev | bash
+curl -fsSL https://raw.githubusercontent.com/gustavosett/Windows-11-Clipboard-History-For-Linux/master/scripts/install.sh | bash
 ```
 
-> **Note:** This installer uses ACLs to grant immediate access to input devices, so **no logout is required**!
+> **Note:** The installer uses ACLs to grant immediate access to input devices — **no logout required!**
 
 ### 📦 Manual Installation
 
-If you prefer to install manually, download the latest release from the [Releases Page](https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/releases).
+Download the latest release from the [Releases Page](https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/releases).
 
 <details>
-<summary><b>Click to see manual setup instructions (for other formats or troubleshooting)</b></summary>
+<summary><b>Debian / Ubuntu / Pop!_OS / Linux Mint</b></summary>
 
-1. **Install the package:**
-   - **Debian/Ubuntu:** `sudo apt install ./win11-clipboard-history_*.deb`
-   - **Fedora/RHEL:** `sudo dnf install ./win11-clipboard-history-*.rpm`
-   - **AppImage:** Make executable (`chmod +x`) and run.
+```bash
+# Download and install (replace VERSION with actual version)
+sudo apt install ./win11-clipboard-history_VERSION_amd64.deb
 
-2. **Configure Permissions (Crucial):**
-   Since this app simulates keystrokes (paste) on Wayland, it needs access to `/dev/uinput`.
-
-   ```bash
-   # 1. Create 'input' group
-   sudo groupadd input
-   sudo usermod -aG input $USER
-
-   # 2. Create udev rules
-   echo 'KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' | sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules
-
-   # 3. Load uinput module
-   sudo modprobe uinput
-   echo "uinput" | sudo tee /etc/modules-load.d/uinput.conf
-
-   # 4. Reload rules
-   sudo udevadm control --reload-rules && sudo udevadm trigger
-   ```
-
-   *You will need to log out and back in for group changes to take effect if doing this manually.*
+# The package sets up udev rules automatically.
+# You may need to log out and back in for permissions to take effect,
+# or run this for immediate access:
+sudo setfacl -m u:$USER:rw /dev/uinput
+```
 
 </details>
+
+<details>
+<summary><b>Fedora / RHEL / CentOS</b></summary>
+
+```bash
+# Download and install (replace VERSION with actual version)
+sudo dnf install ./win11-clipboard-history-VERSION-1.x86_64.rpm
+
+# For immediate access:
+sudo setfacl -m u:$USER:rw /dev/uinput
+```
+
+</details>
+
+<details>
+<summary><b>Arch Linux (AUR)</b></summary>
+
+```bash
+# Using yay
+yay -S win11-clipboard-history-bin
+
+# Or using paru
+paru -S win11-clipboard-history-bin
+```
+
+</details>
+
+<details>
+<summary><b>AppImage (Universal)</b></summary>
+
+```bash
+# Download the AppImage
+chmod +x win11-clipboard-history_*.AppImage
+
+# Run it
+./win11-clipboard-history_*.AppImage
+
+# For paste to work, grant uinput access:
+sudo setfacl -m u:$USER:rw /dev/uinput
+```
+
+> **Note:** AppImage is fully portable — no system installation required. The permission command above is only needed for paste simulation.
+
+</details>
+
+<details>
+<summary><b>Build from Source</b></summary>
+
+```bash
+# Clone and enter the repo
+git clone https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux.git
+cd Windows-11-Clipboard-History-For-Linux
+
+# Install dependencies (auto-detects distro)
+make deps
+make rust
+make node
+source ~/.cargo/env
+
+# Build
+make build
+
+# Install system-wide (uses /usr/local by default)
+sudo make install
+
+# Or install to /usr like a package
+sudo make install PREFIX=/usr
+```
+
+</details>
+
+### 🎯 First Run
+
+On the first launch, the app will show a **Setup Wizard** that:
+- ✅ Checks if you have the necessary permissions for paste simulation
+- 🔧 Offers a one-click fix if permissions are missing
+- ⌨️ Helps register the global shortcut (Super+V) for your desktop environment
+- 🚀 Lets you enable autostart on login
 
 ---
 
@@ -89,14 +152,14 @@ If you prefer to install manually, download the latest release from the [Release
 | Hotkey | Action |
 | :--- | :--- |
 | **`Super + V`** | Open Clipboard History |
-| **`Ctrl + Alt + V`** | Alternative Open Shortcut |
+| **`Ctrl + Alt + V`** | Alternative Shortcut |
 | **`Esc`** | Close Window |
-| **`Arrows / Tab`** | Navigate Items |
+| **`↑ / ↓ / Tab`** | Navigate Items |
 | **`Enter`** | Paste Selected Item |
 
-### Advanced Usage
+### Tips
 - **Paste GIFs:** Select a GIF, and it will be copied as a file URI. The app simulates `Ctrl+V` to paste it into apps like Discord or Telegram.
-- **Pinning:** Click the pin icon on any item to prevent it from being auto-deleted when the history limit (50 items) is reached.
+- **Pinning:** Click the pin icon on any item to keep it at the top permanently.
 
 ---
 
@@ -104,53 +167,57 @@ If you prefer to install manually, download the latest release from the [Release
 
 ### Prerequisites
 
-You need **Rust**, **Node.js (v20+)**, and build tools.
+- **Rust 1.77+**
+- **Node.js 20+**
+- System build dependencies (see `make deps`)
+
+### Quick Start
 
 ```bash
-# Clone repo
 git clone https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux.git
-cd win11-clipboard-history
+cd Windows-11-Clipboard-History-For-Linux
 
-# Install system dependencies (auto-detects distro)
-make deps
-
-# Install language tools
-make rust
-make node
+make deps      # Install system dependencies (auto-detects distro)
+make rust      # Install Rust via rustup
+make node      # Install Node.js via nvm
 source ~/.cargo/env
+
+make dev       # Run in development mode with hot reload
 ```
 
-### Running in Dev Mode
+### Available Commands
 
-Use the provided script to ensure the environment is clean (fixes issues with VS Code Snap version):
-
-```bash
-make dev
-# or
-./scripts/run-dev.sh
-```
-
-### Building for Production
-
-```bash
-make build
-# Artifacts will be in src-tauri/target/release/bundle/
-```
+| Command | Description |
+|---------|-------------|
+| `make dev` | Run in development mode |
+| `make build` | Build production release |
+| `make install` | Install to system (default: `/usr/local`) |
+| `make uninstall` | Remove from system |
+| `make clean` | Remove build artifacts |
+| `make lint` | Run linters |
+| `make help` | Show all available commands |
 
 ---
 
 ## 🔧 Troubleshooting
 
 ### App won't open with Super+V
-1. Ensure the app is running: `pgrep -f win11-clipboard-history`
-2. Check if the shortcut is registered in your Desktop Environment settings (Settings -> Keyboard -> Shortcuts).
-   - **Command:**  win11-clipboard-history
-   - **Shortcut:** Super+V (or your preferred combination)
+
+1. **Ensure the app is running:** `pgrep -f win11-clipboard-history-bin`
+2. If not running, launch it from your app menu or run `win11-clipboard-history`
+3. **Re-run the Setup Wizard** to register the shortcut:
+   ```bash
+   rm ~/.config/win11-clipboard-history/setup.json
+   win11-clipboard-history
+   ```
 
 ### Pasting doesn't work
-1. **Wayland:** Ensure `wl-clipboard` is installed: `sudo apt install wl-clipboard`.
-2. **X11:** Ensure `xclip` is installed: `sudo apt install xclip`.
-3. The app simulates `Ctrl+V`. Ensure the target app accepts this shortcut.
+
+1. **Check the Setup Wizard:** It shows permission status and offers one-click fixes
+2. **Quick fix:** `sudo setfacl -m u:$USER:rw /dev/uinput`
+3. **Wayland:** Ensure `wl-clipboard` is installed
+4. **X11:** Ensure `xclip` is installed
+5. The app simulates `Ctrl+V` — ensure the target app accepts this shortcut
 
 ### Window appears on the wrong monitor
 The app uses smart cursor tracking. If it appears incorrectly, try moving your mouse to the center of the desired screen and pressing the hotkey again.
@@ -159,17 +226,49 @@ The app uses smart cursor tracking. If it appears incorrectly, try moving your m
 
 ## 🗑️ Uninstalling
 
-**Ubuntu / Debian:**
+<details>
+<summary><b>Debian / Ubuntu</b></summary>
+
 ```bash
 sudo apt remove win11-clipboard-history
+# To also remove config files:
+sudo apt purge win11-clipboard-history
 ```
 
-**Fedora:**
+</details>
+
+<details>
+<summary><b>Fedora / RHEL</b></summary>
+
 ```bash
 sudo dnf remove win11-clipboard-history
 ```
 
-**Installer Script / AppImage:**
+</details>
+
+<details>
+<summary><b>Arch Linux (AUR)</b></summary>
+
+```bash
+yay -R win11-clipboard-history-bin
+```
+
+</details>
+
+<details>
+<summary><b>AppImage</b></summary>
+
+```bash
+rm -f ~/.local/bin/win11-clipboard-history*
+rm -f ~/.local/share/applications/win11-clipboard-history.desktop
+rm -rf ~/.config/win11-clipboard-history
+```
+
+</details>
+
+<details>
+<summary><b>Built from Source (Makefile)</b></summary>
+
 ```bash
 rm -f ~/.local/bin/win11-clipboard-history
 rm -rf ~/.local/lib/win11-clipboard-history
