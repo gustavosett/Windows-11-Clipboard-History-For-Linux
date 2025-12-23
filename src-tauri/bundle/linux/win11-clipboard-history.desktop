@@ -1,13 +1,13 @@
 [Desktop Entry]
+Version=1.1
+Type=Application
 Name=Clipboard History
-Comment=Windows 11-style Clipboard History Manager
 GenericName=Clipboard Manager
+Comment=Windows 11-style Clipboard History Manager
 Exec=win11-clipboard-history
 Icon=win11-clipboard-history
 Terminal=false
-Type=Application
-Categories=Utility;
-Keywords=clipboard;history;paste;copy;
+Categories=Utility;GTK;
+Keywords=clipboard;history;paste;copy;emoji;gif;
 StartupWMClass=win11-clipboard-history
-X-GNOME-Autostart-enabled=true
-X-GNOME-Autostart-Delay=2
+StartupNotify=true
