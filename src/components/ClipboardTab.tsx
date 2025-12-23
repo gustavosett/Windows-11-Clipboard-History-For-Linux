@@ -39,7 +39,18 @@ export function ClipboardTab(props: {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [isRegexMode, setIsRegexMode] = useState(false)
-  const [isCompact, setIsCompact] = useState(false)
+  
+  const [isCompact, setIsCompact] = useState(() => {
+    if (typeof window !== 'undefined') {
+        return localStorage.getItem('clipboard-history-compact-mode') === 'true'
+    }
+    return false
+  })
+
+  useEffect(() => {
+    localStorage.setItem('clipboard-history-compact-mode', String(isCompact))
+  }, [isCompact])
+
   const [focusedIndex, setFocusedIndex] = useState(0)
 
   // Refs
