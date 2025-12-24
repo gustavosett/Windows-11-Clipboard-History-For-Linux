@@ -728,9 +728,12 @@ fn main() {
             permission_checker::fix_permissions_now,
             permission_checker::is_first_run,
             permission_checker::mark_first_run_complete,
+            permission_checker::reset_first_run,
             shortcut_setup::get_desktop_environment,
             shortcut_setup::register_de_shortcut,
             shortcut_setup::check_shortcut_tools,
+            shortcut_setup::detect_conflicts,
+            shortcut_setup::resolve_conflicts,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
