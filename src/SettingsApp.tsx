@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow, Window } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
+import { emit } from '@tauri-apps/api/event'
 import { clsx } from 'clsx'
 
 /** User settings type matching the Rust struct */
@@ -449,9 +450,15 @@ function SettingsApp() {
         {/* Reset Section */}
         <div className="flex justify-end pt-2">
           <button
-            onClick={() => {
+            onClick={async () => {
               setSettings(DEFAULT_SETTINGS)
-              saveSettings(DEFAULT_SETTINGS)
+              await saveSettings(DEFAULT_SETTINGS)
+              // Reset first run state to show setup wizard
+              await invoke('reset_first_run')
+              // Emit event to show wizard in main window
+              await emit('show-setup-wizard')
+              // Close settings window
+              await getCurrentWindow().hide()
             }}
             className={clsx(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all',

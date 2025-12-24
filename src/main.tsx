@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import ClipboardApp from './ClipboardApp'
 import SettingsApp from './SettingsApp'
 import { SetupWizard } from './components/SetupWizard'
@@ -25,6 +26,15 @@ function ClipboardAppWithSetup() {
         console.error('Failed to check first run:', err)
         setLoading(false)
       })
+
+    // Listen for reset-to-defaults event from settings
+    const unlisten = listen('show-setup-wizard', () => {
+      setShowWizard(true)
+    })
+
+    return () => {
+      unlisten.then((fn) => fn())
+    }
   }, [])
 
   const handleWizardComplete = () => {
