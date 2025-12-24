@@ -827,7 +827,8 @@ impl ShortcutHandler for CosmicHandler {
                 }
             }
             Ok(Some(new_content))
-        })
+        })?;
+        Ok(())
     }
 
     fn unregister(&self, _s: &ShortcutConfig) -> Result<()> {
@@ -864,7 +865,8 @@ impl ShortcutHandler for LxqtHandler {
             let mut new_content = content.clone();
             new_content.push_str(&entry);
             Ok(Some(new_content))
-        })
+        })?;
+        Ok(())
     }
 
     fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
@@ -900,7 +902,8 @@ impl ShortcutHandler for LxqtHandler {
                 }
             }
             Ok(Some(new_lines.join("\n")))
-        })
+        })?;
+        Ok(())
     }
 }
 
@@ -962,7 +965,8 @@ impl ShortcutHandler for LxdeHandler {
             Err(ShortcutError::ParseError(
                 "Could not find </keyboard> in Openbox config".into(),
             ))
-        })
+        })?;
+        Ok(())
     }
 
     fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
@@ -1002,7 +1006,8 @@ impl ShortcutHandler for LxdeHandler {
             let _ = Utils::run("openbox", &["--reconfigure"]);
 
             Ok(Some(new_content))
-        })
+        })?;
+        Ok(())
     }
 }
 
@@ -1047,7 +1052,7 @@ impl ShortcutHandler for I3Handler {
         // i3 binding format: bindsym $mod+v exec command
         let binding_line = format!("bindsym {} exec {}", s.i3_binding, s.command);
 
-        Utils::modify_file_atomic(&path, |content| {
+        let modified = Utils::modify_file_atomic(&path, |content| {
             // Check if already registered
             if content.contains(s.command) {
                 return Ok(None);
@@ -1055,7 +1060,7 @@ impl ShortcutHandler for I3Handler {
 
             // Check for existing $mod+v binding and comment it out
             let mut lines: Vec<String> = content.lines().map(String::from).collect();
-            let mut modified = false;
+            let mut had_existing = false;
 
             for line in lines.iter_mut() {
                 let trimmed = line.trim().to_lowercase();
@@ -1068,7 +1073,7 @@ impl ShortcutHandler for I3Handler {
                     && (trimmed.contains("$mod+v ") || trimmed.contains("mod4+v "))
                 {
                     *line = format!("# {} # Commented by win11-clipboard-history", line);
-                    modified = true;
+                    had_existing = true;
                 }
             }
 
@@ -1076,13 +1081,18 @@ impl ShortcutHandler for I3Handler {
             lines.push("\n# Clipboard History (added by win11-clipboard-history)".to_string());
             lines.push(binding_line.clone());
 
-            if modified {
+            if had_existing {
                 println!("[i3Handler] Commented out existing $mod+v binding(s)");
             }
 
-            Self::reload_i3();
             Ok(Some(lines.join("\n")))
-        })
+        })?;
+
+        // Reload i3 only after file was successfully written
+        if modified {
+            Self::reload_i3();
+        }
+        Ok(())
     }
 
     fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
@@ -1092,7 +1102,7 @@ impl ShortcutHandler for I3Handler {
             return Ok(());
         }
 
-        Utils::modify_file_atomic(&path, |content| {
+        let modified = Utils::modify_file_atomic(&path, |content| {
             if !content.contains(s.command) {
                 return Ok(None);
             }
@@ -1125,9 +1135,14 @@ impl ShortcutHandler for I3Handler {
                 }
             }
 
-            Self::reload_i3();
             Ok(Some(new_lines.join("\n")))
-        })
+        })?;
+
+        // Reload i3 only after file was successfully written
+        if modified {
+            Self::reload_i3();
+        }
+        Ok(())
     }
 }
 
@@ -1168,13 +1183,13 @@ impl ShortcutHandler for SwayHandler {
 
         let binding_line = format!("bindsym {} exec {}", s.sway_binding, s.command);
 
-        Utils::modify_file_atomic(&path, |content| {
+        let modified = Utils::modify_file_atomic(&path, |content| {
             if content.contains(s.command) {
                 return Ok(None);
             }
 
             let mut lines: Vec<String> = content.lines().map(String::from).collect();
-            let mut modified = false;
+            let mut had_existing = false;
 
             for line in lines.iter_mut() {
                 let trimmed = line.trim().to_lowercase();
@@ -1185,20 +1200,25 @@ impl ShortcutHandler for SwayHandler {
                     && (trimmed.contains("$mod+v ") || trimmed.contains("mod4+v "))
                 {
                     *line = format!("# {} # Commented by win11-clipboard-history", line);
-                    modified = true;
+                    had_existing = true;
                 }
             }
 
             lines.push("\n# Clipboard History (added by win11-clipboard-history)".to_string());
             lines.push(binding_line.clone());
 
-            if modified {
+            if had_existing {
                 println!("[SwayHandler] Commented out existing $mod+v binding(s)");
             }
 
-            Self::reload_sway();
             Ok(Some(lines.join("\n")))
-        })
+        })?;
+
+        // Reload Sway only after file was successfully written
+        if modified {
+            Self::reload_sway();
+        }
+        Ok(())
     }
 
     fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
@@ -1208,7 +1228,7 @@ impl ShortcutHandler for SwayHandler {
             return Ok(());
         }
 
-        Utils::modify_file_atomic(&path, |content| {
+        let modified = Utils::modify_file_atomic(&path, |content| {
             if !content.contains(s.command) {
                 return Ok(None);
             }
@@ -1238,9 +1258,14 @@ impl ShortcutHandler for SwayHandler {
                 }
             }
 
-            Self::reload_sway();
             Ok(Some(new_lines.join("\n")))
-        })
+        })?;
+
+        // Reload Sway only after file was successfully written
+        if modified {
+            Self::reload_sway();
+        }
+        Ok(())
     }
 }
 
@@ -1303,7 +1328,8 @@ impl ShortcutHandler for HyprlandHandler {
 
             // Hyprland auto-reloads config, no explicit reload needed
             Ok(Some(lines.join("\n")))
-        })
+        })?;
+        Ok(())
     }
 
     fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
@@ -1344,6 +1370,7 @@ impl ShortcutHandler for HyprlandHandler {
             }
 
             Ok(Some(new_lines.join("\n")))
-        })
+        })?;
+        Ok(())
     }
 }
