@@ -28,12 +28,25 @@ function ClipboardAppWithSetup() {
       })
 
     // Listen for reset-to-defaults event from settings
-    const unlisten = listen('show-setup-wizard', () => {
-      setShowWizard(true)
+    let isMounted = true
+    let unlistenFn: (() => void) | null = null
+
+    listen('show-setup-wizard', () => {
+      if (isMounted) {
+        setShowWizard(true)
+      }
+    }).then((fn) => {
+      if (isMounted) {
+        unlistenFn = fn
+      } else {
+        // Component already unmounted, clean up immediately
+        fn()
+      }
     })
 
     return () => {
-      unlisten.then((fn) => fn())
+      isMounted = false
+      unlistenFn?.()
     }
   }, [])
 

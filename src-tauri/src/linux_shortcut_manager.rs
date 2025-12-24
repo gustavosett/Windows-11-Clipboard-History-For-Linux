@@ -246,6 +246,22 @@ fn env_var(key: &str) -> String {
     env::var(key).unwrap_or_default()
 }
 
+/// Check if a line contains a $mod+v or mod4+v binding with proper word boundaries.
+/// This ensures we match "bindsym $mod+v" even at end of line or followed by comments.
+fn has_mod_v_binding(trimmed_line: &str) -> bool {
+    for pattern in &["$mod+v", "mod4+v"] {
+        if let Some(idx) = trimmed_line.find(pattern) {
+            // Check what follows the pattern
+            let after = trimmed_line[idx + pattern.len()..].chars().next();
+            // Valid word boundaries: end of string, space, tab, comment, semicolon
+            if matches!(after, None | Some(' ') | Some('\t') | Some('#') | Some(';')) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 // =============================================================================
 // Utilities
 // =============================================================================
@@ -289,10 +305,10 @@ impl Utils {
         }
 
         let content = if path.exists() {
-            // Calculate timestamp for backup filename
+            // Calculate timestamp for backup filename (with safe fallback)
             let timestamp = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or_else(|_| std::time::Duration::from_secs(0))
                 .as_secs();
             let bak_extension = format!("bak.{}", timestamp);
             let bak_path = path.with_extension(&bak_extension);
@@ -315,11 +331,15 @@ impl Utils {
                         })
                         .collect();
 
-                    // Sort by modification time (oldest first)
+                    // Sort by timestamp extracted from filename (oldest first)
+                    // Filename format: name.bak.TIMESTAMP, so we parse the number after last '.'
                     backups.sort_by_key(|e| {
-                        e.metadata()
-                            .and_then(|m| m.modified())
-                            .unwrap_or(UNIX_EPOCH)
+                        e.file_name()
+                            .to_string_lossy()
+                            .rsplit('.')
+                            .next()
+                            .and_then(|s| s.parse::<u64>().ok())
+                            .unwrap_or(0)
                     });
 
                     // Remove oldest backups, keep only 3
@@ -350,7 +370,7 @@ impl Utils {
             "tmp.{}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or_else(|_| std::time::Duration::from_secs(0))
                 .as_millis()
         ));
 
@@ -1068,10 +1088,8 @@ impl ShortcutHandler for I3Handler {
                 if trimmed.starts_with('#') {
                     continue;
                 }
-                // Check for existing mod+v bindings
-                if trimmed.starts_with("bindsym")
-                    && (trimmed.contains("$mod+v ") || trimmed.contains("mod4+v "))
-                {
+                // Check for existing mod+v bindings (word boundary check)
+                if trimmed.starts_with("bindsym") && has_mod_v_binding(&trimmed) {
                     *line = format!("# {} # Commented by win11-clipboard-history", line);
                     had_existing = true;
                 }
@@ -1196,9 +1214,8 @@ impl ShortcutHandler for SwayHandler {
                 if trimmed.starts_with('#') {
                     continue;
                 }
-                if trimmed.starts_with("bindsym")
-                    && (trimmed.contains("$mod+v ") || trimmed.contains("mod4+v "))
-                {
+                // Check for existing mod+v bindings (word boundary check)
+                if trimmed.starts_with("bindsym") && has_mod_v_binding(&trimmed) {
                     *line = format!("# {} # Commented by win11-clipboard-history", line);
                     had_existing = true;
                 }
