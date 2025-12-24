@@ -19,7 +19,7 @@ error()   { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 # Configuration
 REPO_OWNER="gustavosett"
 REPO_NAME="Windows-11-Clipboard-History-For-Linux"
-CLOUDSMITH_REPO="workspace-for-gustavo/clipboard-manager"
+CLOUDSMITH_REPO="gustavosett/clipboard-manager"
 
 # Detect the distribution
 detect_distro() {
