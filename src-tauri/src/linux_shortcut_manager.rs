@@ -22,6 +22,10 @@ pub struct ShortcutConfig {
     pub xfce_binding: &'static str,
     pub cosmic_mods: &'static str,
     pub cosmic_key: &'static str,
+    // Tiling WM bindings
+    pub i3_binding: &'static str,
+    pub sway_binding: &'static str,
+    pub hyprland_binding: &'static str,
 }
 
 fn get_command_path() -> &'static str {
@@ -52,6 +56,9 @@ const SHORTCUTS: &[ShortcutConfig] = &[
         xfce_binding: "<Super>v",
         cosmic_mods: "Super",
         cosmic_key: "v",
+        i3_binding: "$mod+v",
+        sway_binding: "$mod+v",
+        hyprland_binding: "SUPER, V",
     },
     ShortcutConfig {
         id: "win11-clipboard-history-alt",
@@ -62,6 +69,9 @@ const SHORTCUTS: &[ShortcutConfig] = &[
         xfce_binding: "<Primary><Alt>v",
         cosmic_mods: "Ctrl, Alt",
         cosmic_key: "v",
+        i3_binding: "Ctrl+Mod1+v",
+        sway_binding: "Ctrl+Mod1+v",
+        hyprland_binding: "CTRL ALT, V",
     },
 ];
 
@@ -189,8 +199,29 @@ fn detect_handler() -> Box<dyn ShortcutHandler> {
     if combined.contains("deepin") {
         return Box::new(GnomeHandler); // Deepin uses gsettings like GNOME
     }
+    // Tiling Window Managers
+    if combined.contains("i3") {
+        return Box::new(I3Handler);
+    }
+    if combined.contains("sway") {
+        return Box::new(SwayHandler);
+    }
+    if combined.contains("hyprland") {
+        return Box::new(HyprlandHandler);
+    }
 
-    // Heuristic Fallback
+    // Heuristic Fallback - check running processes for tiling WMs
+    if is_process_running("i3") {
+        return Box::new(I3Handler);
+    }
+    if is_process_running("sway") {
+        return Box::new(SwayHandler);
+    }
+    if is_process_running("hyprland") || is_process_running("Hyprland") {
+        return Box::new(HyprlandHandler);
+    }
+
+    // Heuristic Fallback for traditional DEs
     if Utils::command_exists("kwriteconfig5") || Utils::command_exists("kwriteconfig6") {
         return Box::new(KdeHandler);
     }
@@ -200,6 +231,15 @@ fn detect_handler() -> Box<dyn ShortcutHandler> {
 
     // Default fallback
     Box::new(GnomeHandler)
+}
+
+fn is_process_running(name: &str) -> bool {
+    Command::new("pgrep")
+        .arg("-x")
+        .arg(name)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
 }
 
 fn env_var(key: &str) -> String {
@@ -248,9 +288,49 @@ impl Utils {
         }
 
         let content = if path.exists() {
-            // Create backup
-            let bak_path = path.with_extension("bak");
+            // Create timestamped backup to preserve history
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            let bak_extension = format!("bak.{}", timestamp);
+            let bak_path = path.with_extension(&bak_extension);
             fs::copy(path, &bak_path)?;
+            println!("[Utils] Created backup: {:?}", bak_path);
+
+            // Cleanup old backups - keep only the last 3
+            if let Some(parent) = path.parent() {
+                if let Some(file_stem) = path.file_stem() {
+                    let prefix = format!("{}.", file_stem.to_string_lossy());
+                    let mut backups: Vec<_> = fs::read_dir(parent)
+                        .ok()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|e| e.ok())
+                        .filter(|e| {
+                            let name = e.file_name().to_string_lossy().to_string();
+                            name.starts_with(&prefix) && name.contains(".bak.")
+                        })
+                        .collect();
+
+                    // Sort by modification time (oldest first)
+                    backups.sort_by_key(|e| {
+                        e.metadata()
+                            .and_then(|m| m.modified())
+                            .unwrap_or(UNIX_EPOCH)
+                    });
+
+                    // Remove oldest backups, keep only 3
+                    while backups.len() > 3 {
+                        if let Some(oldest) = backups.first() {
+                            let _ = fs::remove_file(oldest.path());
+                            println!("[Utils] Removed old backup: {:?}", oldest.path());
+                        }
+                        backups.remove(0);
+                    }
+                }
+            }
+
             fs::read_to_string(path)?
         } else {
             String::new()
@@ -920,6 +1000,348 @@ impl ShortcutHandler for LxdeHandler {
             let _ = Utils::run("openbox", &["--reconfigure"]);
 
             Ok(Some(new_content))
+        })
+    }
+}
+
+// --- i3 Window Manager ---
+
+struct I3Handler;
+impl I3Handler {
+    fn get_config_path() -> Result<PathBuf> {
+        let home = env::var("HOME")
+            .map_err(|_| ShortcutError::UnsupportedEnvironment("HOME not set".into()))?;
+
+        // Check common i3 config locations
+        let paths = vec![
+            PathBuf::from(&home).join(".config/i3/config"),
+            PathBuf::from(&home).join(".i3/config"),
+        ];
+
+        for path in paths {
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+
+        // Default to the XDG config path
+        Ok(PathBuf::from(&home).join(".config/i3/config"))
+    }
+
+    fn reload_i3() {
+        // Send reload command to i3
+        let _ = Utils::run("i3-msg", &["reload"]);
+    }
+}
+
+impl ShortcutHandler for I3Handler {
+    fn name(&self) -> &str {
+        "i3"
+    }
+
+    fn register(&self, s: &ShortcutConfig) -> Result<()> {
+        let path = Self::get_config_path()?;
+
+        // i3 binding format: bindsym $mod+v exec command
+        let binding_line = format!("bindsym {} exec {}", s.i3_binding, s.command);
+
+        Utils::modify_file_atomic(&path, |content| {
+            // Check if already registered
+            if content.contains(s.command) {
+                return Ok(None);
+            }
+
+            // Check for existing $mod+v binding and comment it out
+            let mut lines: Vec<String> = content.lines().map(String::from).collect();
+            let mut modified = false;
+
+            for line in lines.iter_mut() {
+                let trimmed = line.trim().to_lowercase();
+                // Skip if already a comment
+                if trimmed.starts_with('#') {
+                    continue;
+                }
+                // Check for existing mod+v bindings
+                if trimmed.starts_with("bindsym")
+                    && (trimmed.contains("$mod+v ") || trimmed.contains("mod4+v "))
+                {
+                    *line = format!("# {} # Commented by win11-clipboard-history", line);
+                    modified = true;
+                }
+            }
+
+            // Add our binding at the end
+            lines.push("\n# Clipboard History (added by win11-clipboard-history)".to_string());
+            lines.push(binding_line.clone());
+
+            if modified {
+                println!("[i3Handler] Commented out existing $mod+v binding(s)");
+            }
+
+            Self::reload_i3();
+            Ok(Some(lines.join("\n")))
+        })
+    }
+
+    fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
+        let path = Self::get_config_path()?;
+
+        if !path.exists() {
+            return Ok(());
+        }
+
+        Utils::modify_file_atomic(&path, |content| {
+            if !content.contains(s.command) {
+                return Ok(None);
+            }
+
+            let lines: Vec<&str> = content.lines().collect();
+            let mut new_lines: Vec<String> = Vec::new();
+            let mut skip_comment = false;
+
+            for line in lines {
+                // Skip our comment line
+                if line.contains("# Clipboard History (added by win11-clipboard-history)") {
+                    skip_comment = true;
+                    continue;
+                }
+                // Skip our binding line
+                if skip_comment && line.contains(s.command) {
+                    skip_comment = false;
+                    continue;
+                }
+                skip_comment = false;
+
+                // Restore commented out bindings
+                if line.contains("# Commented by win11-clipboard-history") {
+                    let restored = line
+                        .replace("# ", "")
+                        .replace(" # Commented by win11-clipboard-history", "");
+                    new_lines.push(restored);
+                } else {
+                    new_lines.push(line.to_string());
+                }
+            }
+
+            Self::reload_i3();
+            Ok(Some(new_lines.join("\n")))
+        })
+    }
+}
+
+// --- Sway ---
+
+struct SwayHandler;
+impl SwayHandler {
+    fn get_config_path() -> Result<PathBuf> {
+        let home = env::var("HOME")
+            .map_err(|_| ShortcutError::UnsupportedEnvironment("HOME not set".into()))?;
+
+        let paths = vec![
+            PathBuf::from(&home).join(".config/sway/config"),
+            PathBuf::from(&home).join(".sway/config"),
+        ];
+
+        for path in paths {
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+
+        Ok(PathBuf::from(&home).join(".config/sway/config"))
+    }
+
+    fn reload_sway() {
+        let _ = Utils::run("swaymsg", &["reload"]);
+    }
+}
+
+impl ShortcutHandler for SwayHandler {
+    fn name(&self) -> &str {
+        "Sway"
+    }
+
+    fn register(&self, s: &ShortcutConfig) -> Result<()> {
+        let path = Self::get_config_path()?;
+
+        let binding_line = format!("bindsym {} exec {}", s.sway_binding, s.command);
+
+        Utils::modify_file_atomic(&path, |content| {
+            if content.contains(s.command) {
+                return Ok(None);
+            }
+
+            let mut lines: Vec<String> = content.lines().map(String::from).collect();
+            let mut modified = false;
+
+            for line in lines.iter_mut() {
+                let trimmed = line.trim().to_lowercase();
+                if trimmed.starts_with('#') {
+                    continue;
+                }
+                if trimmed.starts_with("bindsym")
+                    && (trimmed.contains("$mod+v ") || trimmed.contains("mod4+v "))
+                {
+                    *line = format!("# {} # Commented by win11-clipboard-history", line);
+                    modified = true;
+                }
+            }
+
+            lines.push("\n# Clipboard History (added by win11-clipboard-history)".to_string());
+            lines.push(binding_line.clone());
+
+            if modified {
+                println!("[SwayHandler] Commented out existing $mod+v binding(s)");
+            }
+
+            Self::reload_sway();
+            Ok(Some(lines.join("\n")))
+        })
+    }
+
+    fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
+        let path = Self::get_config_path()?;
+
+        if !path.exists() {
+            return Ok(());
+        }
+
+        Utils::modify_file_atomic(&path, |content| {
+            if !content.contains(s.command) {
+                return Ok(None);
+            }
+
+            let lines: Vec<&str> = content.lines().collect();
+            let mut new_lines: Vec<String> = Vec::new();
+            let mut skip_comment = false;
+
+            for line in lines {
+                if line.contains("# Clipboard History (added by win11-clipboard-history)") {
+                    skip_comment = true;
+                    continue;
+                }
+                if skip_comment && line.contains(s.command) {
+                    skip_comment = false;
+                    continue;
+                }
+                skip_comment = false;
+
+                if line.contains("# Commented by win11-clipboard-history") {
+                    let restored = line
+                        .replace("# ", "")
+                        .replace(" # Commented by win11-clipboard-history", "");
+                    new_lines.push(restored);
+                } else {
+                    new_lines.push(line.to_string());
+                }
+            }
+
+            Self::reload_sway();
+            Ok(Some(new_lines.join("\n")))
+        })
+    }
+}
+
+// --- Hyprland ---
+
+struct HyprlandHandler;
+impl HyprlandHandler {
+    fn get_config_path() -> Result<PathBuf> {
+        let home = env::var("HOME")
+            .map_err(|_| ShortcutError::UnsupportedEnvironment("HOME not set".into()))?;
+
+        let xdg_config =
+            env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| format!("{}/.config", home));
+
+        let path = PathBuf::from(&xdg_config).join("hypr/hyprland.conf");
+        Ok(path)
+    }
+}
+
+impl ShortcutHandler for HyprlandHandler {
+    fn name(&self) -> &str {
+        "Hyprland"
+    }
+
+    fn register(&self, s: &ShortcutConfig) -> Result<()> {
+        let path = Self::get_config_path()?;
+
+        // Hyprland format: bind = SUPER, V, exec, command
+        let binding_line = format!("bind = {}, exec, {}", s.hyprland_binding, s.command);
+
+        Utils::modify_file_atomic(&path, |content| {
+            if content.contains(s.command) {
+                return Ok(None);
+            }
+
+            let mut lines: Vec<String> = content.lines().map(String::from).collect();
+            let mut modified = false;
+
+            for line in lines.iter_mut() {
+                let trimmed = line.trim().to_lowercase();
+                if trimmed.starts_with('#') {
+                    continue;
+                }
+                // Check for existing SUPER, V bindings
+                if trimmed.starts_with("bind")
+                    && trimmed.contains("super")
+                    && (trimmed.contains(", v,") || trimmed.contains(",v,"))
+                {
+                    *line = format!("# {} # Commented by win11-clipboard-history", line);
+                    modified = true;
+                }
+            }
+
+            lines.push("\n# Clipboard History (added by win11-clipboard-history)".to_string());
+            lines.push(binding_line.clone());
+
+            if modified {
+                println!("[HyprlandHandler] Commented out existing SUPER+V binding(s)");
+            }
+
+            // Hyprland auto-reloads config, no explicit reload needed
+            Ok(Some(lines.join("\n")))
+        })
+    }
+
+    fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
+        let path = Self::get_config_path()?;
+
+        if !path.exists() {
+            return Ok(());
+        }
+
+        Utils::modify_file_atomic(&path, |content| {
+            if !content.contains(s.command) {
+                return Ok(None);
+            }
+
+            let lines: Vec<&str> = content.lines().collect();
+            let mut new_lines: Vec<String> = Vec::new();
+            let mut skip_comment = false;
+
+            for line in lines {
+                if line.contains("# Clipboard History (added by win11-clipboard-history)") {
+                    skip_comment = true;
+                    continue;
+                }
+                if skip_comment && line.contains(s.command) {
+                    skip_comment = false;
+                    continue;
+                }
+                skip_comment = false;
+
+                if line.contains("# Commented by win11-clipboard-history") {
+                    let restored = line
+                        .replace("# ", "")
+                        .replace(" # Commented by win11-clipboard-history", "");
+                    new_lines.push(restored);
+                } else {
+                    new_lines.push(line.to_string());
+                }
+            }
+
+            Ok(Some(new_lines.join("\n")))
         })
     }
 }
