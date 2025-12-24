@@ -32,7 +32,7 @@ Built with 🦀 **Rust** + ⚡ **Tauri v2** + ⚛️ **React** + 🎨 **Tailwind
 - 🤩 **Emoji Picker** - Built-in searchable emoji keyboard.
 - 🏎️ **Performance** - Native Rust backend ensures minimal resource usage.
 - 🛡️ **Privacy Focused** - History is stored locally and never leaves your machine.
-- 🧙 **Setup Wizard** - First-run wizard guides you through permission setup and autostart configuration.
+- 🧙 **Setup Wizard** - First-run wizard guides you through permission setup, detects shortcut conflicts, and autostart configuration.
 
 ---
 
@@ -142,6 +142,8 @@ sudo make install PREFIX=/usr
 On the first launch, the app will show a **Setup Wizard** that:
 - ✅ Checks if you have the necessary permissions for paste simulation
 - 🔧 Offers a one-click fix if permissions are missing
+- ⚠️ **Detects shortcut conflicts** with your desktop environment (GNOME, KDE, i3, Sway, Hyprland, etc.)
+- ⚡ Offers automatic conflict resolution where possible
 - ⌨️ Helps register the global shortcut (Super+V) for your desktop environment
 - 🚀 Lets you enable autostart on login
 
@@ -210,6 +212,104 @@ make dev       # Run in development mode with hot reload
    rm ~/.config/win11-clipboard-history/setup.json
    win11-clipboard-history
    ```
+
+### Super+V Conflicts with Desktop Environment
+
+Many desktop environments use Super+V for built-in features. The Setup Wizard will detect and offer to fix these automatically, but you can also resolve them manually:
+
+<details>
+<summary><b>GNOME / Ubuntu</b></summary>
+
+GNOME uses Super+V for the Notification Center / Message Tray.
+
+```bash
+# Change GNOME's notification tray shortcut to Super+Shift+V
+gsettings set org.gnome.shell.keybindings toggle-message-tray "['<Super><Shift>v']"
+```
+
+Or manually: **Settings → Keyboard → Keyboard Shortcuts → Search "Notification"**
+
+</details>
+
+<details>
+<summary><b>Pop!_OS / Pop Shell</b></summary>
+
+Pop!_OS inherits GNOME's Super+V shortcut:
+
+```bash
+gsettings set org.gnome.shell.keybindings toggle-message-tray "['<Super><Shift>v']"
+```
+
+If Pop Shell also uses Super+V for tiling:
+**Settings → Keyboard → Customize Shortcuts → Pop Shell**
+
+</details>
+
+<details>
+<summary><b>KDE Plasma</b></summary>
+
+Check if Klipper (built-in clipboard manager) uses Meta+V:
+1. Right-click Klipper in system tray → Configure
+2. Go to Shortcuts
+3. Change or disable the Meta+V binding
+
+Or: **System Settings → Shortcuts → Global Shortcuts → Search "Meta+V"**
+
+</details>
+
+<details>
+<summary><b>COSMIC Desktop</b></summary>
+
+**Settings → Keyboard → Shortcuts** and check for Super+V bindings in both Custom and System shortcuts.
+
+</details>
+
+<details>
+<summary><b>i3 Window Manager</b></summary>
+
+Edit your i3 config (`~/.config/i3/config`):
+
+```bash
+# Comment out or remove existing $mod+v binding
+# bindsym $mod+v split vertical
+
+# Add clipboard history
+bindsym $mod+v exec win11-clipboard-history
+```
+
+Reload i3: `$mod+Shift+r`
+
+</details>
+
+<details>
+<summary><b>Sway</b></summary>
+
+Edit your Sway config (`~/.config/sway/config`):
+
+```bash
+# Comment out existing $mod+v binding if any
+# Add clipboard history
+bindsym $mod+v exec win11-clipboard-history
+```
+
+Reload Sway: `$mod+Shift+c`
+
+</details>
+
+<details>
+<summary><b>Hyprland</b></summary>
+
+Edit your Hyprland config (`~/.config/hypr/hyprland.conf`):
+
+```bash
+# Comment out existing SUPER, V binding if any
+# Add clipboard history
+bind = SUPER, V, exec, win11-clipboard-history
+```
+
+Config auto-reloads.
+
+</details>
 
 ### Pasting doesn't work
 
