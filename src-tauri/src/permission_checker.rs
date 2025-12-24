@@ -125,3 +125,16 @@ pub fn mark_first_run_complete() -> Result<(), String> {
 
     Ok(())
 }
+
+/// Reset the first run state - will show the setup wizard again
+#[tauri::command]
+pub fn reset_first_run() -> Result<(), String> {
+    let config_path = get_config_path();
+
+    if config_path.exists() {
+        std::fs::remove_file(&config_path)
+            .map_err(|e| format!("Failed to remove config: {}", e))?;
+    }
+
+    Ok(())
+}
