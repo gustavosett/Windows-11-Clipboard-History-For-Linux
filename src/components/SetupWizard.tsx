@@ -143,6 +143,22 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   // Fixed opacity for the wizard (similar to main app default)
   const tertiaryOpacity = 0.85
 
+  // Local wrapper to reduce prop drilling on every WizardButton usage
+  const Button = (
+    props: Omit<
+      WizardButtonProps,
+      'hoveredButton' | 'setHoveredButton' | 'isDark' | 'tertiaryOpacity'
+    >
+  ) => (
+    <WizardButton
+      {...props}
+      hoveredButton={hoveredButton}
+      setHoveredButton={setHoveredButton}
+      isDark={isDark}
+      tertiaryOpacity={tertiaryOpacity}
+    />
+  )
+
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark')
@@ -310,17 +326,13 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         <br />
         Let's set up a few things to get you started.
       </p>
-      <WizardButton
+      <Button
         id="start"
         onClick={() => setStep(1)}
         primary
-        hoveredButton={hoveredButton}
-        setHoveredButton={setHoveredButton}
-        isDark={isDark}
-        tertiaryOpacity={tertiaryOpacity}
       >
         Get Started
-      </WizardButton>
+      </Button>
     </div>,
 
     // Step 1: Permissions
@@ -377,29 +389,21 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
 
       <div className="flex gap-3 justify-center">
         {!permissions?.uinput_accessible && (
-          <WizardButton
+          <Button
             id="fix"
             onClick={handleFixPermissions}
             disabled={fixing}
-            hoveredButton={hoveredButton}
-            setHoveredButton={setHoveredButton}
-            isDark={isDark}
-            tertiaryOpacity={tertiaryOpacity}
           >
             {fixing ? 'Fixing...' : 'Fix Now'}
-          </WizardButton>
+          </Button>
         )}
-        <WizardButton
+        <Button
           id="perm-continue"
           onClick={() => setStep(2)}
           primary
-          hoveredButton={hoveredButton}
-          setHoveredButton={setHoveredButton}
-          isDark={isDark}
-          tertiaryOpacity={tertiaryOpacity}
         >
           {permissions?.uinput_accessible ? 'Continue' : 'Skip'}
-        </WizardButton>
+        </Button>
       </div>
     </div>,
 
@@ -482,20 +486,16 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
             </p>
             {conflicts.can_auto_resolve && (
               <div className="space-y-1">
-                <WizardButton
+                <Button
                   id="resolve-conflicts"
                   onClick={handleResolveConflicts}
                   disabled={resolvingConflicts}
-                  hoveredButton={hoveredButton}
-                  setHoveredButton={setHoveredButton}
-                  isDark={isDark}
-                  tertiaryOpacity={tertiaryOpacity}
                 >
                   <span className="flex items-center gap-2">
                     <Zap className="w-4 h-4" />
                     {resolvingConflicts ? 'Resolving...' : 'Auto-Fix Conflicts'}
                   </span>
-                </WizardButton>
+                </Button>
                 <p className="text-xs opacity-60">
                   This will comment out conflicting lines in your config. A backup will be created.
                 </p>
@@ -544,19 +544,15 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
               </p>
             </div>
           </div>
-          <WizardButton
+          <Button
             id="copy-path"
             onClick={() => copyToClipboard('/usr/bin/win11-clipboard-history')}
-            hoveredButton={hoveredButton}
-            setHoveredButton={setHoveredButton}
-            isDark={isDark}
-            tertiaryOpacity={tertiaryOpacity}
           >
             <span className="flex items-center justify-center gap-2">
               <Copy className="w-4 h-4" />
               {copied ? 'Copied!' : 'Copy command path'}
             </span>
-          </WizardButton>
+          </Button>
         </div>
       )}
 
@@ -564,44 +560,32 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         {shortcutTools?.can_register_automatically &&
           !shortcutRegistered &&
           !showManualInstructions && (
-            <WizardButton
+            <Button
               id="register"
               onClick={handleRegisterShortcut}
               disabled={registeringShortcut}
               primary
-              hoveredButton={hoveredButton}
-              setHoveredButton={setHoveredButton}
-              isDark={isDark}
-              tertiaryOpacity={tertiaryOpacity}
             >
               {registeringShortcut ? 'Registering...' : 'Register Automatically'}
-            </WizardButton>
+            </Button>
           )}
 
         {!shortcutTools?.can_register_automatically && !showManualInstructions && (
-          <WizardButton
+          <Button
             id="show-manual"
             onClick={() => setShowManualInstructions(true)}
-            hoveredButton={hoveredButton}
-            setHoveredButton={setHoveredButton}
-            isDark={isDark}
-            tertiaryOpacity={tertiaryOpacity}
           >
             Show Manual Instructions
-          </WizardButton>
+          </Button>
         )}
 
-        <WizardButton
+        <Button
           id="shortcut-continue"
           onClick={() => setStep(3)}
           primary={shortcutRegistered || showManualInstructions}
-          hoveredButton={hoveredButton}
-          setHoveredButton={setHoveredButton}
-          isDark={isDark}
-          tertiaryOpacity={tertiaryOpacity}
         >
           {shortcutRegistered || showManualInstructions ? 'Continue' : 'Skip'}
-        </WizardButton>
+        </Button>
       </div>
     </div>,
 
@@ -640,27 +624,19 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
       </div>
 
       <div className="flex gap-3 justify-center">
-        <WizardButton
+        <Button
           id="enable-autostart"
           onClick={handleEnableAutostart}
           primary
-          hoveredButton={hoveredButton}
-          setHoveredButton={setHoveredButton}
-          isDark={isDark}
-          tertiaryOpacity={tertiaryOpacity}
         >
           Yes, enable
-        </WizardButton>
-        <WizardButton
+        </Button>
+        <Button
           id="skip-autostart"
           onClick={() => setStep(4)}
-          hoveredButton={hoveredButton}
-          setHoveredButton={setHoveredButton}
-          isDark={isDark}
-          tertiaryOpacity={tertiaryOpacity}
         >
           No thanks
-        </WizardButton>
+        </Button>
       </div>
     </div>,
 
@@ -710,17 +686,13 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
           Super + V
         </kbd>
       </div>
-      <WizardButton
+      <Button
         id="finish"
         onClick={handleComplete}
         primary
-        hoveredButton={hoveredButton}
-        setHoveredButton={setHoveredButton}
-        isDark={isDark}
-        tertiaryOpacity={tertiaryOpacity}
       >
         Start Using
-      </WizardButton>
+      </Button>
     </div>,
   ]
 
