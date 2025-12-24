@@ -143,7 +143,7 @@ install_deb() {
     chmod 644 "$FILE"
     
     log "Installing dependencies..."
-    sudo apt-get install -y xclip wl-clipboard acl || true
+    sudo apt-get install -y xclip wl-clipboard acl libayatana-appindicator3-1 || sudo apt-get install -y xclip wl-clipboard acl libappindicator3-1 || true
     
     log "Installing .deb package..."
     yes | sudo apt-get install -y "./$FILE"
@@ -185,7 +185,7 @@ install_rpm() {
     chmod 644 "$FILE"
     
     log "Installing dependencies..."
-    sudo dnf install -y xclip wl-clipboard acl || true
+    sudo dnf install -y xclip wl-clipboard acl libayatana-appindicator-gtk3 || true
     
     log "Installing .rpm package..."
     sudo dnf install -y "./$FILE"
@@ -227,7 +227,7 @@ install_rpm_suse() {
     chmod 644 "$FILE"
     
     log "Installing dependencies..."
-    sudo zypper install -y xclip wl-clipboard acl || true
+    sudo zypper install -y xclip wl-clipboard acl libayatana-appindicator3-1 || true
     
     log "Installing .rpm package..."
     sudo zypper install -y "./$FILE"

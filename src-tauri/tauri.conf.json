@@ -69,7 +69,8 @@
           "xclip",
           "wl-clipboard",
           "acl",
-          "libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37"
+          "libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37",
+          "libayatana-appindicator3-1 | libappindicator3-1"
         ],
         "files": {
           "/usr/bin/win11-clipboard-history": "bundle/linux/wrapper.sh",
@@ -87,7 +88,8 @@
           "xclip",
           "wl-clipboard",
           "acl",
-          "webkit2gtk4.1"
+          "webkit2gtk4.1",
+          "libayatana-appindicator-gtk3"
         ],
         "postInstallScript": "bundle/linux/postinst.sh",
         "preRemoveScript": "bundle/linux/postrm.sh"
