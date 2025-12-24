@@ -326,11 +326,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         <br />
         Let's set up a few things to get you started.
       </p>
-      <Button
-        id="start"
-        onClick={() => setStep(1)}
-        primary
-      >
+      <Button id="start" onClick={() => setStep(1)} primary>
         Get Started
       </Button>
     </div>,
@@ -389,19 +385,11 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
 
       <div className="flex gap-3 justify-center">
         {!permissions?.uinput_accessible && (
-          <Button
-            id="fix"
-            onClick={handleFixPermissions}
-            disabled={fixing}
-          >
+          <Button id="fix" onClick={handleFixPermissions} disabled={fixing}>
             {fixing ? 'Fixing...' : 'Fix Now'}
           </Button>
         )}
-        <Button
-          id="perm-continue"
-          onClick={() => setStep(2)}
-          primary
-        >
+        <Button id="perm-continue" onClick={() => setStep(2)} primary>
           {permissions?.uinput_accessible ? 'Continue' : 'Skip'}
         </Button>
       </div>
@@ -571,10 +559,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
           )}
 
         {!shortcutTools?.can_register_automatically && !showManualInstructions && (
-          <Button
-            id="show-manual"
-            onClick={() => setShowManualInstructions(true)}
-          >
+          <Button id="show-manual" onClick={() => setShowManualInstructions(true)}>
             Show Manual Instructions
           </Button>
         )}
@@ -624,17 +609,10 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
       </div>
 
       <div className="flex gap-3 justify-center">
-        <Button
-          id="enable-autostart"
-          onClick={handleEnableAutostart}
-          primary
-        >
+        <Button id="enable-autostart" onClick={handleEnableAutostart} primary>
           Yes, enable
         </Button>
-        <Button
-          id="skip-autostart"
-          onClick={() => setStep(4)}
-        >
+        <Button id="skip-autostart" onClick={() => setStep(4)}>
           No thanks
         </Button>
       </div>
@@ -686,11 +664,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
           Super + V
         </kbd>
       </div>
-      <Button
-        id="finish"
-        onClick={handleComplete}
-        primary
-      >
+      <Button id="finish" onClick={handleComplete} primary>
         Start Using
       </Button>
     </div>,
