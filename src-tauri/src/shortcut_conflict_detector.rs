@@ -734,8 +734,7 @@ mod tests {
 
     #[test]
     fn test_detect_conflicts_runs() {
-        let result = detect_shortcut_conflicts();
-        // Just verify it doesn't panic and returns a valid structure
-        assert!(!result.desktop_environment.is_empty() || result.desktop_environment.is_empty());
+        // Just verify it doesn't panic when running
+        let _result = detect_shortcut_conflicts();
     }
 }

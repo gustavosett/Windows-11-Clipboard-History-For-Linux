@@ -276,7 +276,8 @@ impl Utils {
 
     /// Reads a file, creates a .bak copy, modifies content via callback,
     /// then writes back atomically using a temp file rename strategy.
-    fn modify_file_atomic<F>(path: &Path, modifier: F) -> Result<()>
+    /// Returns Ok(true) if file was modified, Ok(false) if no changes were needed.
+    fn modify_file_atomic<F>(path: &Path, modifier: F) -> Result<bool>
     where
         F: FnOnce(String) -> Result<Option<String>>,
     {
@@ -288,13 +289,14 @@ impl Utils {
         }
 
         let content = if path.exists() {
-            // Create timestamped backup to preserve history
+            // Calculate timestamp for backup filename
             let timestamp = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs();
             let bak_extension = format!("bak.{}", timestamp);
             let bak_path = path.with_extension(&bak_extension);
+            // Create timestamped backup to preserve history
             fs::copy(path, &bak_path)?;
             println!("[Utils] Created backup: {:?}", bak_path);
 
@@ -339,7 +341,7 @@ impl Utils {
         // Run modifier logic
         let new_content = match modifier(content) {
             Ok(Some(s)) => s,
-            Ok(None) => return Ok(()), // No changes needed
+            Ok(None) => return Ok(false), // No changes needed
             Err(e) => return Err(e),
         };
 
@@ -359,7 +361,7 @@ impl Utils {
         // Atomic rename
         fs::rename(&tmp_path, path)?;
 
-        Ok(())
+        Ok(true) // File was modified
     }
 }
 
