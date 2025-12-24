@@ -138,7 +138,7 @@ deps-fedora:
 		curl \
 		wget \
 		file \
-		libappindicator-gtk3-devel \
+		libayatana-appindicator-gtk3-devel \
 		librsvg2-devel \
 		libxdo-devel \
 		gtk3-devel \
@@ -158,7 +158,7 @@ deps-arch:
 		wget \
 		file \
 		openssl \
-		libappindicator-gtk3 \
+		libayatana-appindicator \
 		librsvg \
 		xdotool \
 		gtk3 \
