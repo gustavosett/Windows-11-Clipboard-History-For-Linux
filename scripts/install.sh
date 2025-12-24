@@ -143,7 +143,8 @@ install_deb() {
     chmod 644 "$FILE"
     
     log "Installing dependencies..."
-    sudo apt-get install -y xclip wl-clipboard acl libayatana-appindicator3-1 || sudo apt-get install -y xclip wl-clipboard acl libappindicator3-1 || true
+    sudo apt-get install -y xclip wl-clipboard acl || true
+    sudo apt-get install -y libayatana-appindicator3-1 || sudo apt-get install -y libappindicator3-1 || true
     
     log "Installing .deb package..."
     yes | sudo apt-get install -y "./$FILE"
