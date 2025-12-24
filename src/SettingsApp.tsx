@@ -457,8 +457,6 @@ function SettingsApp() {
               await invoke('reset_first_run')
               // Emit event to show wizard in main window
               await emit('show-setup-wizard')
-              // Close settings window
-              await getCurrentWindow().hide()
             }}
             className={clsx(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all',
