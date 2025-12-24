@@ -50,7 +50,9 @@ pub fn detect_shortcut_conflicts() -> ConflictDetectionResult {
         _ => Vec::new(),
     };
 
-    let can_auto_resolve = conflicts.iter().all(|c| c.resolution_command.is_some());
+    // Only true if there are actual conflicts AND all of them can be auto-resolved
+    let can_auto_resolve =
+        !conflicts.is_empty() && conflicts.iter().all(|c| c.resolution_command.is_some());
     let message = if conflicts.is_empty() {
         "No shortcut conflicts detected.".to_string()
     } else {
