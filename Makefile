@@ -290,16 +290,35 @@ uninstall:
 	@echo -e "$(CYAN)Uninstalling $(APP_NAME)...$(RESET)"
 	@# Stop any running instances first
 	@if [ -n "$$SUDO_USER" ]; then \
-		pkill -u $$SUDO_USER -f "$(APP_NAME)-bin" 2>/dev/null || true; \
+		pkill -u $$SUDO_USER -x "$(APP_NAME)-bin" 2>/dev/null || true; \
 	fi
-	@pkill -f "$(APP_NAME)-bin" 2>/dev/null || true
+	@pkill -x "$(APP_NAME)-bin" 2>/dev/null || true
+	@# Remove from specified PREFIX path
 	rm -f $(DESTDIR)$(BINDIR)/$(APP_NAME)
 	rm -rf $(DESTDIR)$(LIBDIR)/$(APP_NAME)
+	@# Also clean up common installation paths (in case installed with different PREFIX)
+	@if [ "$(BINDIR)" != "/usr/local/bin" ]; then \
+		rm -f $(DESTDIR)/usr/local/bin/$(APP_NAME) 2>/dev/null || true; \
+		rm -rf $(DESTDIR)/usr/local/lib/$(APP_NAME) 2>/dev/null || true; \
+	fi
+	@if [ "$(BINDIR)" != "/usr/bin" ]; then \
+		rm -f $(DESTDIR)/usr/bin/$(APP_NAME) 2>/dev/null || true; \
+		rm -rf $(DESTDIR)/usr/lib/$(APP_NAME) 2>/dev/null || true; \
+	fi
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/$(APP_NAME).png
 	rm -f $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
+	@# Clean icons from all common share paths
+	rm -f $(DESTDIR)/usr/local/share/icons/hicolor/128x128/apps/$(APP_NAME).png 2>/dev/null || true
+	rm -f $(DESTDIR)/usr/local/share/icons/hicolor/256x256/apps/$(APP_NAME).png 2>/dev/null || true
+	rm -f $(DESTDIR)/usr/share/icons/hicolor/128x128/apps/$(APP_NAME).png 2>/dev/null || true
+	rm -f $(DESTDIR)/usr/share/icons/hicolor/256x256/apps/$(APP_NAME).png 2>/dev/null || true
+	@# Clean desktop entries from all common paths
+	rm -f $(DESTDIR)/usr/local/share/applications/$(APP_NAME).desktop 2>/dev/null || true
+	rm -f $(DESTDIR)/usr/share/applications/$(APP_NAME).desktop 2>/dev/null || true
 	rm -f $(DESTDIR)/etc/udev/rules.d/99-win11-clipboard-input.rules
 	rm -f $(DESTDIR)/etc/modules-load.d/uinput.conf
+	rm -f $(DESTDIR)/etc/modules-load.d/win11-clipboard.conf
 	@# Remove autostart entry for the user
 	@if [ -n "$$SUDO_USER" ]; then \
 		AUTOSTART_FILE=$$(getent passwd $$SUDO_USER | cut -d: -f6)/.config/autostart/$(APP_NAME).desktop; \
