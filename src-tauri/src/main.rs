@@ -630,8 +630,14 @@ fn main() {
 
             let icon = Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap();
 
+            // Get temp directory for tray icon (avoids permission issues with XDG_RUNTIME_DIR)
+            let temp_dir = std::env::temp_dir().join("win11-clipboard-history");
+            std::fs::create_dir_all(&temp_dir).ok();
+
             let _tray = TrayIconBuilder::new()
                 .icon(icon)
+                .tooltip("Clipboard History")
+                .temp_dir_path(temp_dir)
                 .menu(&menu)
                 .on_menu_event(move |app, event| match event.id.as_ref() {
                     "quit" => app.exit(0),

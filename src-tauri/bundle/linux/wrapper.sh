@@ -54,5 +54,6 @@ exec env -i \
     GDK_BACKEND="x11" \
     GDK_SCALE="${GDK_SCALE:-1}" \
     GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}" \
+    TAURI_TRAY="libayatana-appindicator3" \
     NO_AT_BRIDGE=1 \
     "$BINARY" "$@"
