@@ -21,6 +21,40 @@ REPO_OWNER="gustavosett"
 REPO_NAME="Windows-11-Clipboard-History-For-Linux"
 CLOUDSMITH_REPO="gustavosett/clipboard-manager"
 
+# Cleanup previous AppImage installation (prevents conflicts with package manager installs)
+cleanup_appimage_installation() {
+    local has_appimage=false
+    
+    # Check for AppImage installation artifacts
+    if [ -f "$HOME/.local/bin/win11-clipboard-history.AppImage" ] || \
+       [ -f "$HOME/.local/bin/win11-clipboard-history" ] || \
+       [ -f "$HOME/.local/share/applications/win11-clipboard-history.desktop" ]; then
+        has_appimage=true
+    fi
+    
+    if [ "$has_appimage" = true ]; then
+        log "Detected previous AppImage installation. Cleaning up..."
+        
+        # Kill any running instances
+        pkill -f "win11-clipboard-history.AppImage" 2>/dev/null || true
+        pkill -f "win11-clipboard-history-bin" 2>/dev/null || true
+        sleep 1
+        
+        # Remove AppImage files
+        rm -f "$HOME/.local/bin/win11-clipboard-history.AppImage" 2>/dev/null || true
+        rm -f "$HOME/.local/bin/win11-clipboard-history" 2>/dev/null || true
+        rm -f "$HOME/.local/share/applications/win11-clipboard-history.desktop" 2>/dev/null || true
+        rm -f "$HOME/.local/share/icons/hicolor/128x128/apps/win11-clipboard-history.png" 2>/dev/null || true
+        
+        # Update desktop database if available
+        if command -v update-desktop-database &>/dev/null; then
+            update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+        fi
+        
+        success "Previous AppImage installation cleaned up"
+    fi
+}
+
 # Detect the distribution
 detect_distro() {
     if [ -f /etc/os-release ]; then
@@ -80,6 +114,9 @@ check_webkit_compatibility() {
 
 # Installation via package manage
 install_via_package_manager() {
+    # Clean up any previous AppImage installation to prevent PATH conflicts
+    cleanup_appimage_installation
+    
     # 1. Check for Arch Family (Arch, Manjaro, CachyOS, Endeavour, etc)
     if [[ "$SYSTEM_FAMILY_INFO" =~ "arch" ]] || command -v pacman &>/dev/null; then
         install_aur
