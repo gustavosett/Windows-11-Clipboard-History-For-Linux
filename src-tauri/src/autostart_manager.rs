@@ -13,13 +13,12 @@ Version=1.1
 Name=Clipboard History
 GenericName=Clipboard Manager
 Comment=Windows 11-style Clipboard History Manager
-Exec="EXEC_PATH" --background
+Exec=sh -c "sleep 3 && EXEC_PATH --background"
 Icon=win11-clipboard-history
 Terminal=false
 Categories=Utility;
 StartupNotify=false
 X-GNOME-Autostart-enabled=true
-X-GNOME-Autostart-Delay=5
 "#;
 
 /// Get the path to the autostart directory
@@ -127,6 +126,7 @@ pub fn autostart_is_enabled() -> Result<bool, String> {
 
 /// Migrate from the old tauri-plugin-autostart entry to the new custom one
 /// This fixes existing installations where the autostart points to the wrong binary
+/// or is missing the startup delay for proper tray initialization
 #[tauri::command]
 pub fn autostart_migrate() -> Result<bool, String> {
     let autostart_file = get_autostart_file().ok_or("Could not determine autostart file path")?;
@@ -138,15 +138,46 @@ pub fn autostart_migrate() -> Result<bool, String> {
     let content = read_autostart_content().unwrap_or_default();
 
     // Check if the Exec= line is using the old binary path directly
-    let needs_migration = content
+    let uses_old_binary = content
         .lines()
         .find(|line| line.trim_start().starts_with("Exec="))
         .is_some_and(|line| line.contains("win11-clipboard-history-bin"));
 
-    if needs_migration {
-        println!("[Autostart] Migrating from old binary path to wrapper...");
+    // Check if the Exec= line is missing the sleep (for multi-distro compatibility)
+    // We use sleep in exec instead of X-GNOME-Autostart-Delay for better compatibility
+    let missing_sleep = content
+        .lines()
+        .find(|line| line.trim_start().starts_with("Exec="))
+        .is_some_and(|line| !line.contains("sleep"));
 
-        // Re-enable with correct path
+    // Check if the Exec= line is missing the --background flag
+    let missing_background = content
+        .lines()
+        .find(|line| line.trim_start().starts_with("Exec="))
+        .is_some_and(|line| !line.contains("--background"));
+
+    // Check if using deprecated X-GNOME-Autostart-Delay (should use sleep in exec instead)
+    let has_gnome_delay = content
+        .lines()
+        .any(|line| line.trim_start().starts_with("X-GNOME-Autostart-Delay="));
+
+    let needs_migration = uses_old_binary || missing_sleep || missing_background || has_gnome_delay;
+
+    if needs_migration {
+        if uses_old_binary {
+            println!("[Autostart] Migrating from old binary path to wrapper...");
+        }
+        if missing_sleep {
+            println!("[Autostart] Adding sleep to exec for proper tray initialization...");
+        }
+        if missing_background {
+            println!("[Autostart] Adding --background flag for minimized startup...");
+        }
+        if has_gnome_delay {
+            println!("[Autostart] Replacing X-GNOME-Autostart-Delay with sleep in exec (multi-distro compatibility)...");
+        }
+
+        // Re-enable with correct path, sleep and --background
         autostart_enable()?;
 
         return Ok(true); // Migration performed

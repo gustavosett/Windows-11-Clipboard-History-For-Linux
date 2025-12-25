@@ -25,6 +25,14 @@ use win11_clipboard_history_lib::session::is_wayland;
 use win11_clipboard_history_lib::shortcut_setup;
 use win11_clipboard_history_lib::user_settings::{UserSettings, UserSettingsManager};
 
+/// Global flag to track if we started in background mode
+/// This is used to block the initial window show
+static STARTED_IN_BACKGROUND: AtomicBool = AtomicBool::new(false);
+
+/// Global flag to track if the initial show has been blocked
+/// After the first toggle attempt, we allow normal show/hide behavior
+static INITIAL_SHOW_BLOCKED: AtomicBool = AtomicBool::new(false);
+
 /// Application state shared across all handlers
 pub struct AppState {
     clipboard_manager: Arc<Mutex<ClipboardManager>>,
@@ -222,6 +230,12 @@ struct WindowController;
 
 impl WindowController {
     pub fn toggle(app: &AppHandle) {
+        // User-initiated toggle - mark that we're now allowing shows
+        // This stops the background enforcer from hiding the window
+        if STARTED_IN_BACKGROUND.load(Ordering::Relaxed) {
+            INITIAL_SHOW_BLOCKED.store(true, Ordering::Relaxed);
+        }
+
         if let Some(window) = app.get_webview_window("main") {
             if window.is_visible().unwrap_or(false) {
                 let _ = window.hide();
@@ -568,6 +582,7 @@ fn main() {
         println!("OPTIONS:");
         println!("    -h, --help       Show this help message");
         println!("    -v, --version    Show version information");
+        println!("        --background Start minimized to system tray (for autostart)");
         println!("        --settings   Open settings window on startup");
         println!();
         println!("SHORTCUTS:");
@@ -576,8 +591,18 @@ fn main() {
         return;
     }
 
+    // Check if --background flag is present (start minimized to tray)
+    let start_in_background = args.iter().any(|arg| arg == "--background");
+    if start_in_background {
+        println!("[Startup] Starting in background mode (system tray only)");
+        STARTED_IN_BACKGROUND.store(true, Ordering::Relaxed);
+    }
+
     // Check if --settings flag is present (for first instance startup)
     let open_settings_on_start = args.iter().any(|arg| arg == "--settings");
+
+    // Clone for use in setup closure
+    let start_in_background_clone = start_in_background;
 
     win11_clipboard_history_lib::session::init();
 
@@ -618,6 +643,15 @@ fn main() {
         })
         .setup(move |app| {
             let app_handle = app.handle().clone();
+
+            // FIRST THING: If started in background mode, immediately hide the main window
+            // This runs before anything else to prevent the window from appearing
+            if start_in_background_clone {
+                if let Some(main_window) = app.get_webview_window("main") {
+                    let _ = main_window.hide();
+                    println!("[Setup] Immediately hiding main window for background mode");
+                }
+            }
 
             // Auto-migrate old autostart entries to use the wrapper script
             // This fixes existing installations where autostart points to the binary directly
@@ -673,6 +707,18 @@ fn main() {
             let app_handle_for_event = app_handle.clone();
 
             main_window.on_window_event(move |event| match event {
+                // Block any window show attempts when started in background mode
+                // This catches cases where GTK/Tauri automatically shows the window
+                WindowEvent::Focused(true) => {
+                    // If started in background and initial show hasn't been allowed yet,
+                    // immediately hide the window
+                    if STARTED_IN_BACKGROUND.load(Ordering::Relaxed)
+                        && !INITIAL_SHOW_BLOCKED.load(Ordering::Relaxed)
+                    {
+                        println!("[WindowController] Background mode: intercepted focus, hiding window");
+                        let _ = w_clone.hide();
+                    }
+                }
                 WindowEvent::Focused(false) => {
                     let state = w_clone.state::<AppState>();
                     if state.is_mouse_inside.load(Ordering::Relaxed) {
@@ -716,6 +762,32 @@ fn main() {
             // If --settings flag was passed on first startup, open the settings window
             if open_settings_on_start {
                 SettingsController::show(&app_handle);
+            }
+
+            // If --background flag was passed, ensure the main window stays hidden
+            // This is the primary mechanism for starting minimized to tray
+            // Background mode: spawn enforcer thread as fallback
+            // This catches cases where something shows the window after our initial hide
+            if start_in_background_clone {
+                if let Some(main_window) = app.get_webview_window("main") {
+                    // Spawn a background task that keeps checking and hiding the window
+                    // for the first few seconds, in case something shows it after we hide it
+                    let window_clone = main_window.clone();
+                    std::thread::spawn(move || {
+                        for i in 0..10 {
+                            std::thread::sleep(std::time::Duration::from_millis(200));
+                            if INITIAL_SHOW_BLOCKED.load(Ordering::Relaxed) {
+                                // User has already triggered a toggle, stop blocking
+                                break;
+                            }
+                            if window_clone.is_visible().unwrap_or(false) {
+                                println!("[Startup] Background enforcer #{}: window was visible, hiding again", i + 1);
+                                let _ = window_clone.hide();
+                            }
+                        }
+                        println!("[Startup] Background enforcer finished");
+                    });
+                }
             }
 
             Ok(())
