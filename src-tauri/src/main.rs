@@ -30,7 +30,6 @@ use win11_clipboard_history_lib::user_settings::{UserSettings, UserSettingsManag
 static STARTED_IN_BACKGROUND: AtomicBool = AtomicBool::new(false);
 
 /// Global flag to track if the initial show has been blocked
-/// After the first toggle attempt, we allow normal show/hide behavior
 static INITIAL_SHOW_BLOCKED: AtomicBool = AtomicBool::new(false);
 
 /// Application state shared across all handlers
