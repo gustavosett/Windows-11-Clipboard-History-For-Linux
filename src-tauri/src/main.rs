@@ -12,6 +12,7 @@ use tauri::{
     AppHandle, Emitter, Manager, Monitor, PhysicalPosition, PhysicalSize, State, WebviewWindow,
     WindowEvent,
 };
+use win11_clipboard_history_lib::autostart_manager;
 use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardManager};
 use win11_clipboard_history_lib::config_manager::{resolve_window_position, ConfigManager};
 use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
@@ -593,11 +594,6 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        // Autostart plugin for managing startup on login
-        .plugin(tauri_plugin_autostart::init(
-            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            Some(vec!["--background"]),
-        ))
         // Global shortcut plugin for cross-platform hotkeys
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         // Single Instance Plugin: When user triggers shortcut and app is already running,
@@ -740,6 +736,10 @@ fn main() {
             shortcut_setup::check_shortcut_tools,
             shortcut_setup::detect_conflicts,
             shortcut_setup::resolve_conflicts,
+            autostart_manager::autostart_enable,
+            autostart_manager::autostart_disable,
+            autostart_manager::autostart_is_enabled,
+            autostart_manager::autostart_migrate,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

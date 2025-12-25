@@ -1,6 +1,7 @@
 //! Windows 11 Clipboard History For Linux Library
 //! This module re-exports the core functionality for use as a library
 
+pub mod autostart_manager;
 pub mod clipboard_manager;
 pub mod config_manager;
 pub mod emoji_manager;

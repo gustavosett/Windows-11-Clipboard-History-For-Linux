@@ -50,9 +50,6 @@ dirs = "6.0"
 
 tauri-plugin-single-instance = "2"
 
-# Autostart plugin for first-party autostart support
-tauri-plugin-autostart = "2"
-
 # Global shortcut plugin for cross-platform hotkeys
 tauri-plugin-global-shortcut = "2"
 
