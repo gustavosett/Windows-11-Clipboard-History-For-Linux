@@ -38,7 +38,20 @@ cleanup_appimage_installation() {
         # Kill any running instances
         pkill -f "win11-clipboard-history.AppImage" 2>/dev/null || true
         pkill -f "win11-clipboard-history-bin" 2>/dev/null || true
-        sleep 1
+
+        # Wait for processes to terminate, with a timeout
+        timeout=5
+        interval=1
+        elapsed=0
+        while pgrep -f "win11-clipboard-history.AppImage" >/dev/null 2>&1 || \
+              pgrep -f "win11-clipboard-history-bin" >/dev/null 2>&1; do
+            if [ "$elapsed" -ge "$timeout" ]; then
+                warn "Timed out waiting for Win11 Clipboard History AppImage processes to terminate."
+                break
+            fi
+            sleep "$interval"
+            elapsed=$((elapsed + interval))
+        done
         
         # Remove AppImage files
         rm -f "$HOME/.local/bin/win11-clipboard-history.AppImage" 2>/dev/null || true
