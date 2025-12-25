@@ -4,27 +4,24 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { useClipboardHistory } from './hooks/useClipboardHistory'
-import { HistoryItem } from './components/HistoryItem'
 import { TabBar, TabBarRef } from './components/TabBar'
-import { Header } from './components/Header'
-import { EmptyState } from './components/EmptyState'
 import { DragHandle } from './components/DragHandle'
 import { EmojiPicker } from './components/EmojiPicker'
 import { GifPicker } from './components/GifPicker'
+import { KaomojiPicker } from './components/KaomojiPicker'
+import { SymbolPicker } from './components/SymbolPicker'
 import { calculateSecondaryOpacity, calculateTertiaryOpacity } from './utils/themeUtils'
-import type { ActiveTab } from './types/clipboard'
+import type { ActiveTab, UserSettings } from './types/clipboard'
+import { ClipboardTab } from './components/ClipboardTab'
 
-/** User settings type matching the Rust struct */
-interface UserSettings {
-  theme_mode: 'system' | 'dark' | 'light'
-  dark_background_opacity: number
-  light_background_opacity: number
-}
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_mode: 'system',
   dark_background_opacity: 0.7,
   light_background_opacity: 0.7,
+
+  enable_ui_polish: true,
+  custom_kaomojis: [],
 }
 
 /**
@@ -91,7 +88,6 @@ function ClipboardApp() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('clipboard')
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
-  const [focusedIndex, setFocusedIndex] = useState(0)
 
   const isDark = useThemeMode(settings.theme_mode)
   const opacity = isDark ? settings.dark_background_opacity : settings.light_background_opacity
@@ -103,7 +99,6 @@ function ClipboardApp() {
 
   // Refs for focus management
   const tabBarRef = useRef<TabBarRef>(null)
-  const historyItemRefs = useRef<(HTMLDivElement | null)[]>([])
   const contentContainerRef = useRef<HTMLDivElement>(null)
 
   // Load initial settings and set up listener for changes
@@ -157,16 +152,11 @@ function ClipboardApp() {
 
   // Use refs to store current values for the focus handler (to avoid re-registering listener)
   const activeTabRef = useRef(activeTab)
-  const historyRef = useRef(history)
 
   // Keep refs in sync
   useEffect(() => {
     activeTabRef.current = activeTab
   }, [activeTab])
-
-  useEffect(() => {
-    historyRef.current = history
-  }, [history])
 
   // Handle window-shown event for focus management (registered once)
   useEffect(() => {
@@ -174,16 +164,10 @@ function ClipboardApp() {
       // Small delay to ensure the window is fully rendered and focused
       setTimeout(() => {
         const currentTab = activeTabRef.current
-        const currentHistory = historyRef.current
 
-        if (currentTab === 'clipboard') {
-          // Focus the first history item if on clipboard tab
-          if (currentHistory.length > 0) {
-            setFocusedIndex(0)
-            historyItemRefs.current[0]?.focus()
-          }
-        } else {
+        if (currentTab !== 'clipboard') {
           // Focus the first tab button if on other tabs
+          // Clipboard tab focus is handled inside ClipboardTab component
           tabBarRef.current?.focusFirstTab()
         }
       }, 100)
@@ -197,57 +181,9 @@ function ClipboardApp() {
     }
   }, []) // Empty dependency array - listener is registered once
 
-  // Keyboard navigation for clipboard items
-  useEffect(() => {
-    if (activeTab !== 'clipboard' || history.length === 0) return
-
-    const handleArrowKeys = (e: KeyboardEvent) => {
-      // Check if a tab button is focused - if so, don't intercept arrows
-      const activeElement = document.activeElement
-      if (activeElement?.getAttribute('role') === 'tab') return
-
-      // Check if focus is on a history item
-      const isOnHistoryItem = historyItemRefs.current.some((ref) => ref === activeElement)
-      if (!isOnHistoryItem) return
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        const newIndex = Math.min(focusedIndex + 1, history.length - 1)
-        setFocusedIndex(newIndex)
-        historyItemRefs.current[newIndex]?.focus()
-        historyItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest' })
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        const newIndex = Math.max(focusedIndex - 1, 0)
-        setFocusedIndex(newIndex)
-        historyItemRefs.current[newIndex]?.focus()
-        historyItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest' })
-      } else if (e.key === 'Home') {
-        e.preventDefault()
-        setFocusedIndex(0)
-        historyItemRefs.current[0]?.focus()
-        historyItemRefs.current[0]?.scrollIntoView({ block: 'nearest' })
-      } else if (e.key === 'End') {
-        e.preventDefault()
-        const lastIndex = history.length - 1
-        setFocusedIndex(lastIndex)
-        historyItemRefs.current[lastIndex]?.focus()
-        historyItemRefs.current[lastIndex]?.scrollIntoView({ block: 'nearest' })
-      } else if (e.key === 'Tab' && !e.shiftKey) {
-        // When pressing Tab on a history item, go back to the tab bar
-        e.preventDefault()
-        tabBarRef.current?.focusFirstTab()
-      }
-    }
-
-    globalThis.addEventListener('keydown', handleArrowKeys)
-    return () => globalThis.removeEventListener('keydown', handleArrowKeys)
-  }, [activeTab, focusedIndex, history.length])
-
   // Handle tab change
   const handleTabChange = useCallback((tab: ActiveTab) => {
     setActiveTab(tab)
-    setFocusedIndex(0) // Reset focused index when changing tabs
   }, [])
 
   const handleMouseEnter = () => {
@@ -257,51 +193,25 @@ function ClipboardApp() {
   const handleMouseLeave = () => {
     invoke('set_mouse_state', { inside: false }).catch(console.error)
   }
-
+  
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
       case 'clipboard':
-        if (isLoading) {
-          return (
-            <div className="flex items-center justify-center h-full select-none">
-              <div className="w-6 h-6 border-2 border-win11-bg-accent border-t-transparent rounded-full animate-spin" />
-            </div>
-          )
-        }
-
-        if (history.length === 0) {
-          return <EmptyState isDark={isDark} />
-        }
-
         return (
-          <>
-            <Header
-              onClearHistory={clearHistory}
-              itemCount={history.filter((i) => !i.pinned).length}
-              isDark={isDark}
-              tertiaryOpacity={tertiaryOpacity}
-            />
-            <div className="flex flex-col gap-2 p-3" role="listbox" aria-label="Clipboard history">
-              {history.map((item, index) => (
-                <HistoryItem
-                  key={item.id}
-                  ref={(el) => {
-                    historyItemRefs.current[index] = el
-                  }}
-                  item={item}
-                  index={index}
-                  isFocused={index === focusedIndex}
-                  onPaste={pasteItem}
-                  onDelete={deleteItem}
-                  onTogglePin={togglePin}
-                  onFocus={() => setFocusedIndex(index)}
-                  isDark={isDark}
-                  secondaryOpacity={secondaryOpacity}
-                />
-              ))}
-            </div>
-          </>
+          <ClipboardTab
+            history={history}
+            isLoading={isLoading}
+            isDark={isDark}
+            tertiaryOpacity={tertiaryOpacity}
+            secondaryOpacity={secondaryOpacity}
+            clearHistory={clearHistory}
+            deleteItem={deleteItem}
+            togglePin={togglePin}
+            onPaste={pasteItem}
+            settings={settings}
+            tabBarRef={tabBarRef}
+          />
         )
 
       case 'emoji':
@@ -309,6 +219,12 @@ function ClipboardApp() {
 
       case 'gifs':
         return <GifPicker isDark={isDark} opacity={secondaryOpacity} />
+
+      case 'kaomoji':
+        return <KaomojiPicker isDark={isDark} opacity={secondaryOpacity} customKaomojis={settings.custom_kaomojis} />
+
+      case 'symbols':
+        return <SymbolPicker isDark={isDark} opacity={secondaryOpacity} />
 
       default:
         return null
@@ -331,6 +247,7 @@ function ClipboardApp() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
+
       {/* Drag Handle */}
       <DragHandle isDark={isDark} />
 
@@ -341,6 +258,7 @@ function ClipboardApp() {
         onTabChange={handleTabChange}
         isDark={isDark}
         tertiaryOpacity={tertiaryOpacity}
+
       />
 
       {/* Scrollable content area */}
@@ -348,8 +266,8 @@ function ClipboardApp() {
         ref={contentContainerRef}
         className={clsx(
           'flex-1',
-          // Only use scrollbar for non-emoji/gif tabs, they have their own virtualized scrolling
-          activeTab === 'emoji' || activeTab === 'gifs'
+          // Only use scrollbar for non-emoji/gif/kaomoji tabs, they have their own virtualized scrolling or containers
+          activeTab === 'emoji' || activeTab === 'gifs' || activeTab === 'kaomoji' || activeTab === 'symbols'
             ? 'overflow-hidden'
             : 'overflow-y-auto scrollbar-win11'
         )}

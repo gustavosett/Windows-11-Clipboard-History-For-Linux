@@ -1,0 +1,7883 @@
+[
+  {
+    "id": "h1",
+    "text": "(^_^)",
+    "category": "Happy",
+    "keywords": [
+      "smile",
+      "happy"
+    ]
+  },
+  {
+    "id": "h2",
+    "text": "(^o^)",
+    "category": "Happy",
+    "keywords": [
+      "smile",
+      "happy",
+      "laugh"
+    ]
+  },
+  {
+    "id": "h3",
+    "text": "(uwu)",
+    "category": "Happy",
+    "keywords": [
+      "cute",
+      "happy",
+      "uwu"
+    ]
+  },
+  {
+    "id": "h4",
+    "text": "(*^ω^)",
+    "category": "Happy",
+    "keywords": [
+      "cute",
+      "happy"
+    ]
+  },
+  {
+    "id": "h5",
+    "text": "(✿◠‿◠)",
+    "category": "Happy",
+    "keywords": [
+      "flower",
+      "happy"
+    ]
+  },
+  {
+    "id": "h6",
+    "text": "d(^_^)b",
+    "category": "Happy",
+    "keywords": [
+      "thumbs up",
+      "music"
+    ]
+  },
+  {
+    "id": "h7",
+    "text": "ヽ(・∀・)ﾉ",
+    "category": "Happy",
+    "keywords": [
+      "yay",
+      "happy"
+    ]
+  },
+  {
+    "id": "h8",
+    "text": "(｡♥‿♥｡)",
+    "category": "Happy",
+    "keywords": [
+      "love",
+      "happy"
+    ]
+  },
+  {
+    "id": "h9",
+    "text": "o(>ω<)o",
+    "category": "Happy",
+    "keywords": [
+      "excited"
+    ]
+  },
+  {
+    "id": "h10",
+    "text": "(っ˘ω˘ς )",
+    "category": "Happy",
+    "keywords": [
+      "content"
+    ]
+  },
+  {
+    "id": "h11",
+    "text": "(≧◡≦)",
+    "category": "Happy",
+    "keywords": [
+      "happy",
+      "cute"
+    ]
+  },
+  {
+    "id": "h12",
+    "text": "(⌒▽⌒)☆",
+    "category": "Happy",
+    "keywords": [
+      "star",
+      "happy"
+    ]
+  },
+  {
+    "id": "h13",
+    "text": "<(￣︶￣)>",
+    "category": "Happy",
+    "keywords": [
+      "proud",
+      "happy"
+    ]
+  },
+  {
+    "id": "h14",
+    "text": "(*・ω・)ﾉ",
+    "category": "Happy",
+    "keywords": [
+      "wave",
+      "happy"
+    ]
+  },
+  {
+    "id": "h15",
+    "text": "(´｡• ᵕ •｡`)",
+    "category": "Happy",
+    "keywords": [
+      "blush",
+      "happy"
+    ]
+  },
+  {
+    "id": "h16",
+    "text": "╰(*´︶`*)╯",
+    "category": "Happy",
+    "keywords": [
+      "yey",
+      "happy"
+    ]
+  },
+  {
+    "id": "h17",
+    "text": "(✧ω✧)",
+    "category": "Happy",
+    "keywords": [
+      "stars",
+      "eyes"
+    ]
+  },
+  {
+    "id": "h18",
+    "text": "(◕‿◕)",
+    "category": "Happy",
+    "keywords": [
+      "cute",
+      "smile"
+    ]
+  },
+  {
+    "id": "h19",
+    "text": "(o^▽^o)",
+    "category": "Happy",
+    "keywords": [
+      "laugh"
+    ]
+  },
+  {
+    "id": "h20",
+    "text": "(´• ω •`)",
+    "category": "Happy",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "h21",
+    "text": "(⌒ω⌒)",
+    "category": "Happy",
+    "keywords": [
+      "smile"
+    ]
+  },
+  {
+    "id": "h22",
+    "text": "ヽ(o^ ^o)ﾉ",
+    "category": "Happy",
+    "keywords": [
+      "hands up"
+    ]
+  },
+  {
+    "id": "h23",
+    "text": "(✯◡✯)",
+    "category": "Happy",
+    "keywords": [
+      "excited"
+    ]
+  },
+  {
+    "id": "h24",
+    "text": "(◕‿◕✿)",
+    "category": "Happy",
+    "keywords": [
+      "flower"
+    ]
+  },
+  {
+    "id": "h25",
+    "text": "(☆ω☆)",
+    "category": "Happy",
+    "keywords": [
+      "star eyes"
+    ]
+  },
+  {
+    "id": "h26",
+    "text": "ヽ(*・ω・)ﾉ",
+    "category": "Happy",
+    "keywords": [
+      "wave"
+    ]
+  },
+  {
+    "id": "h27",
+    "text": "( ´ ▽ ` )",
+    "category": "Happy",
+    "keywords": [
+      "relaxed"
+    ]
+  },
+  {
+    "id": "h28",
+    "text": "(￣ω￣)",
+    "category": "Happy",
+    "keywords": [
+      "content"
+    ]
+  },
+  {
+    "id": "h29",
+    "text": "╰(▔∀▔)╯",
+    "category": "Happy",
+    "keywords": [
+      "yay"
+    ]
+  },
+  {
+    "id": "h30",
+    "text": "(o･ω･o)",
+    "category": "Happy",
+    "keywords": [
+      "curious"
+    ]
+  },
+  {
+    "id": "h31",
+    "text": "(´｡• ᵕ •｡`)",
+    "category": "Happy",
+    "keywords": [
+      "blush"
+    ]
+  },
+  {
+    "id": "h32",
+    "text": "ヽ(>∀<☆)ノ",
+    "category": "Happy",
+    "keywords": [
+      "excited"
+    ]
+  },
+  {
+    "id": "h33",
+    "text": "(´･ᴗ･ ` )",
+    "category": "Happy",
+    "keywords": [
+      "smile"
+    ]
+  },
+  {
+    "id": "h34",
+    "text": "(ﾉ´ヮ`)ﾉ*: ･ﾟ",
+    "category": "Happy",
+    "keywords": [
+      "sparkle"
+    ]
+  },
+  {
+    "id": "h35",
+    "text": "( ˙꒳​˙ )",
+    "category": "Happy",
+    "keywords": [
+      "neutral happy"
+    ]
+  },
+  {
+    "id": "s1",
+    "text": "(T_T)",
+    "category": "Sad",
+    "keywords": [
+      "crying",
+      "sad"
+    ]
+  },
+  {
+    "id": "s2",
+    "text": "(;_;)",
+    "category": "Sad",
+    "keywords": [
+      "crying",
+      "sad"
+    ]
+  },
+  {
+    "id": "s3",
+    "text": "(._.)",
+    "category": "Sad",
+    "keywords": [
+      "disappointed"
+    ]
+  },
+  {
+    "id": "s4",
+    "text": "(ToT)",
+    "category": "Sad",
+    "keywords": [
+      "crying"
+    ]
+  },
+  {
+    "id": "s5",
+    "text": "(qwq)",
+    "category": "Sad",
+    "keywords": [
+      "sad",
+      "crying"
+    ]
+  },
+  {
+    "id": "s6",
+    "text": "ಥ_ಥ",
+    "category": "Sad",
+    "keywords": [
+      "crying"
+    ]
+  },
+  {
+    "id": "s7",
+    "text": "(/_;)",
+    "category": "Sad",
+    "keywords": [
+      "crying"
+    ]
+  },
+  {
+    "id": "s8",
+    "text": "(╥_╥)",
+    "category": "Sad",
+    "keywords": [
+      "crying",
+      "sad"
+    ]
+  },
+  {
+    "id": "s9",
+    "text": "(´;ω;`)",
+    "category": "Sad",
+    "keywords": [
+      "crying",
+      "sad"
+    ]
+  },
+  {
+    "id": "s10",
+    "text": "(-̩̩̩-̩̩̩-̩̩̩-̩̩̩-̩̩̩___-̩̩̩-̩̩̩-̩̩̩-̩̩̩-̩̩̩)",
+    "category": "Sad",
+    "keywords": [
+      "waterfall tears"
+    ]
+  },
+  {
+    "id": "s11",
+    "text": "(｡•́︿•̀｡)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "s12",
+    "text": "(个_个)",
+    "category": "Sad",
+    "keywords": [
+      "tears"
+    ]
+  },
+  {
+    "id": "s13",
+    "text": "(〒﹏〒)",
+    "category": "Sad",
+    "keywords": [
+      "crying"
+    ]
+  },
+  {
+    "id": "s14",
+    "text": "｡ﾟ(ﾟ´Dv`ﾟ)ﾟ｡",
+    "category": "Sad",
+    "keywords": [
+      "sobbing"
+    ]
+  },
+  {
+    "id": "s15",
+    "text": "(´-ω-`)",
+    "category": "Sad",
+    "keywords": [
+      "disappointed"
+    ]
+  },
+  {
+    "id": "s16",
+    "text": "(｡╯3╰｡)",
+    "category": "Sad",
+    "keywords": [
+      "sad kiss"
+    ]
+  },
+  {
+    "id": "s17",
+    "text": "( ╥ω╥ )",
+    "category": "Sad",
+    "keywords": [
+      "tears"
+    ]
+  },
+  {
+    "id": "s18",
+    "text": "(´°̥̥̥̥̥̥̥̥ω°̥̥̥̥̥̥̥̥｀)",
+    "category": "Sad",
+    "keywords": [
+      "heavy rain tears"
+    ]
+  },
+  {
+    "id": "s19",
+    "text": "o(TヘTo)",
+    "category": "Sad",
+    "keywords": [
+      "holding back tears"
+    ]
+  },
+  {
+    "id": "s20",
+    "text": "(´；д；`)",
+    "category": "Sad",
+    "keywords": [
+      "pain"
+    ]
+  },
+  {
+    "id": "s21",
+    "text": "(´•̥̥̥д•̥̥̥`)",
+    "category": "Sad",
+    "keywords": [
+      "crying"
+    ]
+  },
+  {
+    "id": "s22",
+    "text": "(ಥ﹏ಥ)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "s23",
+    "text": "( ≧Д≦)",
+    "category": "Sad",
+    "keywords": [
+      "screaming"
+    ]
+  },
+  {
+    "id": "s24",
+    "text": "((´д｀))",
+    "category": "Sad",
+    "keywords": [
+      "shaking"
+    ]
+  },
+  {
+    "id": "s25",
+    "text": "(´Ａ｀。)",
+    "category": "Sad",
+    "keywords": [
+      "sigh"
+    ]
+  },
+  {
+    "id": "a1",
+    "text": "(>_<)",
+    "category": "Angry",
+    "keywords": [
+      "angry",
+      "frustrated"
+    ]
+  },
+  {
+    "id": "a2",
+    "text": "(FAO)",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "a3",
+    "text": "ಠ_ಠ",
+    "category": "Angry",
+    "keywords": [
+      "disapproval",
+      "look"
+    ]
+  },
+  {
+    "id": "a4",
+    "text": "(╬ Ò﹏Ó)",
+    "category": "Angry",
+    "keywords": [
+      "angry",
+      "furious"
+    ]
+  },
+  {
+    "id": "a5",
+    "text": "(¬_¬)",
+    "category": "Angry",
+    "keywords": [
+      "suspicious"
+    ]
+  },
+  {
+    "id": "a6",
+    "text": "(＃`Д´)",
+    "category": "Angry",
+    "keywords": [
+      "angry",
+      "shout"
+    ]
+  },
+  {
+    "id": "a7",
+    "text": "(｀ε´)",
+    "category": "Angry",
+    "keywords": [
+      "angry",
+      "pout"
+    ]
+  },
+  {
+    "id": "a8",
+    "text": "(¬､¬)",
+    "category": "Angry",
+    "keywords": [
+      "suspicious",
+      "glare"
+    ]
+  },
+  {
+    "id": "a9",
+    "text": "(*￣m￣)",
+    "category": "Angry",
+    "keywords": [
+      "dissatisfied"
+    ]
+  },
+  {
+    "id": "a10",
+    "text": "(￣^￣)",
+    "category": "Angry",
+    "keywords": [
+      "hmph"
+    ]
+  },
+  {
+    "id": "a11",
+    "text": "(＃＞＜)",
+    "category": "Angry",
+    "keywords": [
+      "pain",
+      "angry"
+    ]
+  },
+  {
+    "id": "a12",
+    "text": "(°ㅂ°╬)",
+    "category": "Angry",
+    "keywords": [
+      "annoyed"
+    ]
+  },
+  {
+    "id": "a13",
+    "text": "(╬￣皿￣)",
+    "category": "Angry",
+    "keywords": [
+      "grinding teeth"
+    ]
+  },
+  {
+    "id": "a14",
+    "text": "(҂ `з´ )",
+    "category": "Angry",
+    "keywords": [
+      "fighting"
+    ]
+  },
+  {
+    "id": "a15",
+    "text": "(* ಠ_ಠ)",
+    "category": "Angry",
+    "keywords": [
+      "serious"
+    ]
+  },
+  {
+    "id": "a16",
+    "text": "(｀Ð´)",
+    "category": "Angry",
+    "keywords": [
+      "shout"
+    ]
+  },
+  {
+    "id": "a17",
+    "text": "(╬`益´)",
+    "category": "Angry",
+    "keywords": [
+      "rage"
+    ]
+  },
+  {
+    "id": "a18",
+    "text": "凸(￣ヘ￣)",
+    "category": "Angry",
+    "keywords": [
+      "rude"
+    ]
+  },
+  {
+    "id": "a19",
+    "text": "(mu_mu)",
+    "category": "Angry",
+    "keywords": [
+      "annoyed"
+    ]
+  },
+  {
+    "id": "a20",
+    "text": "(*≧m≦*)",
+    "category": "Angry",
+    "keywords": [
+      "mad"
+    ]
+  },
+  {
+    "id": "l1",
+    "text": "(♥_♥)",
+    "category": "Love",
+    "keywords": [
+      "love",
+      "heart"
+    ]
+  },
+  {
+    "id": "l2",
+    "text": "(´ε｀ )",
+    "category": "Love",
+    "keywords": [
+      "kiss"
+    ]
+  },
+  {
+    "id": "l3",
+    "text": "(♡μ_μ)",
+    "category": "Love",
+    "keywords": [
+      "shy",
+      "love"
+    ]
+  },
+  {
+    "id": "l4",
+    "text": "(*♡∀♡)",
+    "category": "Love",
+    "keywords": [
+      "love",
+      "eyes"
+    ]
+  },
+  {
+    "id": "l5",
+    "text": "( ˘ ³˘)♥",
+    "category": "Love",
+    "keywords": [
+      "kiss",
+      "love"
+    ]
+  },
+  {
+    "id": "l6",
+    "text": "(❤ω❤)",
+    "category": "Love",
+    "keywords": [
+      "love",
+      "eyes"
+    ]
+  },
+  {
+    "id": "l7",
+    "text": "(´｡• ᵕ •｡`) ♡",
+    "category": "Love",
+    "keywords": [
+      "love",
+      "heart"
+    ]
+  },
+  {
+    "id": "l8",
+    "text": "ヽ(♡‿♡)ノ",
+    "category": "Love",
+    "keywords": [
+      "love",
+      "happy"
+    ]
+  },
+  {
+    "id": "l9",
+    "text": "(ʃƪ ˘ ³˘)",
+    "category": "Love",
+    "keywords": [
+      "kiss"
+    ]
+  },
+  {
+    "id": "l10",
+    "text": "(°◡°♡)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "l11",
+    "text": "(´∩｡• ᵕ •｡∩`)",
+    "category": "Love",
+    "keywords": [
+      "in love"
+    ]
+  },
+  {
+    "id": "l12",
+    "text": "(♡-_-♡)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "l13",
+    "text": "( ◡‿◡ *)",
+    "category": "Love",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "l14",
+    "text": "(ﾉ´ з `)ノ",
+    "category": "Love",
+    "keywords": [
+      "kiss throw"
+    ]
+  },
+  {
+    "id": "l15",
+    "text": "(♡˙︶˙♡)",
+    "category": "Love",
+    "keywords": [
+      "peace love"
+    ]
+  },
+  {
+    "id": "l16",
+    "text": "(´ω｀*)",
+    "category": "Love",
+    "keywords": [
+      "fond"
+    ]
+  },
+  {
+    "id": "l17",
+    "text": "( ˘⌣˘)♡(˘⌣˘ )",
+    "category": "Love",
+    "keywords": [
+      "couple"
+    ]
+  },
+  {
+    "id": "l18",
+    "text": "Σ>―(〃°ω°〃)♡→",
+    "category": "Love",
+    "keywords": [
+      "arrow",
+      "cupid"
+    ]
+  },
+  {
+    "id": "l19",
+    "text": "(´▽`ʃ♡ƪ)",
+    "category": "Love",
+    "keywords": [
+      "hugging heart"
+    ]
+  },
+  {
+    "id": "l20",
+    "text": "(๑♡⌓♡๑)",
+    "category": "Love",
+    "keywords": [
+      "love eyes"
+    ]
+  },
+  {
+    "id": "c1",
+    "text": "(o_O)",
+    "category": "Confused",
+    "keywords": [
+      "confused",
+      "eye"
+    ]
+  },
+  {
+    "id": "c2",
+    "text": "(?)",
+    "category": "Confused",
+    "keywords": [
+      "question"
+    ]
+  },
+  {
+    "id": "c3",
+    "text": "┐(￣ヘ￣)┌",
+    "category": "Confused",
+    "keywords": [
+      "shrug",
+      "dunno"
+    ]
+  },
+  {
+    "id": "c4",
+    "text": "¯\\_(ツ)_/¯",
+    "category": "Confused",
+    "keywords": [
+      "shrug"
+    ]
+  },
+  {
+    "id": "c5",
+    "text": "(・・ ) ?",
+    "category": "Confused",
+    "keywords": [
+      "confused",
+      "question"
+    ]
+  },
+  {
+    "id": "c6",
+    "text": "(-_-)ゞ゛",
+    "category": "Confused",
+    "keywords": [
+      "scratch head"
+    ]
+  },
+  {
+    "id": "c7",
+    "text": "٩(｡•́‿•̀｡)۶",
+    "category": "Confused",
+    "keywords": [
+      "dunno",
+      "cute"
+    ]
+  },
+  {
+    "id": "c8",
+    "text": "(・_・ヾ",
+    "category": "Confused",
+    "keywords": [
+      "scratch"
+    ]
+  },
+  {
+    "id": "c9",
+    "text": "┐(︶▽︶)┌",
+    "category": "Confused",
+    "keywords": [
+      "who knows"
+    ]
+  },
+  {
+    "id": "c10",
+    "text": "╮(￣ω￣;)╭",
+    "category": "Confused",
+    "keywords": [
+      "give up"
+    ]
+  },
+  {
+    "id": "c11",
+    "text": "(・∀・)?",
+    "category": "Confused",
+    "keywords": [
+      "question"
+    ]
+  },
+  {
+    "id": "c12",
+    "text": "(?_?)",
+    "category": "Confused",
+    "keywords": [
+      "question"
+    ]
+  },
+  {
+    "id": "c13",
+    "text": "く(＾_・)ゝ",
+    "category": "Confused",
+    "keywords": [
+      "scratch"
+    ]
+  },
+  {
+    "id": "c14",
+    "text": "┐(‘～`；)┌",
+    "category": "Confused",
+    "keywords": [
+      "dunno"
+    ]
+  },
+  {
+    "id": "c15",
+    "text": "σ(￣、￣〃)",
+    "category": "Confused",
+    "keywords": [
+      "thinking"
+    ]
+  },
+  {
+    "id": "sk1",
+    "text": "(¬_¬)",
+    "category": "Skeptical",
+    "keywords": [
+      "suspicious"
+    ]
+  },
+  {
+    "id": "sk2",
+    "text": "(¬､¬)",
+    "category": "Skeptical",
+    "keywords": [
+      "side eye"
+    ]
+  },
+  {
+    "id": "sk3",
+    "text": "(￢_￢;)",
+    "category": "Skeptical",
+    "keywords": [
+      "doubt"
+    ]
+  },
+  {
+    "id": "sk4",
+    "text": "(⇀_↼)",
+    "category": "Skeptical",
+    "keywords": [
+      "doubt"
+    ]
+  },
+  {
+    "id": "sk5",
+    "text": "(￣ω￣;)",
+    "category": "Skeptical",
+    "keywords": [
+      "awkward"
+    ]
+  },
+  {
+    "id": "sk6",
+    "text": "(・_・;)",
+    "category": "Skeptical",
+    "keywords": [
+      "sweat"
+    ]
+  },
+  {
+    "id": "sk7",
+    "text": "(・_・ヾ",
+    "category": "Skeptical",
+    "keywords": [
+      "what"
+    ]
+  },
+  {
+    "id": "sk8",
+    "text": "Σ(￣。￣ﾉ)",
+    "category": "Skeptical",
+    "keywords": [
+      "huh"
+    ]
+  },
+  {
+    "id": "sk9",
+    "text": "(；￢_￢)",
+    "category": "Skeptical",
+    "keywords": [
+      "stare"
+    ]
+  },
+  {
+    "id": "sk10",
+    "text": "(￢‿￢ )",
+    "category": "Skeptical",
+    "keywords": [
+      "smirk"
+    ]
+  },
+  {
+    "id": "sk11",
+    "text": "(¬‿¬)",
+    "category": "Skeptical",
+    "keywords": [
+      "smirk"
+    ]
+  },
+  {
+    "id": "sk12",
+    "text": "(￣ヘ￣)",
+    "category": "Skeptical",
+    "keywords": [
+      "hmph"
+    ]
+  },
+  {
+    "id": "sk13",
+    "text": "(<_<)",
+    "category": "Skeptical",
+    "keywords": [
+      "side eye"
+    ]
+  },
+  {
+    "id": "sk14",
+    "text": "(>_>)",
+    "category": "Skeptical",
+    "keywords": [
+      "side eye"
+    ]
+  },
+  {
+    "id": "sk15",
+    "text": "(￣～￣;)",
+    "category": "Skeptical",
+    "keywords": [
+      "thinking"
+    ]
+  },
+  {
+    "id": "su1",
+    "text": "(O_O)",
+    "category": "Surprised",
+    "keywords": [
+      "shocked"
+    ]
+  },
+  {
+    "id": "su2",
+    "text": "(*_*)",
+    "category": "Surprised",
+    "keywords": [
+      "starstruck"
+    ]
+  },
+  {
+    "id": "su3",
+    "text": "∑(O_O;)",
+    "category": "Surprised",
+    "keywords": [
+      "scared",
+      "surprised"
+    ]
+  },
+  {
+    "id": "su4",
+    "text": "(⊙_⊙)",
+    "category": "Surprised",
+    "keywords": [
+      "shocked",
+      "eyes"
+    ]
+  },
+  {
+    "id": "su5",
+    "text": "(ﾟoﾟ)",
+    "category": "Surprised",
+    "keywords": [
+      "wide mouth"
+    ]
+  },
+  {
+    "id": "su6",
+    "text": "(o_O) !",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "su7",
+    "text": "w(°ｏ°)w",
+    "category": "Surprised",
+    "keywords": [
+      "wow"
+    ]
+  },
+  {
+    "id": "su8",
+    "text": "ヽ(°〇°)ﾉ",
+    "category": "Surprised",
+    "keywords": [
+      "woah"
+    ]
+  },
+  {
+    "id": "su9",
+    "text": "Σ(°ロ°)",
+    "category": "Surprised",
+    "keywords": [
+      "shocked"
+    ]
+  },
+  {
+    "id": "su10",
+    "text": "(O.O)",
+    "category": "Surprised",
+    "keywords": [
+      "stare"
+    ]
+  },
+  {
+    "id": "su11",
+    "text": "Σ(□_□)",
+    "category": "Surprised",
+    "keywords": [
+      "shocked"
+    ]
+  },
+  {
+    "id": "su12",
+    "text": "(°ロ°)",
+    "category": "Surprised",
+    "keywords": [
+      "gasp"
+    ]
+  },
+  {
+    "id": "su13",
+    "text": "(ﾟдﾟ)",
+    "category": "Surprised",
+    "keywords": [
+      "shocked"
+    ]
+  },
+  {
+    "id": "su14",
+    "text": "(⊙_⊙)",
+    "category": "Surprised",
+    "keywords": [
+      "wide eyes"
+    ]
+  },
+  {
+    "id": "su15",
+    "text": "(ﾉ*0*)ﾉ",
+    "category": "Surprised",
+    "keywords": [
+      "oh my"
+    ]
+  },
+  {
+    "id": "sh1",
+    "text": "(⁄ ⁄•⁄ω⁄•⁄ ⁄)",
+    "category": "Shy",
+    "keywords": [
+      "blush",
+      "shy"
+    ]
+  },
+  {
+    "id": "sh2",
+    "text": "(///￣ ￣///)",
+    "category": "Shy",
+    "keywords": [
+      "blush"
+    ]
+  },
+  {
+    "id": "sh3",
+    "text": "(⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)",
+    "category": "Shy",
+    "keywords": [
+      "blush",
+      "excited"
+    ]
+  },
+  {
+    "id": "sh4",
+    "text": "(*ﾉωﾉ)",
+    "category": "Shy",
+    "keywords": [
+      "hiding",
+      "face"
+    ]
+  },
+  {
+    "id": "sh5",
+    "text": "(*/_＼)",
+    "category": "Shy",
+    "keywords": [
+      "hiding"
+    ]
+  },
+  {
+    "id": "sh6",
+    "text": "(//ω//)",
+    "category": "Shy",
+    "keywords": [
+      "blush"
+    ]
+  },
+  {
+    "id": "sh7",
+    "text": "(o_ _)ﾉ彡☆",
+    "category": "Shy",
+    "keywords": [
+      "laughing"
+    ]
+  },
+  {
+    "id": "sh8",
+    "text": "(⁄ ⁄•⁄-⁄•⁄ ⁄)",
+    "category": "Shy",
+    "keywords": [
+      "blush"
+    ]
+  },
+  {
+    "id": "sh9",
+    "text": "(*μ_μ)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "sh10",
+    "text": "(◡‿◡✿)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "sh11",
+    "text": "( 〃．．)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "sh12",
+    "text": "(*ﾉ∀`*)",
+    "category": "Shy",
+    "keywords": [
+      "shy",
+      "laugh"
+    ]
+  },
+  {
+    "id": "sh13",
+    "text": "(//▽//)",
+    "category": "Shy",
+    "keywords": [
+      "blush"
+    ]
+  },
+  {
+    "id": "sh14",
+    "text": "(⁄ ⁄•⁄ ⁄•⁄ ⁄)",
+    "category": "Shy",
+    "keywords": [
+      "blush"
+    ]
+  },
+  {
+    "id": "sh15",
+    "text": "(*/ω＼)",
+    "category": "Shy",
+    "keywords": [
+      "peek"
+    ]
+  },
+  {
+    "id": "sy1",
+    "text": "(´｡• ᵕ •｡`)",
+    "category": "Sympathy",
+    "keywords": [
+      "comfort"
+    ]
+  },
+  {
+    "id": "sy2",
+    "text": "(o´･_･)っ",
+    "category": "Sympathy",
+    "keywords": [
+      "comfort",
+      "pat"
+    ]
+  },
+  {
+    "id": "sy3",
+    "text": "(づ◡﹏◡)づ",
+    "category": "Sympathy",
+    "keywords": [
+      "hug"
+    ]
+  },
+  {
+    "id": "sy4",
+    "text": "(つ . •́ _ʖ •̀ .)つ",
+    "category": "Sympathy",
+    "keywords": [
+      "hug"
+    ]
+  },
+  {
+    "id": "sy5",
+    "text": "(っ´ω`)ﾉ(╥ω╥)",
+    "category": "Sympathy",
+    "keywords": [
+      "pat",
+      "cry"
+    ]
+  },
+  {
+    "id": "sy6",
+    "text": "(･ω･)つ⊂(･ω･)",
+    "category": "Sympathy",
+    "keywords": [
+      "hug"
+    ]
+  },
+  {
+    "id": "sy7",
+    "text": "( T_T)＼(^-^ )",
+    "category": "Sympathy",
+    "keywords": [
+      "there there"
+    ]
+  },
+  {
+    "id": "sy8",
+    "text": "(..、)ヾ(^-^;) ",
+    "category": "Sympathy",
+    "keywords": [
+      "comfort"
+    ]
+  },
+  {
+    "id": "sy9",
+    "text": "(づ｡◕‿‿◕｡)づ",
+    "category": "Sympathy",
+    "keywords": [
+      "hug"
+    ]
+  },
+  {
+    "id": "sy10",
+    "text": "(*・ω・)ﾉ (._.`)",
+    "category": "Sympathy",
+    "keywords": [
+      "comfort"
+    ]
+  },
+  {
+    "id": "cu1",
+    "text": "(◕‿◕)",
+    "category": "Cute",
+    "keywords": [
+      "cute",
+      "eyes"
+    ]
+  },
+  {
+    "id": "cu2",
+    "text": "(uwu)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "cu3",
+    "text": "(✿◠‿◠)",
+    "category": "Cute",
+    "keywords": [
+      "flower"
+    ]
+  },
+  {
+    "id": "cu4",
+    "text": "(◡‿◡✿)",
+    "category": "Cute",
+    "keywords": [
+      "shy",
+      "flower"
+    ]
+  },
+  {
+    "id": "cu5",
+    "text": "(*^ω^)",
+    "category": "Cute",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "cu6",
+    "text": "(｡♥‿♥｡)",
+    "category": "Cute",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "cu7",
+    "text": "(*≧ω≦*)",
+    "category": "Cute",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "cu8",
+    "text": "(◕ω◕✿)",
+    "category": "Cute",
+    "keywords": [
+      "eyes"
+    ]
+  },
+  {
+    "id": "cu9",
+    "text": "(*・ω・)",
+    "category": "Cute",
+    "keywords": [
+      "cat face"
+    ]
+  },
+  {
+    "id": "cu10",
+    "text": "(^・ω・^ )",
+    "category": "Cute",
+    "keywords": [
+      "cat"
+    ]
+  },
+  {
+    "id": "cu11",
+    "text": "(｡･ω･｡)",
+    "category": "Cute",
+    "keywords": [
+      "cat"
+    ]
+  },
+  {
+    "id": "cu12",
+    "text": "(●´ω｀●)",
+    "category": "Cute",
+    "keywords": [
+      "blush"
+    ]
+  },
+  {
+    "id": "cu13",
+    "text": "(｡・//ε//・｡)",
+    "category": "Cute",
+    "keywords": [
+      "blush"
+    ]
+  },
+  {
+    "id": "cu14",
+    "text": "(ღ˘⌣˘ღ)",
+    "category": "Cute",
+    "keywords": [
+      "peace"
+    ]
+  },
+  {
+    "id": "cu15",
+    "text": "(✿ ♥‿♥)",
+    "category": "Cute",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "ac1",
+    "text": "(╯°□°）╯︵ ┻━┻",
+    "category": "Action",
+    "keywords": [
+      "flip table",
+      "angry"
+    ]
+  },
+  {
+    "id": "ac2",
+    "text": "┬─┬ノ( º _ ºノ)",
+    "category": "Action",
+    "keywords": [
+      "put table back"
+    ]
+  },
+  {
+    "id": "ac3",
+    "text": "(/・0・)",
+    "category": "Action",
+    "keywords": [
+      "wave"
+    ]
+  },
+  {
+    "id": "ac4",
+    "text": "ε=ε=┌( >_<)┘",
+    "category": "Action",
+    "keywords": [
+      "running"
+    ]
+  },
+  {
+    "id": "ac5",
+    "text": "ᕙ(⇀‸↼‶)ᕗ",
+    "category": "Action",
+    "keywords": [
+      "flex",
+      "strong"
+    ]
+  },
+  {
+    "id": "ac6",
+    "text": "(ノಠ益ಠ)ノ彡┻━┻",
+    "category": "Action",
+    "keywords": [
+      "flip table",
+      "furious"
+    ]
+  },
+  {
+    "id": "ac7",
+    "text": "(/・・)ノ",
+    "category": "Action",
+    "keywords": [
+      "throw"
+    ]
+  },
+  {
+    "id": "ac8",
+    "text": "( ´∀｀)ノ～ ♡",
+    "category": "Action",
+    "keywords": [
+      "throw love"
+    ]
+  },
+  {
+    "id": "ac9",
+    "text": "(*・ω・)ﾉ",
+    "category": "Action",
+    "keywords": [
+      "wave"
+    ]
+  },
+  {
+    "id": "ac10",
+    "text": "ᕦ(ò_óˇ)ᕤ",
+    "category": "Action",
+    "keywords": [
+      "flex"
+    ]
+  },
+  {
+    "id": "da1",
+    "text": "♪ヽ( ⌒o⌒)人(⌒-⌒ )v ♪",
+    "category": "Dancing",
+    "keywords": [
+      "dance",
+      "party"
+    ]
+  },
+  {
+    "id": "da2",
+    "text": "＼(￣▽￣)／",
+    "category": "Dancing",
+    "keywords": [
+      "yay"
+    ]
+  },
+  {
+    "id": "da3",
+    "text": "♪♪♪ ヽ(ˇ∀ˇ )ゞ",
+    "category": "Dancing",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "da4",
+    "text": "ヾ(･ω･*)ﾉ",
+    "category": "Dancing",
+    "keywords": [
+      "dance"
+    ]
+  },
+  {
+    "id": "da5",
+    "text": "〜(￣▽￣〜)",
+    "category": "Dancing",
+    "keywords": [
+      "groove"
+    ]
+  },
+  {
+    "id": "da6",
+    "text": "(〜￣△￣)〜",
+    "category": "Dancing",
+    "keywords": [
+      "ghost dance"
+    ]
+  },
+  {
+    "id": "da7",
+    "text": "ヽ(⌐■_■)ノ♪♬",
+    "category": "Dancing",
+    "keywords": [
+      "cool dance"
+    ]
+  },
+  {
+    "id": "da8",
+    "text": "~(˘▽˘~)",
+    "category": "Dancing",
+    "keywords": [
+      "dance"
+    ]
+  },
+  {
+    "id": "da9",
+    "text": "(~˘▽˘)~",
+    "category": "Dancing",
+    "keywords": [
+      "dance"
+    ]
+  },
+  {
+    "id": "da10",
+    "text": "└(＾＾)┐",
+    "category": "Dancing",
+    "keywords": [
+      "walking"
+    ]
+  },
+  {
+    "id": "cat1",
+    "text": "(^..^)",
+    "category": "Cats",
+    "keywords": [
+      "cat"
+    ]
+  },
+  {
+    "id": "cat2",
+    "text": "(=^･ω･^=)",
+    "category": "Cats",
+    "keywords": [
+      "cat"
+    ]
+  },
+  {
+    "id": "cat3",
+    "text": "V(=^･ω･^=)v",
+    "category": "Cats",
+    "keywords": [
+      "cat",
+      "peace"
+    ]
+  },
+  {
+    "id": "cat4",
+    "text": "(=^-ω-^=)",
+    "category": "Cats",
+    "keywords": [
+      "cat",
+      "sleep"
+    ]
+  },
+  {
+    "id": "cat5",
+    "text": "(=｀ω´=)",
+    "category": "Cats",
+    "keywords": [
+      "cat",
+      "angry"
+    ]
+  },
+  {
+    "id": "cat6",
+    "text": "(=^･ｪ･^=)",
+    "category": "Cats",
+    "keywords": [
+      "cat"
+    ]
+  },
+  {
+    "id": "cat7",
+    "text": "(=^..^=)",
+    "category": "Cats",
+    "keywords": [
+      "cat"
+    ]
+  },
+  {
+    "id": "cat8",
+    "text": "(^・x・^)",
+    "category": "Cats",
+    "keywords": [
+      "cat"
+    ]
+  },
+  {
+    "id": "cat9",
+    "text": "(=^ ◡ ^=)",
+    "category": "Cats",
+    "keywords": [
+      "cat",
+      "happy"
+    ]
+  },
+  {
+    "id": "cat10",
+    "text": ">^///^<",
+    "category": "Cats",
+    "keywords": [
+      "cat",
+      "blush"
+    ]
+  },
+  {
+    "id": "cat11",
+    "text": "(=①ω①=)",
+    "category": "Cats",
+    "keywords": [
+      "cat"
+    ]
+  },
+  {
+    "id": "cat12",
+    "text": "/ᐠ｡ꞈ｡ᐟ\\",
+    "category": "Cats",
+    "keywords": [
+      "cat",
+      "cute"
+    ]
+  },
+  {
+    "id": "cat13",
+    "text": "(=ｘェｘ=)",
+    "category": "Cats",
+    "keywords": [
+      "cat",
+      "dead"
+    ]
+  },
+  {
+    "id": "cat14",
+    "text": "(=O*_*O=)",
+    "category": "Cats",
+    "keywords": [
+      "cat",
+      "dizzy"
+    ]
+  },
+  {
+    "id": "cat15",
+    "text": "(=T.T=)",
+    "category": "Cats",
+    "keywords": [
+      "cat",
+      "sad"
+    ]
+  },
+  {
+    "id": "cat16",
+    "text": "(^=◕ᴥ◕=^)",
+    "category": "Cats",
+    "keywords": [
+      "cat"
+    ]
+  },
+  {
+    "id": "br1",
+    "text": "(ᵔᴥᵔ)",
+    "category": "Bears",
+    "keywords": [
+      "bear"
+    ]
+  },
+  {
+    "id": "br2",
+    "text": "ʕ•ᴥ•ʔ",
+    "category": "Bears",
+    "keywords": [
+      "bear"
+    ]
+  },
+  {
+    "id": "br3",
+    "text": "ʕ ᵔᴥᵔ ʔ",
+    "category": "Bears",
+    "keywords": [
+      "bear",
+      "happy"
+    ]
+  },
+  {
+    "id": "br4",
+    "text": "ʕ •̀ ω •́ ʔ",
+    "category": "Bears",
+    "keywords": [
+      "bear",
+      "determined"
+    ]
+  },
+  {
+    "id": "br5",
+    "text": "ʕ • ᴥ • ʔ",
+    "category": "Bears",
+    "keywords": [
+      "bear"
+    ]
+  },
+  {
+    "id": "br6",
+    "text": "ᶘ ᵒᴥᵒᶅ",
+    "category": "Bears",
+    "keywords": [
+      "bear",
+      "seal"
+    ]
+  },
+  {
+    "id": "br7",
+    "text": "ʕ º ᴥ º ʔ",
+    "category": "Bears",
+    "keywords": [
+      "bear"
+    ]
+  },
+  {
+    "id": "br8",
+    "text": "ʕ´•ᴥ•`ʔ",
+    "category": "Bears",
+    "keywords": [
+      "bear",
+      "sad"
+    ]
+  },
+  {
+    "id": "br9",
+    "text": "ʕ/　·ᴥ·ʔ/",
+    "category": "Bears",
+    "keywords": [
+      "bear",
+      "wave"
+    ]
+  },
+  {
+    "id": "br10",
+    "text": "ʕ·ᴥ·　ʔ",
+    "category": "Bears",
+    "keywords": [
+      "bear",
+      "look"
+    ]
+  },
+  {
+    "id": "dg1",
+    "text": "(U・x・U)",
+    "category": "Dogs",
+    "keywords": [
+      "dog"
+    ]
+  },
+  {
+    "id": "dg2",
+    "text": "U・ᴥ・U",
+    "category": "Dogs",
+    "keywords": [
+      "dog"
+    ]
+  },
+  {
+    "id": "dg3",
+    "text": "U ´ᴥ` U",
+    "category": "Dogs",
+    "keywords": [
+      "dog"
+    ]
+  },
+  {
+    "id": "dg4",
+    "text": "(U・ω・U)",
+    "category": "Dogs",
+    "keywords": [
+      "dog"
+    ]
+  },
+  {
+    "id": "dg5",
+    "text": "U^ｪ^U",
+    "category": "Dogs",
+    "keywords": [
+      "dog"
+    ]
+  },
+  {
+    "id": "dg6",
+    "text": "V●ᴥ●V",
+    "category": "Dogs",
+    "keywords": [
+      "dog"
+    ]
+  },
+  {
+    "id": "dg7",
+    "text": "U(•ㅅ•)U",
+    "category": "Dogs",
+    "keywords": [
+      "dog"
+    ]
+  },
+  {
+    "id": "dg8",
+    "text": "(U・ﻌ・U)",
+    "category": "Dogs",
+    "keywords": [
+      "dog"
+    ]
+  },
+  {
+    "id": "dg9",
+    "text": "U •́ .̫ •̀ U",
+    "category": "Dogs",
+    "keywords": [
+      "dog",
+      "sad"
+    ]
+  },
+  {
+    "id": "dg10",
+    "text": "(υ´• ﻌ •`υ)",
+    "category": "Dogs",
+    "keywords": [
+      "dog"
+    ]
+  },
+  {
+    "id": "rb1",
+    "text": "／(･ × ･)＼",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbit"
+    ]
+  },
+  {
+    "id": "rb2",
+    "text": "／(≧ x ≦)＼",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbit",
+      "happy"
+    ]
+  },
+  {
+    "id": "rb3",
+    "text": "U(•ㅅ•)U",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbit"
+    ]
+  },
+  {
+    "id": "rb4",
+    "text": "(x . x) ~~",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbit",
+      "dead"
+    ]
+  },
+  {
+    "id": "rb5",
+    "text": "／(^ x ^)＼",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbit"
+    ]
+  },
+  {
+    "id": "rb6",
+    "text": "／(･_･)＼",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbit",
+      "normal"
+    ]
+  },
+  {
+    "id": "rb7",
+    "text": "／(=･ x ･=)＼",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbit"
+    ]
+  },
+  {
+    "id": "rb8",
+    "text": "／(＞×＜)＼",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbit",
+      "hurting"
+    ]
+  },
+  {
+    "id": "rb9",
+    "text": "／(v x v)＼",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbit",
+      "down"
+    ]
+  },
+  {
+    "id": "rb10",
+    "text": "／(=´x`=)＼",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbit",
+      "sleepy"
+    ]
+  },
+  {
+    "id": "gr1",
+    "text": "(・_・)ノ",
+    "category": "Greetings",
+    "keywords": [
+      "hello",
+      "wave"
+    ]
+  },
+  {
+    "id": "gr2",
+    "text": "(^-^*)/",
+    "category": "Greetings",
+    "keywords": [
+      "hello",
+      "wave"
+    ]
+  },
+  {
+    "id": "gr3",
+    "text": "( ´ ▽ ` )ﾉ",
+    "category": "Greetings",
+    "keywords": [
+      "hello",
+      "happy"
+    ]
+  },
+  {
+    "id": "gr4",
+    "text": "Hello ( ^_^)／",
+    "category": "Greetings",
+    "keywords": [
+      "hello",
+      "wave"
+    ]
+  },
+  {
+    "id": "gr5",
+    "text": "(*・ω・)ﾉ",
+    "category": "Greetings",
+    "keywords": [
+      "wave"
+    ]
+  },
+  {
+    "id": "gr6",
+    "text": "(=ﾟωﾟ)ﾉ",
+    "category": "Greetings",
+    "keywords": [
+      "hello"
+    ]
+  },
+  {
+    "id": "gr7",
+    "text": "(≧▽≦)/",
+    "category": "Greetings",
+    "keywords": [
+      "yay"
+    ]
+  },
+  {
+    "id": "gr8",
+    "text": "(・∀・)ノ",
+    "category": "Greetings",
+    "keywords": [
+      "hi"
+    ]
+  },
+  {
+    "id": "gr9",
+    "text": "ヾ(☆▽☆)",
+    "category": "Greetings",
+    "keywords": [
+      "hi"
+    ]
+  },
+  {
+    "id": "gr10",
+    "text": "( ^_^)／",
+    "category": "Greetings",
+    "keywords": [
+      "hello"
+    ]
+  },
+  {
+    "id": "sl1",
+    "text": "(￣o￣) zzZ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleep",
+      "zzz"
+    ]
+  },
+  {
+    "id": "sl2",
+    "text": "(－_－) zzZ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleep",
+      "tired"
+    ]
+  },
+  {
+    "id": "sl3",
+    "text": "(∪｡∪)｡｡｡zzz",
+    "category": "Sleeping",
+    "keywords": [
+      "sleep"
+    ]
+  },
+  {
+    "id": "sl4",
+    "text": "(＿ ＿*) Z z z",
+    "category": "Sleeping",
+    "keywords": [
+      "sleep"
+    ]
+  },
+  {
+    "id": "sl5",
+    "text": "[(－－)]..zzZ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleep"
+    ]
+  },
+  {
+    "id": "sl6",
+    "text": "(ｘ . ｘ) ...zzZ",
+    "category": "Sleeping",
+    "keywords": [
+      "knocked out"
+    ]
+  },
+  {
+    "id": "sl7",
+    "text": "(=ω=)..nyaa",
+    "category": "Sleeping",
+    "keywords": [
+      "sleep",
+      "cat"
+    ]
+  },
+  {
+    "id": "sl8",
+    "text": "(u_u)",
+    "category": "Sleeping",
+    "keywords": [
+      "sleep"
+    ]
+  },
+  {
+    "id": "sl9",
+    "text": "(o_ _)o ᶻᶻᶻ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleep"
+    ]
+  },
+  {
+    "id": "sl10",
+    "text": "(￣ρ￣)..zzZ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleep"
+    ]
+  },
+  {
+    "id": "ap1",
+    "text": "m(_ _)m",
+    "category": "Apology",
+    "keywords": [
+      "bow",
+      "sorry"
+    ]
+  },
+  {
+    "id": "ap2",
+    "text": "(シ_ _)シ",
+    "category": "Apology",
+    "keywords": [
+      "bow",
+      "sorry",
+      "worship"
+    ]
+  },
+  {
+    "id": "ap3",
+    "text": "Sorry... (o_ _)o",
+    "category": "Apology",
+    "keywords": [
+      "sorry",
+      "fall"
+    ]
+  },
+  {
+    "id": "ap4",
+    "text": "(人 •͈ᴗ•͈)",
+    "category": "Apology",
+    "keywords": [
+      "please",
+      "sorry"
+    ]
+  },
+  {
+    "id": "ap5",
+    "text": "<(_ _)>",
+    "category": "Apology",
+    "keywords": [
+      "bow"
+    ]
+  },
+  {
+    "id": "ap6",
+    "text": "( ._.)",
+    "category": "Apology",
+    "keywords": [
+      "sorry"
+    ]
+  },
+  {
+    "id": "ap7",
+    "text": "(m;_ _)m",
+    "category": "Apology",
+    "keywords": [
+      "sweat",
+      "sorry"
+    ]
+  },
+  {
+    "id": "ap8",
+    "text": "(≧人≦)",
+    "category": "Apology",
+    "keywords": [
+      "beg"
+    ]
+  },
+  {
+    "id": "ap9",
+    "text": "(ノ_<、)",
+    "category": "Apology",
+    "keywords": [
+      "sorry",
+      "cry"
+    ]
+  },
+  {
+    "id": "ap10",
+    "text": "m(._.)m",
+    "category": "Apology",
+    "keywords": [
+      "sorry",
+      "bow"
+    ]
+  },
+  {
+    "id": "mg1",
+    "text": "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧",
+    "category": "Magic",
+    "keywords": [
+      "magic",
+      "sparkle"
+    ]
+  },
+  {
+    "id": "mg2",
+    "text": "☆*:.｡.o(≧▽≦)o.｡.:*☆",
+    "category": "Magic",
+    "keywords": [
+      "magic",
+      "excited"
+    ]
+  },
+  {
+    "id": "mg3",
+    "text": "╰( ͡° ͜ʖ ͡° )つ──☆*:・ﾟ",
+    "category": "Magic",
+    "keywords": [
+      "magic",
+      "wand"
+    ]
+  },
+  {
+    "id": "mg4",
+    "text": "(∩^o^)⊃━☆",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "mg5",
+    "text": "━☆ﾟ.*･｡ﾟ",
+    "category": "Magic",
+    "keywords": [
+      "sparkle"
+    ]
+  },
+  {
+    "id": "mg6",
+    "text": "(⊃｡•́‿•̀｡)⊃━☆ﾟ.*･｡ﾟ",
+    "category": "Magic",
+    "keywords": [
+      "spell"
+    ]
+  },
+  {
+    "id": "mg7",
+    "text": "(∩｀-´)⊃━☆ﾟ.*･｡ﾟ",
+    "category": "Magic",
+    "keywords": [
+      "attack"
+    ]
+  },
+  {
+    "id": "mg8",
+    "text": "Bibbidi Bobbidi Boo *",
+    "category": "Magic",
+    "keywords": [
+      "spell"
+    ]
+  },
+  {
+    "id": "mg9",
+    "text": "（＊’ー’）ノ☆",
+    "category": "Magic",
+    "keywords": [
+      "wand"
+    ]
+  },
+  {
+    "id": "mg10",
+    "text": "( ・_・)ノ⌒●~*",
+    "category": "Magic",
+    "keywords": [
+      "bomb"
+    ]
+  },
+  {
+    "id": "fd1",
+    "text": "( ・∀・)っ旦",
+    "category": "Food",
+    "keywords": [
+      "tea",
+      "drink"
+    ]
+  },
+  {
+    "id": "fd2",
+    "text": "(*・ω・)っiii",
+    "category": "Food",
+    "keywords": [
+      "cake",
+      "birthday"
+    ]
+  },
+  {
+    "id": "fd3",
+    "text": "(っˆڡˆς)",
+    "category": "Food",
+    "keywords": [
+      "yummy"
+    ]
+  },
+  {
+    "id": "fd4",
+    "text": "( ˘▽˘)っ♨",
+    "category": "Food",
+    "keywords": [
+      "hot food",
+      "tea"
+    ]
+  },
+  {
+    "id": "fd5",
+    "text": "(o˘◡˘o) ┌iii┐",
+    "category": "Food",
+    "keywords": [
+      "cake"
+    ]
+  },
+  {
+    "id": "fd6",
+    "text": "( ・ω・)o━<",
+    "category": "Food",
+    "keywords": [
+      "skewer"
+    ]
+  },
+  {
+    "id": "fd7",
+    "text": "♨(⋆‿⋆)",
+    "category": "Food",
+    "keywords": [
+      "hot"
+    ]
+  },
+  {
+    "id": "fd8",
+    "text": "(っ˘ڡ˘ς)",
+    "category": "Food",
+    "keywords": [
+      "yummy"
+    ]
+  },
+  {
+    "id": "fd9",
+    "text": "Ψ( `∀` )Ψ",
+    "category": "Food",
+    "keywords": [
+      "eat"
+    ]
+  },
+  {
+    "id": "fd10",
+    "text": "( ˘▽˘)っ(⋆‿⋆)",
+    "category": "Food",
+    "keywords": [
+      "share"
+    ]
+  },
+  {
+    "id": "st1",
+    "text": "φ(・ω・｀ )",
+    "category": "Study",
+    "keywords": [
+      "writing"
+    ]
+  },
+  {
+    "id": "st2",
+    "text": "...φ(︶▽︶)φ...",
+    "category": "Study",
+    "keywords": [
+      "writing",
+      "happy"
+    ]
+  },
+  {
+    "id": "st3",
+    "text": "〆(・∀・｀)",
+    "category": "Study",
+    "keywords": [
+      "writing"
+    ]
+  },
+  {
+    "id": "st4",
+    "text": "✎ (❁ᴗ͈ˬᴗ͈) ༉‧ ♡*.✧",
+    "category": "Study",
+    "keywords": [
+      "writing",
+      "cute"
+    ]
+  },
+  {
+    "id": "st5",
+    "text": "___〆(・∀・)",
+    "category": "Study",
+    "keywords": [
+      "writing"
+    ]
+  },
+  {
+    "id": "st6",
+    "text": "(￣ー￣)φ__",
+    "category": "Study",
+    "keywords": [
+      "writing"
+    ]
+  },
+  {
+    "id": "st7",
+    "text": "φ(￣ー￣ )ノ",
+    "category": "Study",
+    "keywords": [
+      "writing"
+    ]
+  },
+  {
+    "id": "st8",
+    "text": "( ˙-˙ )✎",
+    "category": "Study",
+    "keywords": [
+      "writing"
+    ]
+  },
+  {
+    "id": "st9",
+    "text": "...φ(。。*)",
+    "category": "Study",
+    "keywords": [
+      "taking notes"
+    ]
+  },
+  {
+    "id": "st10",
+    "text": "φ(◎◎ヘ)",
+    "category": "Study",
+    "keywords": [
+      "studying hard"
+    ]
+  },
+  {
+    "id": "mu1",
+    "text": "♪♪♪ ヽ(ˇ∀ˇ )ゞ",
+    "category": "Music",
+    "keywords": [
+      "dancing",
+      "music"
+    ]
+  },
+  {
+    "id": "mu2",
+    "text": "♬♫♪◖(●◡●)◗♪♫♬",
+    "category": "Music",
+    "keywords": [
+      "headphones",
+      "music"
+    ]
+  },
+  {
+    "id": "mu3",
+    "text": "♪(┌・。・)┌",
+    "category": "Music",
+    "keywords": [
+      "dancing"
+    ]
+  },
+  {
+    "id": "mu4",
+    "text": "(^_^♪)",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "mu5",
+    "text": "v(⌒o⌒)v♪",
+    "category": "Music",
+    "keywords": [
+      "peace",
+      "music"
+    ]
+  },
+  {
+    "id": "mu6",
+    "text": "♪└|∵|┐♪",
+    "category": "Music",
+    "keywords": [
+      "dancing"
+    ]
+  },
+  {
+    "id": "mu7",
+    "text": "(~˘▽˘)~",
+    "category": "Music",
+    "keywords": [
+      "vibe"
+    ]
+  },
+  {
+    "id": "mu8",
+    "text": "♪♪(o*゜∇゜)o～♪♪",
+    "category": "Music",
+    "keywords": [
+      "singing"
+    ]
+  },
+  {
+    "id": "mu9",
+    "text": "( *´・ω)/(；д； )",
+    "category": "Music",
+    "keywords": [
+      "comfort",
+      "music?"
+    ]
+  },
+  {
+    "id": "mu10",
+    "text": "♪ヽ( ⌒o⌒)人(⌒-⌒ )v ♪",
+    "category": "Music",
+    "keywords": [
+      "party"
+    ]
+  },
+  {
+    "id": "fr1",
+    "text": "ヽ( ⌒o⌒)人(⌒-⌒ )ﾉ",
+    "category": "Friends",
+    "keywords": [
+      "high five"
+    ]
+  },
+  {
+    "id": "fr2",
+    "text": "(*・∀・)爻(・∀・*)",
+    "category": "Friends",
+    "keywords": [
+      "high five"
+    ]
+  },
+  {
+    "id": "fr3",
+    "text": "╰( ͡° ͜ʖ ͡° )つ──☆*:・ﾟ",
+    "category": "Friends",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "fr4",
+    "text": "(=´∀`)人(´∀`=)",
+    "category": "Friends",
+    "keywords": [
+      "high five"
+    ]
+  },
+  {
+    "id": "fr5",
+    "text": "(・_・)ノ (・_・)ノ",
+    "category": "Friends",
+    "keywords": [
+      "hello"
+    ]
+  },
+  {
+    "id": "fr6",
+    "text": "( ´∀｀)人(´∀｀ )",
+    "category": "Friends",
+    "keywords": [
+      "high five"
+    ]
+  },
+  {
+    "id": "fr7",
+    "text": "(*^o^)人(^o^*)",
+    "category": "Friends",
+    "keywords": [
+      "high five"
+    ]
+  },
+  {
+    "id": "fr8",
+    "text": "( ｡･_･｡)人(｡･_･｡ )",
+    "category": "Friends",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "fr9",
+    "text": "ヽ(∀° )人( °∀)ノ",
+    "category": "Friends",
+    "keywords": [
+      "high five"
+    ]
+  },
+  {
+    "id": "fr10",
+    "text": "(((￣(￣(￣▽￣)￣)￣)))",
+    "category": "Friends",
+    "keywords": [
+      "crowd"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_0",
+    "text": "(* ^ ω ^)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_1",
+    "text": "(´ ∀ ` *)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_2",
+    "text": "٩(◕‿◕｡)۶",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_3",
+    "text": "。.:☆*:･'(*⌒―⌒*)))",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_4",
+    "text": "(´｡• ω •｡`)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_5",
+    "text": "｀;:゛;｀;･(°ε° )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_6",
+    "text": "(＠＾◡＾)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_7",
+    "text": "(^人^)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_8",
+    "text": "(o´▽`o)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_9",
+    "text": "(*´▽`*)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_10",
+    "text": "｡ﾟ( ﾟ^∀^ﾟ)ﾟ｡",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_11",
+    "text": "( ´ ω ` )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_12",
+    "text": "(((o(*°▽°*)o)))",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_13",
+    "text": "(o´∀`o)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_14",
+    "text": "(＾▽＾)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_15",
+    "text": "∑d(°∀°d)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_16",
+    "text": "(─‿‿─)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_17",
+    "text": "(*^‿^*)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_18",
+    "text": "(☆▽☆)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_19",
+    "text": "(⌒‿⌒)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_20",
+    "text": "＼(≧▽≦)／",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_21",
+    "text": "ヽ(o＾▽＾o)ノ",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_22",
+    "text": "☆ ～('▽^人)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_23",
+    "text": "(*°▽°*)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_24",
+    "text": "ヽ(*⌒▽⌒*)ﾉ",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_25",
+    "text": "(￣▽￣)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_26",
+    "text": "o(≧▽≦)o",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_27",
+    "text": "(*¯︶¯*)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_28",
+    "text": "＼(＾▽＾)／",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_29",
+    "text": "٩(◕‿◕)۶",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_30",
+    "text": "(o˘◡˘o)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_31",
+    "text": "\\(★ω★)/",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_32",
+    "text": "\\(^ヮ^)/",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_33",
+    "text": "(〃＾▽＾〃)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_34",
+    "text": "(╯✧▽✧)╯",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_35",
+    "text": "o( ❛ᴗ❛ )o",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_36",
+    "text": "｡ﾟ(TヮT)ﾟ｡",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_37",
+    "text": "( ‾́ ◡ ‾́ )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_38",
+    "text": "(b ᵔ▽ᵔ)b",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_39",
+    "text": "(๑˃ᴗ˂)ﻭ",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_40",
+    "text": "(๑˘︶˘๑)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_41",
+    "text": "(*꒦ິ꒳꒦ີ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_42",
+    "text": "°˖✧◝(⁰▿⁰)◜✧˖°",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_43",
+    "text": "(„• ֊ •„)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_44",
+    "text": "(.❛ ᴗ ❛.)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_45",
+    "text": "(⁀ᗢ⁀)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_46",
+    "text": "(¬‿¬ )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_47",
+    "text": "(*￣▽￣)b",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_48",
+    "text": "( ˙▿˙ )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_49",
+    "text": "(¯▿¯)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_50",
+    "text": "( ◕▿◕ )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_51",
+    "text": "＼(٥⁀▽⁀ )／",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_52",
+    "text": "(„• ᴗ •„)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_53",
+    "text": "(ᵔ◡ᵔ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_54",
+    "text": "( ´ ▿ ` )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_55",
+    "text": "(๑>◡<๑)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_56",
+    "text": "( = ⩊ = )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_57",
+    "text": "( ´ ꒳ ` )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_58",
+    "text": "⸜( ´ ꒳ ` )⸝",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_59",
+    "text": "⸜(⸝⸝⸝´꒳`⸝⸝⸝)⸝",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_60",
+    "text": "⸜(*ˊᗜˋ*)⸝",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_61",
+    "text": "⸜( *ˊᵕˋ* )⸝",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_62",
+    "text": "(>⩊<)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_63",
+    "text": "(ᗒ⩊ᗕ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_64",
+    "text": "(ᵔ⩊ᵔ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_65",
+    "text": "( ᵔ ⩊ ᵔ )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_66",
+    "text": "(•⩊•)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_67",
+    "text": "( • ⩊ • )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_68",
+    "text": "(*^^*)♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_69",
+    "text": "☆⌒ヽ(*'､^*)chu",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_70",
+    "text": "(￣ε￣＠)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_71",
+    "text": "( ´ ∀ `)ノ～ ♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_72",
+    "text": "(─‿‿─)♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_73",
+    "text": "(´ ω `♡)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_74",
+    "text": "♡( ◡‿◡ )",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_75",
+    "text": "(◕‿◕)♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_76",
+    "text": "(/▽＼*)｡o○♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_77",
+    "text": "(♡°▽°♡)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_78",
+    "text": "♡(｡- ω -)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_79",
+    "text": "♡ ～('▽^人)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_80",
+    "text": "(´• ω •`) ♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_81",
+    "text": "(´ ε ` )♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_82",
+    "text": "(´｡• ω •｡`) ♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_83",
+    "text": "( ´ ▽ ` ).｡ｏ♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_84",
+    "text": "╰(*´︶`*)╯♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_85",
+    "text": "(*˘︶˘*).｡.:*♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_86",
+    "text": "♡＼(￣▽￣)／♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_87",
+    "text": "(≧◡≦) ♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_88",
+    "text": "(⌒▽⌒)♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_89",
+    "text": "(*¯ ³¯*)♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_90",
+    "text": "(っ˘з(˘⌣˘ ) ♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_91",
+    "text": "♡ (˘▽˘>ԅ( ˘⌣˘)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_92",
+    "text": "(/^-^(^ ^*)/ ♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_93",
+    "text": "٩(♡ε♡)۶",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_94",
+    "text": "σ(≧ε≦σ) ♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_95",
+    "text": "♡ (⇀ 3 ↼)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_96",
+    "text": "♡ (￣З￣)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_97",
+    "text": "(˘∀˘)/(μ‿μ) ❤",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_98",
+    "text": "❤ (ɔˆз(ˆ⌣ˆc)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_99",
+    "text": "(´♡‿♡`)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_100",
+    "text": "(´,,•ω•,,)♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_101",
+    "text": "(´꒳`)♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_102",
+    "text": "♡(>ᴗ•)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_103",
+    "text": "(❤⩊❤)[=_=](☆ε☆)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_104",
+    "text": "( ´ ꒳ ` ) ♡",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_105",
+    "text": "(˘˘ ♡)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_106",
+    "text": "(´ ˘ `).｡oO (♡)",
+    "category": "Love",
+    "keywords": [
+      "love"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_107",
+    "text": "(⌒_⌒;)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_108",
+    "text": "(o^ ^o)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_109",
+    "text": "(*/。＼)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_110",
+    "text": "(o-_-o)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_111",
+    "text": "(ᵔ.ᵔ)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_112",
+    "text": "(ノ*°▽°*)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_113",
+    "text": "(*^.^*)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_114",
+    "text": "(*ﾉ▽ﾉ)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_115",
+    "text": "(￣▽￣*)ゞ",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_116",
+    "text": "(*/▽＼*)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_117",
+    "text": "(„ಡωಡ„)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_118",
+    "text": "(ง ื▿ ื)ว",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_119",
+    "text": "( 〃▽〃)",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_120",
+    "text": "(/▿＼ )",
+    "category": "Shy",
+    "keywords": [
+      "shy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_121",
+    "text": "(ノ_<。)ヾ(´ ▽ ` )",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_122",
+    "text": "｡･ﾟ･(ﾉД`)ヽ(￣ω￣ )",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_123",
+    "text": "ρ(- ω -、)ヾ(￣ω￣; )",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_124",
+    "text": "ヽ(￣ω￣(。。 )ゝ",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_125",
+    "text": "(*´ I `)ﾉﾟ(ﾉД｀ﾟ)ﾟ｡",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_126",
+    "text": "ヽ(~_~(・_・ )ゝ",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_127",
+    "text": "(ﾉ_；)ヾ(´ ∀ ` )",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_128",
+    "text": "(; ω ; )ヾ(´∀`* )",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_129",
+    "text": "(*´ー)ﾉ(ノд`)",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_130",
+    "text": "(´-ω-`( _ _ )",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_131",
+    "text": "(ｏ・_・)ノ”(ノ_<、)",
+    "category": "Sympathy",
+    "keywords": [
+      "sympathy"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_132",
+    "text": "(；⌣̀_⌣́)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_133",
+    "text": "☆ｏ(＞＜；)○",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_134",
+    "text": "(￣ ￣|||)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_135",
+    "text": "(；￣Д￣)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_136",
+    "text": "(￣□￣」)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_137",
+    "text": "(＃￣0￣)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228510_138",
+    "text": "(＃￣ω￣)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_139",
+    "text": "(＞ｍ＜)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_140",
+    "text": "(」°ロ°)」",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_141",
+    "text": "(〃＞＿＜;〃)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_142",
+    "text": "(＾＾＃)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_143",
+    "text": "(︶︹︺)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_144",
+    "text": "<(￣ ﹌ ￣)>",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_145",
+    "text": "(￣︿￣)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_146",
+    "text": "(＞﹏＜)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_147",
+    "text": "(--_--)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_148",
+    "text": "ヾ( ￣O￣)ツ",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_149",
+    "text": "(⇀‸↼‶)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_150",
+    "text": "o(>< )o",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_151",
+    "text": "(」＞＜)」",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_152",
+    "text": "(ᗒᗣᗕ)՞",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_153",
+    "text": "(눈_눈)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_154",
+    "text": "(`皿´＃)",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_155",
+    "text": "( ` ω ´ )",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_156",
+    "text": "ヽ( `д´*)ノ",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_157",
+    "text": "(・`ω´・)",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_158",
+    "text": "(`ー´)",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_159",
+    "text": "ヽ(`⌒´メ)ノ",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_160",
+    "text": "凸(`△´＃)",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_161",
+    "text": "( `ε´ )",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_162",
+    "text": "ψ( ` ∇ ´ )ψ",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_163",
+    "text": "ヾ(`ヘ´)ﾉﾞ",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_164",
+    "text": "ヽ(‵﹏´)ノ",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_165",
+    "text": "(ﾒ` ﾛ ´)",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_166",
+    "text": "┌∩┐(◣_◢)┌∩┐",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_167",
+    "text": "凸( ` ﾛ ´ )凸",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_168",
+    "text": "Σ(▼□▼メ)",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_169",
+    "text": "ψ(▼へ▼メ)～→",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_170",
+    "text": "(ノ°益°)ノ",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_171",
+    "text": "(‡▼益▼)",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_172",
+    "text": "(҂` ﾛ ´)凸",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_173",
+    "text": "((╬◣﹏◢))",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_174",
+    "text": "٩(╬ʘ益ʘ╬)۶",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_175",
+    "text": "＼＼٩(๑`^´๑)۶／／",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_176",
+    "text": "(凸ಠ益ಠ)凸",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_177",
+    "text": "↑_(ΦwΦ)Ψ",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_178",
+    "text": "←~(Ψ▼ｰ▼)∈",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_179",
+    "text": "୧((#Φ益Φ#))୨",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_180",
+    "text": "٩(ఠ益ఠ)۶",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_181",
+    "text": "(ﾉಥ益ಥ)ﾉ",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_182",
+    "text": "(≖､≖╬)",
+    "category": "Angry",
+    "keywords": [
+      "angry"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_183",
+    "text": "(ノ_<。)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_184",
+    "text": "(-_-)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_185",
+    "text": ".･ﾟﾟ･(／ω＼)･ﾟﾟ･.",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_186",
+    "text": "(μ_μ)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_187",
+    "text": "(ﾉД`)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_188",
+    "text": "(-ω-、)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_189",
+    "text": "。゜゜(´Ｏ`) ゜゜。",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_190",
+    "text": "( ; ω ; )",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_191",
+    "text": "(｡╯︵╰｡)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_192",
+    "text": "｡･ﾟﾟ*(>д<)*ﾟﾟ･｡",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_193",
+    "text": "( ﾟ，_ゝ｀)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_194",
+    "text": "(╯︵╰,)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_195",
+    "text": "｡･ﾟ(ﾟ><ﾟ)ﾟ･｡",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_196",
+    "text": "(╯_╰)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_197",
+    "text": ".｡･ﾟﾟ･(＞_＜)･ﾟﾟ･｡.",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_198",
+    "text": "(／ˍ・、)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_199",
+    "text": "(╥﹏╥)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_200",
+    "text": "｡ﾟ(｡ﾉωヽ｡)ﾟ｡",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_201",
+    "text": "(つω`｡)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_202",
+    "text": "(｡T ω T｡)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_203",
+    "text": "(ﾉω･､)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_204",
+    "text": "･ﾟ･(｡>ω<｡)･ﾟ･",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_205",
+    "text": "(っ˘̩╭╮˘̩)っ",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_206",
+    "text": "｡ﾟ･ (>﹏<) ･ﾟ｡",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_207",
+    "text": "o(〒﹏〒)o",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_208",
+    "text": "(ಡ‸ಡ)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_209",
+    "text": "~(>_<~)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_210",
+    "text": "☆⌒(> _ <)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_211",
+    "text": "☆⌒(>。<)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_212",
+    "text": "(☆_@)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_213",
+    "text": "(×_×)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_214",
+    "text": "(x_x)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_215",
+    "text": "(×_×)⌒☆",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_216",
+    "text": "(x_x)⌒☆",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_217",
+    "text": "(×﹏×)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_218",
+    "text": "☆(＃××)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_219",
+    "text": "(＋_＋)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_220",
+    "text": "[ ± _ ± ]",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_221",
+    "text": "٩(× ×)۶",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_222",
+    "text": "_:(´ཀ`」 ∠):_",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_223",
+    "text": "(ﾒ﹏ﾒ)",
+    "category": "Sad",
+    "keywords": [
+      "sad"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_224",
+    "text": "(ノωヽ)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_225",
+    "text": "(／。＼)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_226",
+    "text": "(ﾉ_ヽ)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_227",
+    "text": "..・ヾ(。＞＜)シ",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_228",
+    "text": "(″ロ゛)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_229",
+    "text": "(;;;*_*)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_230",
+    "text": "(・人・)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_231",
+    "text": "＼(〇_ｏ)／",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_232",
+    "text": "(/ω＼)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_233",
+    "text": "(/_＼)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_234",
+    "text": "〜(＞＜)〜",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_235",
+    "text": "Σ(°△°|||)︴",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_236",
+    "text": "(((＞＜)))",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_237",
+    "text": "{{ (>_<) }}",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_238",
+    "text": "＼(º □ º l|l)/",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_239",
+    "text": "〣( ºΔº )〣",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_240",
+    "text": "▓▒░(°◡°)░▒▓",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_241",
+    "text": "(°□°;)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_242",
+    "text": "Σ(°ロ°)!!!",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_243",
+    "text": "ヽ(ー_ー )ノ",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_244",
+    "text": "ヽ(´ー` )┌",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_245",
+    "text": "┐(‘～` )┌",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_246",
+    "text": "ヽ(　￣д￣)ノ",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_247",
+    "text": "ヽ(￣～￣　)ノ",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_248",
+    "text": "╮(￣_￣)╭",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_249",
+    "text": "ヽ(ˇヘˇ)ノ",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_250",
+    "text": "┐(￣～￣)┌",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_251",
+    "text": "╮(￣～￣)╭",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_252",
+    "text": "┐( ´ д ` )┌",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_253",
+    "text": "╮(︶︿︶)╭",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_254",
+    "text": "┐(￣∀￣)┌",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_255",
+    "text": "┐( ˘ ､ ˘ )┌",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_256",
+    "text": "╮(︶▽︶)╭",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_257",
+    "text": "╮( ˘ ､ ˘ )╭",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_258",
+    "text": "┐( ˘_˘ )┌",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_259",
+    "text": "╮( ˘_˘ )╭",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_260",
+    "text": "┐(￣ヮ￣)┌",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_261",
+    "text": "ᕕ( ᐛ )ᕗ",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_262",
+    "text": "┐(シ)┌",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_263",
+    "text": "(-_-;)・・・",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_264",
+    "text": "┐('～`;)┌",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_265",
+    "text": "(〃￣ω￣〃ゞ",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_266",
+    "text": "┐(￣ヘ￣;)┌",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_267",
+    "text": "(￣_￣)・・・",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_268",
+    "text": "(¯ . ¯;)",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_269",
+    "text": "(＠_＠)",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_270",
+    "text": "(・・;)ゞ",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_271",
+    "text": "(•ิ_•ิ)?",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_272",
+    "text": "(◎ ◎)ゞ",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_273",
+    "text": "(ーー;)",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_274",
+    "text": "ლ(ಠ_ಠ ლ)",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_275",
+    "text": "ლ(¯ロ¯\"ლ)",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_276",
+    "text": "(¯ . ¯٥)",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_277",
+    "text": "(¯  ¯٥)",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_278",
+    "text": "(・・?)",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_279",
+    "text": "(??_??)",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_280",
+    "text": "(⊙.⊙)?",
+    "category": "Confused",
+    "keywords": [
+      "confused"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_281",
+    "text": "(￢_￢)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_282",
+    "text": "(→_→)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_283",
+    "text": "(￢ ￢)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_284",
+    "text": "(¬_¬ )",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_285",
+    "text": "(←_←)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_286",
+    "text": "(¬ ¬ )",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_287",
+    "text": "(↼_↼)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_288",
+    "text": "(⇀_⇀)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_289",
+    "text": "(ᓀ ᓀ)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_290",
+    "text": "(„¬ᴗ¬„)",
+    "category": "Skeptical",
+    "keywords": [
+      "skeptical"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_291",
+    "text": "Σ(O_O)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_292",
+    "text": "(O_O;)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_293",
+    "text": "(°ロ°) !",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_294",
+    "text": "(□_□)",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_295",
+    "text": "( : ౦ ‸ ౦ : )",
+    "category": "Surprised",
+    "keywords": [
+      "surprised"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_296",
+    "text": "(￣▽￣)ノ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_297",
+    "text": "(°▽°)/",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_298",
+    "text": "( ´ ∀ ` )ﾉ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_299",
+    "text": "(＠´ー`)ﾉﾞ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_300",
+    "text": "(´• ω •`)ﾉ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_301",
+    "text": "( ° ∀ ° )ﾉﾞ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_302",
+    "text": "ヾ(*'▽'*)",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_303",
+    "text": "＼(⌒▽⌒)",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_304",
+    "text": "(^０^)ノ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_305",
+    "text": "~ヾ(・ω・)",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_306",
+    "text": "ヾ(・ω・*)",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_307",
+    "text": "(*°ｰ°)ﾉ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_308",
+    "text": "(o´ω`o)ﾉ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_309",
+    "text": "( ´ ▽ ` )/",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_310",
+    "text": "(￣ω￣)/",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_311",
+    "text": "( ´ ω ` )ノﾞ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_312",
+    "text": "(⌒ω⌒)ﾉ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_313",
+    "text": "(o^ ^o)/",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_314",
+    "text": "(✧∀✧)/",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_315",
+    "text": "(o´▽`o)ﾉ",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_316",
+    "text": "(￣▽￣)/",
+    "category": "Greetings",
+    "keywords": [
+      "greetings"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_317",
+    "text": "(づ￣ ³￣)づ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_318",
+    "text": "(つ≧▽≦)つ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_319",
+    "text": "(つ✧ω✧)つ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_320",
+    "text": "(づ ◕‿◕ )づ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_321",
+    "text": "(⊃｡•́‿•̀｡)⊃",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_322",
+    "text": "(っಠ‿ಠ)っ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_323",
+    "text": "⊂(´• ω •`⊂)",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_324",
+    "text": "⊂(･ω･*⊂)",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_325",
+    "text": "⊂(￣▽￣)⊃",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_326",
+    "text": "⊂( ´ ▽ ` )⊃",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_327",
+    "text": "( ~*-*)~",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_328",
+    "text": "(ノ= ⩊ = )ノ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_329",
+    "text": "(っ ᵔ◡ᵔ)っ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_330",
+    "text": "(っ╹ᆺ╹)っ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_331",
+    "text": "(^_~)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_332",
+    "text": "( ﾟｏ⌒)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_333",
+    "text": "(^_-)≡☆",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_334",
+    "text": "(^ω~)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_335",
+    "text": "(>ω^)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_336",
+    "text": "(~人^)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_337",
+    "text": "(^_-)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_338",
+    "text": "( -_・)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_339",
+    "text": "(^_<)〜☆",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_340",
+    "text": "(^人<)〜☆",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_341",
+    "text": "☆⌒(≧▽​° )",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_342",
+    "text": "☆⌒(ゝ。∂)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_343",
+    "text": "(^_<)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_344",
+    "text": "(^_−)☆",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_345",
+    "text": "(･ω<)☆",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_346",
+    "text": "(^.~)☆",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_347",
+    "text": "(^.~)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_348",
+    "text": "(｡•̀ᴗ-)✧",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_349",
+    "text": "(>ᴗ•)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_350",
+    "text": "☆(>ᴗ•)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_351",
+    "text": "m(. .)m",
+    "category": "Apology",
+    "keywords": [
+      "apology"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_352",
+    "text": "人(_ _*)",
+    "category": "Apology",
+    "keywords": [
+      "apology"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_353",
+    "text": "(*_ _)人",
+    "category": "Apology",
+    "keywords": [
+      "apology"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_354",
+    "text": "m(_ _;m)",
+    "category": "Apology",
+    "keywords": [
+      "apology"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_355",
+    "text": "(シ. .)シ",
+    "category": "Apology",
+    "keywords": [
+      "apology"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_356",
+    "text": "(*￣ii￣)",
+    "category": "action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_357",
+    "text": "(￣ﾊ￣*)",
+    "category": "action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_358",
+    "text": "\\(￣ﾊ￣)",
+    "category": "action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_359",
+    "text": "(＾་།＾)",
+    "category": "action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_360",
+    "text": "(＾〃＾)",
+    "category": "action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_361",
+    "text": "(￣ ¨ヽ￣)",
+    "category": "action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_362",
+    "text": "(￣ ;￣)",
+    "category": "action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_363",
+    "text": "(￣ ;;￣)",
+    "category": "action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_364",
+    "text": "|･ω･)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_365",
+    "text": "ﾍ(･_|",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_366",
+    "text": "|ω･)ﾉ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_367",
+    "text": "ヾ(･|",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_368",
+    "text": "|д･)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_369",
+    "text": "|_￣))",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_370",
+    "text": "|▽//)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_371",
+    "text": "┬┴┬┴┤(･_├┬┴┬┴",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_372",
+    "text": "┬┴┬┴┤･ω･)ﾉ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_373",
+    "text": "┬┴┬┴┤( ͡° ͜ʖ├┬┴┬┴",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_374",
+    "text": "|_・)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_375",
+    "text": "|･д･)ﾉ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_376",
+    "text": "|ʘ‿ʘ)╯",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_377",
+    "text": "__φ(．．)",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_378",
+    "text": "( ￣ー￣)φ__",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_379",
+    "text": "__φ(。。)",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_380",
+    "text": "__φ(．．;)",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_381",
+    "text": "ヾ( `ー´)シφ__",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_382",
+    "text": "__〆(￣ー￣ )",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_383",
+    "text": "....φ(・∀・*)",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_384",
+    "text": "( ^▽^)ψ__",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_385",
+    "text": "....φ(︶▽︶)φ....",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_386",
+    "text": "( . .)φ__",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_387",
+    "text": "__φ(◎◎ヘ)",
+    "category": "Study",
+    "keywords": [
+      "study"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_388",
+    "text": "☆ﾐ(o*･ω･)ﾉ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_389",
+    "text": "C= C= C= C= C=┌(;・ω・)┘",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_390",
+    "text": "─=≡Σ((( つ＞＜)つ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_391",
+    "text": "ε=ε=ε=ε=┌(;￣▽￣)┘",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_392",
+    "text": "C= C= C= C=┌( `ー´)┘",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_393",
+    "text": "ε===(っ≧ω≦)っ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_394",
+    "text": "ヽ(￣д￣;)ノ=3=3=3",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_395",
+    "text": "。。。ミヽ(。＞＜)ノ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_396",
+    "text": "(∪｡∪)｡｡｡zzZ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleeping"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_397",
+    "text": "(－ω－) zzZ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleeping"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_398",
+    "text": "(￣o￣) zzZZzzZZ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleeping"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_399",
+    "text": "(( _ _ ))..zzzZZ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleeping"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_400",
+    "text": "(￣ρ￣)..zzZZ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleeping"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_401",
+    "text": "(－.－)...zzz",
+    "category": "Sleeping",
+    "keywords": [
+      "sleeping"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_402",
+    "text": "(x . x) ~~zzZ",
+    "category": "Sleeping",
+    "keywords": [
+      "sleeping"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_403",
+    "text": "( =ω=)..nyaa",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_404",
+    "text": "(= ; ｪ ; =)",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228511_405",
+    "text": "(=`ω´=)",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_406",
+    "text": "(=^‥^=)",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_407",
+    "text": "( =ノωヽ=)",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_408",
+    "text": "(=⌒‿‿⌒=)",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_409",
+    "text": "ヾ(=`ω´=)ノ”",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_410",
+    "text": "(＾• ω •＾)",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_411",
+    "text": "(/ =ω=)/",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_412",
+    "text": "ฅ(•ㅅ•❀)ฅ",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_413",
+    "text": "ฅ(• ɪ •)ฅ",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_414",
+    "text": "ଲ(ⓛ ω ⓛ)ଲ",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_415",
+    "text": "( =ω= )",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_416",
+    "text": "(^˵◕ω◕˵^)",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_417",
+    "text": "(^◔ᴥ◔^)",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_418",
+    "text": "(^◕ᴥ◕^)",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_419",
+    "text": "ต(=ω=)ต",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_420",
+    "text": "( Φ ω Φ )",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_421",
+    "text": "ฅ(^◕ᴥ◕^)ฅ",
+    "category": "Cats",
+    "keywords": [
+      "cats"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_422",
+    "text": "( ´(ｴ)ˋ )",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_423",
+    "text": "(*￣(ｴ)￣*)",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_424",
+    "text": "ヽ(￣(ｴ)￣)ﾉ",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_425",
+    "text": "(／￣(ｴ)￣)／",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_426",
+    "text": "(￣(ｴ)￣)",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_427",
+    "text": "ヽ( ˋ(ｴ)´ )ﾉ",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_428",
+    "text": "⊂(￣(ｴ)￣)⊃",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_429",
+    "text": "(／(ｴ)＼)",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_430",
+    "text": "⊂(´(ェ)ˋ)⊃",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_431",
+    "text": "(/-(ｴ)-＼)",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_432",
+    "text": "(/°(ｴ)°)/",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_433",
+    "text": "ʕ •ᴥ• ʔ",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_434",
+    "text": "ʕ •̀ o •́ ʔ",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_435",
+    "text": "ʕಠᴥಠʔ",
+    "category": "Bears",
+    "keywords": [
+      "bears"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_436",
+    "text": "∪＾ェ＾∪",
+    "category": "Dogs",
+    "keywords": [
+      "dogs"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_437",
+    "text": "∪･ω･∪",
+    "category": "Dogs",
+    "keywords": [
+      "dogs"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_438",
+    "text": "∪￣-￣∪",
+    "category": "Dogs",
+    "keywords": [
+      "dogs"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_439",
+    "text": "∪･ｪ･∪",
+    "category": "Dogs",
+    "keywords": [
+      "dogs"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_440",
+    "text": "Ｕ^皿^Ｕ",
+    "category": "Dogs",
+    "keywords": [
+      "dogs"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_441",
+    "text": "ＵＴｪＴＵ",
+    "category": "Dogs",
+    "keywords": [
+      "dogs"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_442",
+    "text": "／(^ × ^)＼",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbits"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_443",
+    "text": "／(˃ᆺ˂)＼",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbits"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_444",
+    "text": "૮ ˶ᵔ ᵕ ᵔ˶ ა",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbits"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_445",
+    "text": "૮₍ ˶• ༝ •˶ ₎ა",
+    "category": "Rabbits",
+    "keywords": [
+      "rabbits"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_446",
+    "text": "( ´(00)ˋ )",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_447",
+    "text": "(￣(ω)￣)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_448",
+    "text": "ヽ( ˋ(00)´ )ノ",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_449",
+    "text": "( ´(oo)ˋ )",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_450",
+    "text": "＼(￣(oo)￣)／",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_451",
+    "text": "｡ﾟ(ﾟ´(00)`ﾟ)ﾟ｡",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_452",
+    "text": "(￣(00)￣)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_453",
+    "text": "(ˆ(oo)ˆ)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_454",
+    "text": "(￣Θ￣)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_455",
+    "text": "(`･Θ･´)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_456",
+    "text": "( ˋ Θ ´ )",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_457",
+    "text": "(◉Θ◉)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_458",
+    "text": "＼( ˋ Θ ´ )／",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_459",
+    "text": "(･θ･)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_460",
+    "text": "(・Θ・)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_461",
+    "text": "ヾ(￣◇￣)ノ〃",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_462",
+    "text": "(･Θ･)",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_463",
+    "text": "(°)#))<<",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_464",
+    "text": "<・ )))><<",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_465",
+    "text": "ζ°)))彡",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_466",
+    "text": ">°))))彡",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_467",
+    "text": "(°))<<",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_468",
+    "text": ">^)))<～～",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_469",
+    "text": "≧( ° ° )≦",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_470",
+    "text": "/╲/\\╭(ఠఠ益ఠఠ)╮/\\╱\\",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_471",
+    "text": "/╲/\\╭(ರರ⌓ರರ)╮/\\╱\\",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_472",
+    "text": "/╲/\\╭༼ ººل͟ºº ༽╮/\\╱\\",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_473",
+    "text": "/╲/\\╭( ͡°͡° ͜ʖ ͡°͡°)╮/\\╱\\",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_474",
+    "text": "/╲/\\╭[ ᴼᴼ ౪ ᴼᴼ]╮/\\╱\\",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_475",
+    "text": "/╲/\\( •̀ ω •́ )/\\╱\\",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_476",
+    "text": "/╲/\\╭[☉﹏☉]╮/\\╱\\",
+    "category": "Cute",
+    "keywords": [
+      "cute"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_477",
+    "text": "ヾ(・ω・)メ(・ω・)ノ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_478",
+    "text": "(*^ω^)八(⌒▽⌒)八(-‿‿- )ヽ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_479",
+    "text": "＼(＾∀＾)メ(＾∀＾)ノ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_480",
+    "text": "ヾ(￣ー￣(≧ω≦*)ゝ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_481",
+    "text": "ヽ( ⌒ω⌒)人(=^‥^= )ﾉ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_482",
+    "text": "ヽ(≧◡≦)八(o^ ^o)ノ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_483",
+    "text": "｡*:☆(・ω・人・ω・)｡:゜☆｡",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_484",
+    "text": "o(^^o)(o^^o)(o^^o)(o^^)o",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_485",
+    "text": "(°(°ω(°ω°(☆ω☆)°ω°)ω°)°)",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_486",
+    "text": "ヾ(・ω・`)ノヾ(´・ω・)ノ゛",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_487",
+    "text": "Ψ( `∀)(∀´ )Ψ",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_488",
+    "text": "(っ˘▽˘)(˘▽˘)˘▽˘ς)",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_489",
+    "text": "(((*°▽°*)八(*°▽°*)))",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_490",
+    "text": "☆ヾ(*´・∀・)ﾉヾ(・∀・`*)ﾉ☆",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_491",
+    "text": "(*＾ω＾)人(＾ω＾*)",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_492",
+    "text": "٩(๑･ิᴗ･ิ)۶٩(･ิᴗ･ิ๑)۶",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_493",
+    "text": "(☞°ヮ°)☞ ☜(°ヮ°☜)",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_494",
+    "text": "＼(▽￣ \\ (￣▽￣) / ￣▽)／",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_495",
+    "text": "\\( ˙▿˙ )/\\( ˙▿˙ )/",
+    "category": "Friends",
+    "keywords": [
+      "friends"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_496",
+    "text": "ヽ( ･∀･)ﾉ_θ彡☆Σ(ノ `Д´)ノ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_497",
+    "text": "(*´∇`)┌θ☆(ﾉ>_<)ﾉ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_498",
+    "text": "( ￣ω￣)ノﾞ⌒☆ﾐ(o _ _)o",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_499",
+    "text": "(*`0´)θ☆(メ°皿°)ﾉ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_500",
+    "text": "(o¬‿¬o )...☆ﾐ(*x_x)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_501",
+    "text": "(╬￣皿￣)=○＃(￣#)３￣)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_502",
+    "text": "(; -_-)――――――C<―_-)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_503",
+    "text": "＜( ￣︿￣)︵θ︵θ︵☆(＞口＜－)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_504",
+    "text": "(￣ε(#￣)☆╰╮o(￣▽￣///)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_505",
+    "text": "ヽ(>_<ヽ) ―⊂|=0ヘ(^‿^ )",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_506",
+    "text": "ヘ(>_<ヘ) ￢o(￣‿￣ﾒ)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_507",
+    "text": ",,((( ￣□)_／ ＼_(○￣ ))),,",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_508",
+    "text": "(҂` ﾛ ´)︻デ═一 ＼(º □ º l|l)/",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_509",
+    "text": "(╯°Д°)╯︵ /(.□ . ＼)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_510",
+    "text": "(¬_¬'')ԅ(￣ε￣ԅ)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_511",
+    "text": "/( .□.)＼ ︵╰(°益°)╯︵ /(.□. /)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_512",
+    "text": "(ﾉ-.-)ﾉ….((((((((((((●~* ( >_<)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_513",
+    "text": "!!(ﾒ￣ ￣)_θ☆°0°)/",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_514",
+    "text": "(`⌒*)O-(`⌒´Q)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_515",
+    "text": "(((ง’ω’)و三 ง’ω’)ڡ≡　☆⌒ﾐ((x_x)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_516",
+    "text": "(งಠ_ಠ)ง　σ( •̀ ω •́ σ)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_517",
+    "text": "(っ•﹏•)っ ✴==≡눈٩(`皿´҂)ง",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_518",
+    "text": "(｢• ω •)｢ (⌒ω⌒`)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_519",
+    "text": "( °ᴗ°)~ð (/❛o❛\\)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_520",
+    "text": "( ・∀・)・・・--------☆",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_521",
+    "text": "(/-_・)/D・・・・・------ →",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_522",
+    "text": "(^ω^)ノﾞ(((((((((●～*",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_523",
+    "text": "( -ω-)／占~~~~~",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_524",
+    "text": "(/・・)ノ　　 (( く ((へ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_525",
+    "text": "―⊂|=0ヘ(^^ )",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_526",
+    "text": "○∞∞∞∞ヽ(^ー^ )",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_527",
+    "text": "(; ・_・)――――C",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_528",
+    "text": "(ಠ o ಠ)¤=[]:::::>",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_529",
+    "text": "(*＾＾)/~~~~~~~~~~◎",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_530",
+    "text": "￢o(￣-￣ﾒ)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_531",
+    "text": "―(T_T)→",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_532",
+    "text": "((( ￣□)_／",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_533",
+    "text": "(ﾒ` ﾛ ´)︻デ═一",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_534",
+    "text": "( ´-ω･)︻┻┳══━一",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_535",
+    "text": "(ﾒ￣▽￣)︻┳═一",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_536",
+    "text": "✴==≡눈٩(`皿´҂)ง",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_537",
+    "text": "Q(`⌒´Q)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_538",
+    "text": "(ノ ˘_˘)ノ　ζ|||ζ　ζ|||ζ　ζ|||ζ",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_539",
+    "text": "(ﾉ≧∀≦)ﾉ ‥…━━━★",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_540",
+    "text": "(ﾉ>ω<)ﾉ :｡･:*:･ﾟ’★,｡･:*:･ﾟ’☆",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_541",
+    "text": "(ノ°∀°)ノ⌒･*:.｡. .｡.:*･゜ﾟ･*☆",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_542",
+    "text": "(＃￣□￣)o━∈・・━━━━☆",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_543",
+    "text": "(⊃｡•́‿•̀｡)⊃━✿✿✿✿✿✿",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_544",
+    "text": "(∩ᄑ_ᄑ)⊃━☆ﾟ*･｡*･:≡( ε:)",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_545",
+    "text": "(/￣ー￣)/~~☆’.･.･:★’.･.･:☆",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_546",
+    "text": "(∩` ﾛ ´)⊃━炎炎炎炎炎",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_547",
+    "text": "( o˘◡˘o) ┌iii┐",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_548",
+    "text": "(　’ω’)旦~~",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_549",
+    "text": "♨o(>_<)o♨",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_550",
+    "text": "( ・ω・)o-{{[〃]}}",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_551",
+    "text": "(　・ω・)⊃-[二二]",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_552",
+    "text": "( ・・)つ―{}@{}@{}-",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_553",
+    "text": "( ・・)つ-●●●",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_554",
+    "text": "(*´ー`)旦 旦(￣ω￣*)",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_555",
+    "text": "(*´з`)口ﾟ｡ﾟ口(・∀・ )",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_556",
+    "text": "( o^ ^o)且 且(´ω`*)",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_557",
+    "text": "( ￣▽￣)[] [](≧▽≦ )",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_558",
+    "text": "( *^^)o∀*∀o(^^* )",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_559",
+    "text": "( ^^)_旦~~　 ~~U_(^^ )",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_560",
+    "text": "(*￣▽￣)旦 且(´∀`*)",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_561",
+    "text": "-●●●-ｃ(・・ )",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_562",
+    "text": "( ・・)つ―●○◎-",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_563",
+    "text": "(￣﹃￣)",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_564",
+    "text": "(๑ᵔ⤙ᵔ๑)",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_565",
+    "text": "(´ᵔ⤙ᵔ`)",
+    "category": "Food",
+    "keywords": [
+      "food"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_566",
+    "text": "ヾ(´〇`)ﾉ♪♪♪",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_567",
+    "text": "ヘ(￣ω￣ヘ)",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_568",
+    "text": "(〜￣▽￣)〜",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_569",
+    "text": "ヽ(o´∀`)ﾉ♪♬",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_570",
+    "text": "(ﾉ≧∀≦)ﾉ",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_571",
+    "text": "♪ヽ(^^ヽ)♪",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_572",
+    "text": "♪(/_ _ )/♪",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_573",
+    "text": "♪♬((d⌒ω⌒b))♬♪",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_574",
+    "text": "└(￣-￣└))",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_575",
+    "text": "((┘￣ω￣)┘",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_576",
+    "text": "√(￣‥￣√)",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_577",
+    "text": "┌(＾＾)┘",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_578",
+    "text": "＼(￣▽￣)＼",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_579",
+    "text": "／(￣▽￣)／",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_580",
+    "text": "(￣▽￣)/♫•*¨*•.¸¸♪",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_581",
+    "text": "ヾ(⌐■_■)ノ♪",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_582",
+    "text": "(~‾▽‾)~",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_583",
+    "text": "~(˘▽˘)~",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_584",
+    "text": "乁( • ω •乁)",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_585",
+    "text": "(｢• ω •)｢",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_586",
+    "text": "⁽⁽◝( • ω • )◜⁾⁾",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_587",
+    "text": "✺◟( • ω • )◞✺",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_588",
+    "text": "♬♫♪◖(● o ●)◗♪♫♬",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_589",
+    "text": "( ˘ ɜ˘) ♬♪♫",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_590",
+    "text": "(ˇ▽ˇ)ノ♪♬♫",
+    "category": "Music",
+    "keywords": [
+      "music"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_591",
+    "text": "( ^^)p_____|_o____q(^^ )",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_592",
+    "text": "(／o^)/ °⊥ ＼(^o＼)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_593",
+    "text": "!(;ﾟoﾟ)o/￣￣￣￣￣￣￣~ >ﾟ))))彡",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_594",
+    "text": "ヽ(^o^)ρ┳┻┳°σ(^o^)ノ",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_595",
+    "text": "(／_^)／　　●　＼(^_＼)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_596",
+    "text": "\"( (≡|≡))_／ ＼_((≡|≡) )\"",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_597",
+    "text": "( ノ-_-)ノﾞ_□ VS □_ヾ(^-^ヽ)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_598",
+    "text": "ヽ(；^ ^)ノﾞ ．．．...___〇",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_599",
+    "text": "(=O*_*)=O Q(*_*Q)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_600",
+    "text": "Ю　○三　＼(￣^￣＼)",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_601",
+    "text": "(˙ω˙)🎮(˙∀˙)🎮",
+    "category": "Action",
+    "keywords": [
+      "action"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_602",
+    "text": "( ͡° ͜ʖ ͡°)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_603",
+    "text": "( ͡° ʖ̯ ͡°)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_604",
+    "text": "( ͠° ͟ʖ ͡°)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_605",
+    "text": "( ͡ᵔ ͜ʖ ͡ᵔ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_606",
+    "text": "( . •́ _ʖ •̀ .)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_607",
+    "text": "( ఠ ͟ʖ ఠ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_608",
+    "text": "( ͡ಠ ʖ̯ ͡ಠ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_609",
+    "text": "( ಠ ʖ̯ ಠ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_610",
+    "text": "( ಠ ͜ʖ ಠ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_611",
+    "text": "( ಥ ʖ̯ ಥ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_612",
+    "text": "( ͡• ͜ʖ ͡• )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_613",
+    "text": "( ･ิ ͜ʖ ･ิ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_614",
+    "text": "( ͡  ͜ʖ ͡  )",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_615",
+    "text": "(≖ ͜ʖ≖)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_616",
+    "text": "(ʘ ʖ̯ ʘ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_617",
+    "text": "(ʘ ͟ʖ ʘ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_618",
+    "text": "(ʘ ͜ʖ ʘ)",
+    "category": "Happy",
+    "keywords": [
+      "happy"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_620",
+    "text": "٩(ˊ〇ˋ*)و",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_621",
+    "text": "(￣^￣)ゞ",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_622",
+    "text": "(－‸ლ)",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_623",
+    "text": "(╯°益°)╯彡┻━┻",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_624",
+    "text": "(╮°-°)╮┳━━┳ ( ╯°□°)╯ ┻━━┻",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_625",
+    "text": "(oT-T)尸",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_626",
+    "text": "[̲̅$̲̅(̲̅ ͡° ͜ʖ ͡°̲̅)̲̅$̲̅]",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_627",
+    "text": "(ಠ_ಠ)",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_628",
+    "text": "౦０o ｡ (‾́。‾́ )y~~",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_629",
+    "text": "(x(x_(x_x(O_o)x_x)_x)x)",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_630",
+    "text": "(　･ω･)☞",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_631",
+    "text": "(⌐■_■)",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_632",
+    "text": "(　￣.)o-　　【　TV　】",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_633",
+    "text": "｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_634",
+    "text": "‿︵‿︵‿︵‿ヽ(°□° )ノ︵‿︵‿︵‿︵",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_635",
+    "text": "( • )( • )ԅ(≖‿≖ԅ)",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_636",
+    "text": "( ＾▽＾)っ✂╰⋃╯",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_637",
+    "text": "〜〜(／￣▽)／　〜ф",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_638",
+    "text": "ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_639",
+    "text": "ଘ(੭ˊ꒳​ˋ)੭✧",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_640",
+    "text": "_(:3 」∠)_",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  },
+  {
+    "id": "imported_1766477228512_641",
+    "text": "∠( ᐛ 」∠)_",
+    "category": "Magic",
+    "keywords": [
+      "magic"
+    ]
+  }
+]

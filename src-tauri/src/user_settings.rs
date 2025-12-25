@@ -18,6 +18,31 @@ pub struct UserSettings {
     /// Background opacity for light mode (0.0 to 1.0)
     /// Default matches the original glass-effect-light alpha of 0.85
     pub light_background_opacity: f32,
+    
+    // --- Feature Flags ---
+
+
+
+    /// Enable UI Polish (Compact Mode capability)
+    #[serde(default = "default_true")]
+    pub enable_ui_polish: bool,
+    
+    // --- Custom Data ---
+    /// User-defined Kaomojis
+    #[serde(default = "Vec::new")]
+    pub custom_kaomojis: Vec<CustomKaomoji>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CustomKaomoji {
+    pub text: String,
+    pub category: String, // Default "Custom"
+    #[serde(default)]
+    pub keywords: Vec<String>,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for UserSettings {
@@ -26,6 +51,9 @@ impl Default for UserSettings {
             theme_mode: "system".to_string(),
             dark_background_opacity: 0.70,
             light_background_opacity: 0.70,
+
+            enable_ui_polish: true,
+            custom_kaomojis: Vec::new(),
         }
     }
 }
@@ -143,6 +171,7 @@ mod tests {
             theme_mode: "invalid".to_string(),
             dark_background_opacity: 1.5,
             light_background_opacity: -0.5,
+            ..Default::default()
         };
         settings.validate();
 
