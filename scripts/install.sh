@@ -44,7 +44,7 @@ cleanup_appimage_installation() {
         rm -f "$HOME/.local/bin/win11-clipboard-history.AppImage" 2>/dev/null || true
         rm -f "$HOME/.local/bin/win11-clipboard-history" 2>/dev/null || true
         rm -f "$HOME/.local/share/applications/win11-clipboard-history.desktop" 2>/dev/null || true
-        rm -f "$HOME/.local/share/icons/hicolor/128x128/apps/win11-clipboard-history.png" 2>/dev/null || true
+        rm -f "$HOME/.local/share/icons/hicolor"/*/apps/win11-clipboard-history.png 2>/dev/null || true
         
         # Update desktop database if available
         if command -v update-desktop-database &>/dev/null; then
