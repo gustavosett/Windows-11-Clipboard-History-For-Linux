@@ -112,7 +112,7 @@ check_webkit_compatibility() {
     fi
 }
 
-# Installation via package manage
+# Installation via package manager
 install_via_package_manager() {
     # Clean up any previous AppImage installation to prevent PATH conflicts
     cleanup_appimage_installation
