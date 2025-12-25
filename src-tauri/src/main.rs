@@ -29,8 +29,10 @@ use win11_clipboard_history_lib::user_settings::{UserSettings, UserSettingsManag
 /// This is used to block the initial window show
 static STARTED_IN_BACKGROUND: AtomicBool = AtomicBool::new(false);
 
-/// Global flag to track if the initial show has been blocked
-static INITIAL_SHOW_BLOCKED: AtomicBool = AtomicBool::new(false);
+/// Global flag indicating whether the initial show is allowed
+/// While false, background mode will still hide the window on focus
+/// After the first user toggle, this is set to true to allow normal show/hide behavior
+static INITIAL_SHOW_ALLOWED: AtomicBool = AtomicBool::new(false);
 
 /// Application state shared across all handlers
 pub struct AppState {
@@ -231,8 +233,8 @@ impl WindowController {
     pub fn toggle(app: &AppHandle) {
         // User-initiated toggle - mark that we're now allowing shows
         // This stops the background enforcer from hiding the window
-        if STARTED_IN_BACKGROUND.load(Ordering::Relaxed) {
-            INITIAL_SHOW_BLOCKED.store(true, Ordering::Relaxed);
+        if STARTED_IN_BACKGROUND.load(Ordering::SeqCst) {
+            INITIAL_SHOW_ALLOWED.store(true, Ordering::SeqCst);
         }
 
         if let Some(window) = app.get_webview_window("main") {
@@ -709,11 +711,13 @@ fn main() {
                 // Block any window show attempts when started in background mode
                 // This catches cases where GTK/Tauri automatically shows the window
                 WindowEvent::Focused(true) => {
+                    // Load both flags atomically with SeqCst to avoid race conditions
+                    let started_in_background = STARTED_IN_BACKGROUND.load(Ordering::SeqCst);
+                    let initial_show_allowed = INITIAL_SHOW_ALLOWED.load(Ordering::SeqCst);
+
                     // If started in background and initial show hasn't been allowed yet,
                     // immediately hide the window
-                    if STARTED_IN_BACKGROUND.load(Ordering::Relaxed)
-                        && !INITIAL_SHOW_BLOCKED.load(Ordering::Relaxed)
-                    {
+                    if started_in_background && !initial_show_allowed {
                         println!("[WindowController] Background mode: intercepted focus, hiding window");
                         let _ = w_clone.hide();
                     }
@@ -775,13 +779,21 @@ fn main() {
                     std::thread::spawn(move || {
                         for i in 0..10 {
                             std::thread::sleep(std::time::Duration::from_millis(200));
-                            if INITIAL_SHOW_BLOCKED.load(Ordering::Relaxed) {
-                                // User has already triggered a toggle, stop blocking
+
+                            // User has already triggered a toggle, stop blocking
+                            if INITIAL_SHOW_ALLOWED.load(Ordering::SeqCst) {
                                 break;
                             }
-                            if window_clone.is_visible().unwrap_or(false) {
-                                println!("[Startup] Background enforcer #{}: window was visible, hiding again", i + 1);
-                                let _ = window_clone.hide();
+
+                            // Check if window still exists and is visible, then hide it
+                            // Use unwrap_or(false) to safely handle cases where window was destroyed
+                            match window_clone.is_visible() {
+                                Ok(true) => {
+                                    println!("[Startup] Background enforcer #{}: window was visible, hiding again", i + 1);
+                                    let _ = window_clone.hide();
+                                }
+                                Ok(false) => {} // Window exists but is hidden, nothing to do
+                                Err(_) => break, // Window was destroyed, stop the enforcer
                             }
                         }
                         println!("[Startup] Background enforcer finished");
