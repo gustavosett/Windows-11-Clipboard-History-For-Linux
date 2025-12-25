@@ -13,7 +13,7 @@ Version=1.1
 Name=Clipboard History
 GenericName=Clipboard Manager
 Comment=Windows 11-style Clipboard History Manager
-Exec=EXEC_PATH --background
+Exec="EXEC_PATH" --background
 Icon=win11-clipboard-history
 Terminal=false
 Categories=Utility;
@@ -29,6 +29,11 @@ fn get_autostart_dir() -> Option<PathBuf> {
 /// Get the path to the autostart desktop file
 fn get_autostart_file() -> Option<PathBuf> {
     get_autostart_dir().map(|p| p.join("win11-clipboard-history.desktop"))
+}
+
+/// Read the content of the autostart desktop file
+fn read_autostart_content() -> Option<String> {
+    get_autostart_file().and_then(|p| fs::read_to_string(p).ok())
 }
 
 /// Determines the correct executable path to use in the autostart entry.
@@ -108,8 +113,8 @@ pub fn autostart_is_enabled() -> Result<bool, String> {
         return Ok(false);
     }
 
-    // Also check if the file has X-GNOME-Autostart-enabled=false
-    let content = fs::read_to_string(&autostart_file).unwrap_or_default();
+    // Check if the file has X-GNOME-Autostart-enabled=false
+    let content = read_autostart_content().unwrap_or_default();
 
     // If the file exists and doesn't explicitly disable itself, it's enabled
     let is_disabled = content
@@ -129,10 +134,15 @@ pub fn autostart_migrate() -> Result<bool, String> {
         return Ok(false); // Nothing to migrate
     }
 
-    let content = fs::read_to_string(&autostart_file).unwrap_or_default();
+    let content = read_autostart_content().unwrap_or_default();
 
-    // Check if it's using the old binary path directly
-    if content.contains("win11-clipboard-history-bin") && !content.contains("wrapper") {
+    // Check if the Exec= line is using the old binary path directly
+    let needs_migration = content
+        .lines()
+        .find(|line| line.trim_start().starts_with("Exec="))
+        .is_some_and(|line| line.contains("win11-clipboard-history-bin"));
+
+    if needs_migration {
         println!("[Autostart] Migrating from old binary path to wrapper...");
 
         // Re-enable with correct path
