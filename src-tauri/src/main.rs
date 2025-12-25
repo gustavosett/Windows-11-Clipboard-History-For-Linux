@@ -596,7 +596,7 @@ fn main() {
     let start_in_background = args.iter().any(|arg| arg == "--background");
     if start_in_background {
         println!("[Startup] Starting in background mode (system tray only)");
-        STARTED_IN_BACKGROUND.store(true, Ordering::Relaxed);
+        STARTED_IN_BACKGROUND.store(true, Ordering::SeqCst);
     }
 
     // Check if --settings flag is present (for first instance startup)
