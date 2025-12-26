@@ -539,7 +539,11 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
                     if Some(text_hash) != last_text_hash {
                         last_text_hash = Some(text_hash);
                         last_image_hash = None;
-                        if let Some(item) = manager.add_text(text) {
+
+                        // Try to get HTML content for rich text support
+                        let html = manager.get_current_html();
+
+                        if let Some(item) = manager.add_text(text, html) {
                             let _ = app.emit("clipboard-changed", &item);
                         }
                     }

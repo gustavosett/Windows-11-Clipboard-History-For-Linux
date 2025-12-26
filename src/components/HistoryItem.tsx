@@ -30,7 +30,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
   },
   ref
 ) {
-  const isText = item.content.type === 'Text'
+  const isText = item.content.type === 'Text' || item.content.type === 'RichText'
 
   // Format timestamp
   const formatTime = useCallback((timestamp: string) => {
@@ -136,6 +136,17 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
               )}
             >
               {item.content.data}
+            </p>
+          )}
+
+          {item.content.type === 'RichText' && (
+            <p
+              className={clsx(
+                'text-sm line-clamp-3 break-words whitespace-pre-wrap',
+                isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
+              )}
+            >
+              {item.content.data.plain}
             </p>
           )}
 
