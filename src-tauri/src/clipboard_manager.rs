@@ -169,7 +169,7 @@ impl ClipboardManager {
     }
 
     /// Try to get HTML content from clipboard. Returns None if not available.
-    pub fn get_current_html(&mut self) -> Option<String> {
+    pub fn get_current_html(&self) -> Option<String> {
         let mut clipboard = get_system_clipboard().ok()?;
         clipboard.get().html().ok()
     }
