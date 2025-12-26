@@ -1,8 +1,10 @@
 import { useCallback, forwardRef } from 'react'
 import { clsx } from 'clsx'
 import { Pin, X, Image as ImageIcon, Type } from 'lucide-react'
-import type { ClipboardItem } from '../types/clipboard'
-import { getCardBackgroundStyle, getTertiaryBackgroundStyle } from '../utils/themeUtils'
+import type { ClipboardItem } from '../../types/clipboard'
+import { getCardBackgroundStyle, getTertiaryBackgroundStyle } from '../../utils/themeUtils'
+import { useSmartActions } from '../../hooks/useSmartActions'
+import { HistorySmartActions } from '../HistorySmartActions'
 
 interface HistoryItemProps {
   item: ClipboardItem
@@ -14,7 +16,21 @@ interface HistoryItemProps {
   isFocused?: boolean
   isDark: boolean
   secondaryOpacity: number
+  isCompact?: boolean
+  // Feature flags passed from parent
+  enableSmartActions: boolean
+  enableUiPolish: boolean
 }
+
+import {
+  TextContent,
+  ImageContent,
+  Timestamp,
+} from './_HistoryItemContent'
+import {
+  getIconSize,
+  getIconContainerClasses,
+} from './_HistoryItemUtils'
 
 export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function HistoryItem(
   {
@@ -27,24 +43,24 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
     isFocused = false,
     isDark,
     secondaryOpacity,
+    isCompact = false,
+    enableSmartActions,
+    enableUiPolish,
   },
   ref
 ) {
   const isText = item.content.type === 'Text'
 
-  // Format timestamp
-  const formatTime = useCallback((timestamp: string) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
+  // Use compact mode only if enabled by flag
+  const effectiveCompact = enableUiPolish ? isCompact : false
+  const iconSize = getIconSize(effectiveCompact)
+  const iconContainerClasses = getIconContainerClasses(effectiveCompact)
 
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    return date.toLocaleDateString()
-  }, [])
+  // Smart Actions Hook
+  const { colorPreview, linkAction, emailAction, handleSmartAction } = useSmartActions(
+    item,
+    enableSmartActions
+  )
 
   // Handle paste on click
   const handleClick = useCallback(() => {
@@ -74,7 +90,8 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
       ref={ref}
       className={clsx(
         // Base styles
-        'group relative rounded-win11 p-3 cursor-pointer',
+        'group relative rounded-win11 cursor-pointer',
+        effectiveCompact ? 'p-2' : 'p-3',
         'transition-all duration-150 ease-out',
         // Animation delay based on index
         'animate-in',
@@ -106,20 +123,25 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div
-          className={clsx('flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center')}
-          style={getTertiaryBackgroundStyle(isDark, secondaryOpacity)}
+          className={clsx(iconContainerClasses, colorPreview && 'shadow-sm')}
+          style={
+            colorPreview && colorPreview.data
+              ? { backgroundColor: colorPreview.data }
+              : getTertiaryBackgroundStyle(isDark, secondaryOpacity)
+          }
+          title={colorPreview ? `Color: ${colorPreview.data}` : undefined}
         >
-          {isText ? (
+          {colorPreview ? null : isText ? (
             <Type
               className={clsx(
-                'w-4 h-4',
+                iconSize,
                 isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
               )}
             />
           ) : (
             <ImageIcon
               className={clsx(
-                'w-4 h-4',
+                iconSize,
                 isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
               )}
             />
@@ -128,39 +150,9 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          {item.content.type === 'Text' && (
-            <p
-              className={clsx(
-                'text-sm line-clamp-3 break-words whitespace-pre-wrap',
-                isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
-              )}
-            >
-              {item.content.data}
-            </p>
-          )}
-
-          {item.content.type === 'Image' && (
-            <div className="relative">
-              <img
-                src={`data:image/png;base64,${item.content.data.base64}`}
-                alt="Clipboard image"
-                className="max-w-full max-h-24 rounded object-contain bg-black/10"
-              />
-              <span className="absolute bottom-1 right-1 text-xs px-1.5 py-0.5 rounded bg-black/60 text-white">
-                {item.content.data.width}×{item.content.data.height}
-              </span>
-            </div>
-          )}
-
-          {/* Timestamp */}
-          <span
-            className={clsx(
-              'text-xs mt-1 block',
-              isDark ? 'text-win11-text-tertiary' : 'text-win11Light-text-secondary'
-            )}
-          >
-            {formatTime(item.timestamp)}
-          </span>
+          <TextContent item={item} isDark={isDark} effectiveCompact={effectiveCompact} />
+          <ImageContent item={item} isDark={isDark} effectiveCompact={effectiveCompact} />
+          <Timestamp show={!effectiveCompact} isDark={isDark} timestamp={item.timestamp} />
         </div>
 
         {/* Action buttons - visible on hover */}
@@ -170,6 +162,14 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
             'transition-opacity duration-150'
           )}
         >
+          {/* Smart Actions Buttons */}
+          <HistorySmartActions
+            linkAction={linkAction}
+            emailAction={emailAction}
+            isDark={isDark}
+            onActionClick={handleSmartAction}
+          />
+
           {/* Pin button */}
           <button
             onClick={handleTogglePin}
