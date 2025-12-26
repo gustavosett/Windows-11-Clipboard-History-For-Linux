@@ -6,9 +6,10 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use chrono::{DateTime, Utc};
 use image::{DynamicImage, ImageFormat};
 use serde::{Deserialize, Serialize};
-use std::collections::hash_map::DefaultHasher;
+use std::fs;
 use std::hash::{Hash, Hasher};
 use std::io::Cursor;
+use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
 use uuid::Uuid;
@@ -22,9 +23,34 @@ const FILE_URI_PREFIX: &str = "file://";
 
 // --- Helper Functions ---
 
+// Simple FNV-1a implementation for stable hashing across restarts
+// This avoids the randomization of DefaultHasher which causes duplicates on restart
+const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+const FNV_PRIME: u64 = 0x100000001b3;
+
+struct FnvHasher(u64);
+
+impl Default for FnvHasher {
+    fn default() -> Self {
+        FnvHasher(FNV_OFFSET_BASIS)
+    }
+}
+
+impl Hasher for FnvHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        for &byte in bytes {
+            self.0 ^= byte as u64;
+            self.0 = self.0.wrapping_mul(FNV_PRIME);
+        }
+    }
+}
+
 /// Calculates a stable hash for any hashable data.
-fn calculate_hash<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
+pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = FnvHasher::default();
     t.hash(&mut s);
     s.finish()
 }
@@ -142,21 +168,72 @@ pub struct ClipboardManager {
     last_pasted_image_hash: Option<u64>,
     /// Track last added text hash to prevent duplicates from rapid copies
     last_added_text_hash: Option<u64>,
-}
-
-impl Default for ClipboardManager {
-    fn default() -> Self {
-        Self::new()
-    }
+    /// Path to save the history file
+    persistence_path: PathBuf,
 }
 
 impl ClipboardManager {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(persistence_path: PathBuf) -> Self {
+        let mut manager = Self {
             history: Vec::with_capacity(MAX_HISTORY_SIZE),
             last_pasted_text: None,
             last_pasted_image_hash: None,
             last_added_text_hash: None,
+            persistence_path,
+        };
+        manager.load_history();
+        manager
+    }
+
+    fn load_history(&mut self) {
+        if !self.persistence_path.exists() {
+            return;
+        }
+
+        match fs::read_to_string(&self.persistence_path) {
+            Ok(content) => {
+                match serde_json::from_str::<Vec<ClipboardItem>>(&content) {
+                    Ok(items) => {
+                        self.history = items;
+
+                        // Initialize last_added_text_hash from the most recent item (even if pinned)
+                        // This prevents duplication on startup if the clipboard content matches the top item
+                        if let Some(first) = self.history.first() {
+                            match &first.content {
+                                ClipboardContent::Text(text) => {
+                                    self.last_added_text_hash = Some(calculate_hash(text));
+                                }
+                                ClipboardContent::RichText { plain, .. } => {
+                                    self.last_added_text_hash = Some(calculate_hash(plain));
+                                }
+                                ClipboardContent::Image { .. } => {
+                                    if let Some(_hash) = first.extract_image_hash() {
+                                        // We don't have a separate last_added_image_hash,
+                                        // but we can at least avoid text hash collision
+                                        self.last_added_text_hash = None;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => eprintln!("Failed to parse history: {}", e),
+                }
+            }
+            Err(e) => eprintln!("Failed to read history file: {}", e),
+        }
+    }
+
+    fn save_history(&self) {
+        match serde_json::to_string_pretty(&self.history) {
+            Ok(content) => {
+                if let Some(parent) = self.persistence_path.parent() {
+                    let _ = fs::create_dir_all(parent);
+                }
+                if let Err(e) = fs::write(&self.persistence_path, content) {
+                    eprintln!("Failed to save history: {}", e);
+                }
+            }
+            Err(e) => eprintln!("Failed to serialize history: {}", e),
         }
     }
 
@@ -347,6 +424,7 @@ impl ClipboardManager {
 
         // Trim history
         self.enforce_history_limit();
+        self.save_history();
     }
 
     fn enforce_history_limit(&mut self) {
@@ -373,16 +451,20 @@ impl ClipboardManager {
 
     pub fn clear(&mut self) {
         self.history.retain(|item| item.pinned);
+        self.save_history();
     }
 
     pub fn remove_item(&mut self, id: &str) {
         self.history.retain(|item| item.id != id);
+        self.save_history();
     }
 
     pub fn toggle_pin(&mut self, id: &str) -> Option<ClipboardItem> {
         let item = self.history.iter_mut().find(|i| i.id == id)?;
         item.pinned = !item.pinned;
-        Some(item.clone())
+        let item_clone = item.clone();
+        self.save_history();
+        Some(item_clone)
     }
 
     // --- Paste Logic ---

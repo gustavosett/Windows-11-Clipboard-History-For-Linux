@@ -550,9 +550,8 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
             // Text
             if let Ok(text) = manager.get_current_text() {
                 if !text.is_empty() {
-                    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-                    std::hash::Hash::hash(&text, &mut hasher);
-                    let text_hash = std::hash::Hasher::finish(&hasher);
+                    let text_hash =
+                        win11_clipboard_history_lib::clipboard_manager::calculate_hash(&text);
 
                     if Some(text_hash) != last_text_hash {
                         last_text_hash = Some(text_hash);
@@ -630,11 +629,17 @@ fn main() {
     win11_clipboard_history_lib::session::init();
 
     let is_mouse_inside = Arc::new(AtomicBool::new(false));
-    let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new()));
-
     let base_dir = dirs::data_local_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("win11-clipboard-history");
+
+    // Ensure base directory exists
+    if let Err(e) = std::fs::create_dir_all(&base_dir) {
+        eprintln!("Failed to create base directory: {}", e);
+    }
+
+    let history_path = base_dir.join("history.json");
+    let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new(history_path)));
 
     let emoji_manager = Arc::new(Mutex::new(EmojiManager::new(base_dir.clone())));
 
