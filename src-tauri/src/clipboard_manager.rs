@@ -220,7 +220,7 @@ impl ClipboardManager {
                 match serde_json::from_str::<Vec<ClipboardItem>>(&content) {
                     Ok(mut items) => {
                         // Sort items: pinned first (preserving order within each group)
-                        items.sort_by_key(|item| !item.pinned);
+                        items.sort_by(|a, b| (!a.pinned).cmp(&!b.pinned));
                         self.history = items;
 
                         // Ensure loaded history respects configured limit immediately
