@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 // --- Constants ---
 
-const DEFAULT_MAX_HISTORY_SIZE: usize = 50;
+pub const DEFAULT_MAX_HISTORY_SIZE: usize = 50;
 const PREVIEW_TEXT_MAX_LEN: usize = 100;
 const GIF_CACHE_MARKER: &str = "win11-clipboard-history/gifs/";
 const FILE_URI_PREFIX: &str = "file://";
@@ -175,9 +175,17 @@ pub struct ClipboardManager {
 }
 
 impl ClipboardManager {
+    fn clamp_max_history_size(size: usize) -> usize {
+        match size {
+            0 => DEFAULT_MAX_HISTORY_SIZE,
+            1..=100_000 => size,
+            _ => 100_000,
+        }
+    }
+
     pub fn new(persistence_path: PathBuf, max_history_size: usize) -> Self {
-        // Clamp to the same valid range used in `set_max_history_size`
-        let max_size = max_history_size.clamp(1, 100_000);
+        // Normalize the requested max size and avoid huge allocations
+        let max_size = Self::clamp_max_history_size(max_history_size);
         let mut manager = Self {
             history: Vec::with_capacity(max_size),
             last_pasted_text: None,
@@ -192,7 +200,7 @@ impl ClipboardManager {
 
     /// Updates the maximum history size and enforces the new limit
     pub fn set_max_history_size(&mut self, new_size: usize) {
-        self.max_history_size = new_size.clamp(1, 100_000);
+        self.max_history_size = Self::clamp_max_history_size(new_size);
         self.enforce_history_limit();
         self.save_history();
     }
@@ -214,6 +222,14 @@ impl ClipboardManager {
                         // Sort items: pinned first (preserving order within each group)
                         items.sort_by_key(|item| !item.pinned);
                         self.history = items;
+
+                        // Ensure loaded history respects configured limit immediately
+                        let before = self.history.len();
+                        self.enforce_history_limit();
+                        // If we trimmed items, persist the trimmed history so disk stays in sync
+                        if self.history.len() != before {
+                            self.save_history();
+                        }
 
                         // Initialize last_added_text_hash from the most recent item (even if pinned)
                         // This prevents duplication on startup if the clipboard content matches the top item
