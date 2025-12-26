@@ -1,7 +1,7 @@
 {
   "name": "win11-clipboard-history",
   "private": true,
-  "version": "0.4.16",
+  "version": "0.4.17",
   "type": "module",
   "description": "A Windows 11-style Clipboard History Manager for Linux built with Tauri",
   "author": "gustavosett",
