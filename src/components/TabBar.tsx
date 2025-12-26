@@ -10,7 +10,6 @@ interface TabBarProps {
   onTabChange: (tab: ActiveTab) => void
   isDark: boolean
   tertiaryOpacity: number
-
 }
 
 export interface TabBarRef {
@@ -31,7 +30,7 @@ export const TabBar = forwardRef<TabBarRef, TabBarProps>(function TabBar(
 ) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const [hoveredTab, setHoveredTab] = useState<ActiveTab | null>(null)
-  
+
   const visibleTabs = ALL_TABS
 
   useImperativeHandle(ref, () => ({

@@ -11,14 +11,8 @@ export function useHistoryKeyboardNavigation(params: {
   historyItemRefs: MutableRefObject<(HTMLElement | null)[]>
   tabBarRef: RefObject<TabBarRef | null>
 }) {
-  const {
-    activeTab,
-    itemsLength,
-    focusedIndex,
-    setFocusedIndex,
-    historyItemRefs,
-    tabBarRef,
-  } = params
+  const { activeTab, itemsLength, focusedIndex, setFocusedIndex, historyItemRefs, tabBarRef } =
+    params
 
   useEffect(() => {
     if (activeTab !== 'clipboard' || itemsLength === 0) return

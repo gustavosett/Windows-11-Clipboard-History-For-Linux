@@ -18,15 +18,12 @@ pub struct UserSettings {
     /// Background opacity for light mode (0.0 to 1.0)
     /// Default matches the original glass-effect-light alpha of 0.85
     pub light_background_opacity: f32,
-    
+
     // --- Feature Flags ---
-
-
-
     /// Enable UI Polish (Compact Mode capability)
     #[serde(default = "default_true")]
     pub enable_ui_polish: bool,
-    
+
     // --- Custom Data ---
     /// User-defined Kaomojis
     #[serde(default = "Vec::new")]

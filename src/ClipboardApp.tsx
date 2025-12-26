@@ -14,7 +14,6 @@ import { calculateSecondaryOpacity, calculateTertiaryOpacity } from './utils/the
 import type { ActiveTab, UserSettings } from './types/clipboard'
 import { ClipboardTab } from './components/ClipboardTab'
 
-
 const DEFAULT_SETTINGS: UserSettings = {
   theme_mode: 'system',
   dark_background_opacity: 0.7,
@@ -193,7 +192,7 @@ function ClipboardApp() {
   const handleMouseLeave = () => {
     invoke('set_mouse_state', { inside: false }).catch(console.error)
   }
-  
+
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
@@ -221,7 +220,13 @@ function ClipboardApp() {
         return <GifPicker isDark={isDark} opacity={secondaryOpacity} />
 
       case 'kaomoji':
-        return <KaomojiPicker isDark={isDark} opacity={secondaryOpacity} customKaomojis={settings.custom_kaomojis} />
+        return (
+          <KaomojiPicker
+            isDark={isDark}
+            opacity={secondaryOpacity}
+            customKaomojis={settings.custom_kaomojis}
+          />
+        )
 
       case 'symbols':
         return <SymbolPicker isDark={isDark} opacity={secondaryOpacity} />
@@ -247,7 +252,6 @@ function ClipboardApp() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-
       {/* Drag Handle */}
       <DragHandle isDark={isDark} />
 
@@ -258,7 +262,6 @@ function ClipboardApp() {
         onTabChange={handleTabChange}
         isDark={isDark}
         tertiaryOpacity={tertiaryOpacity}
-
       />
 
       {/* Scrollable content area */}
@@ -267,7 +270,10 @@ function ClipboardApp() {
         className={clsx(
           'flex-1',
           // Only use scrollbar for non-emoji/gif/kaomoji tabs, they have their own virtualized scrolling or containers
-          activeTab === 'emoji' || activeTab === 'gifs' || activeTab === 'kaomoji' || activeTab === 'symbols'
+          activeTab === 'emoji' ||
+            activeTab === 'gifs' ||
+            activeTab === 'kaomoji' ||
+            activeTab === 'symbols'
             ? 'overflow-hidden'
             : 'overflow-y-auto scrollbar-win11'
         )}

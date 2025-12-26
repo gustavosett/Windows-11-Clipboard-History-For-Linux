@@ -6,7 +6,6 @@ import { CategoryPill } from './CategoryPill'
 import { invoke } from '@tauri-apps/api/core'
 import { KAOMOJI_CATEGORIES, getKaomojis } from '../services/kaomojiService'
 
-
 import type { CustomKaomoji } from '../types/clipboard'
 
 interface KaomojiPickerProps {
@@ -19,9 +18,11 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [categoryFocusedIndex, setCategoryFocusedIndex] = useState(0)
-  const [hoveredKaomoji, setHoveredKaomoji] = useState<{ text: string; category: string } | null>(null)
+  const [hoveredKaomoji, setHoveredKaomoji] = useState<{ text: string; category: string } | null>(
+    null
+  )
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  
+
   // Grid keyboard navigation state
   const [gridFocusedIndex, setGridFocusedIndex] = useState(0)
   const gridContainerRef = useRef<HTMLDivElement>(null)
@@ -75,7 +76,7 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
       // Total items = 1 (All) + 1 (Custom if exists) + categories.length
       const hasCustom = customKaomojis.length > 0
       const totalItems = 1 + (hasCustom ? 1 : 0) + KAOMOJI_CATEGORIES.length
-      
+
       let newIndex = currentIndex
       let handled = false
 
@@ -108,10 +109,10 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
           } else if (hasCustom && currentIndex === 1) {
             setSelectedCategory('Custom')
           } else {
-             // If hasCustom, categories start at index 2 (so subtract 2)
-             // If no custom, categories start at index 1 (so subtract 1)
-             const catIndex = currentIndex - (hasCustom ? 2 : 1)
-             setSelectedCategory(KAOMOJI_CATEGORIES[catIndex])
+            // If hasCustom, categories start at index 2 (so subtract 2)
+            // If no custom, categories start at index 1 (so subtract 1)
+            const catIndex = currentIndex - (hasCustom ? 2 : 1)
+            setSelectedCategory(KAOMOJI_CATEGORIES[catIndex])
           }
           return
       }
@@ -141,25 +142,22 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
     // Map CustomKaomoji to Kaomoji if structures differ (they are compatible: text, category, keywords)
     // Add IDs to custom items
     const mappedCustom = customKaomojis.map((c, i) => ({
-        id: `custom-${i}`,
-        text: c.text,
-        category: c.category,
-        keywords: c.keywords
+      id: `custom-${i}`,
+      text: c.text,
+      category: c.category,
+      keywords: c.keywords,
     }))
     return getKaomojis(selectedCategory, searchQuery, mappedCustom)
   }, [selectedCategory, searchQuery, customKaomojis])
 
-  const handlePaste = useCallback(
-    async (text: string) => {
-      try {
-        await invoke('paste_text', { text, itemType: 'kaomoji' })
-        // No need for toast or close_window here, backend handles it
-      } catch (err) {
-        console.error('Failed to paste kaomoji', err)
-      }
-    },
-    []
-  )
+  const handlePaste = useCallback(async (text: string) => {
+    try {
+      await invoke('paste_text', { text, itemType: 'kaomoji' })
+      // No need for toast or close_window here, backend handles it
+    } catch (err) {
+      console.error('Failed to paste kaomoji', err)
+    }
+  }, [])
 
   // Keyboard navigation for kaomoji grid
   const handleGridKeyDown = useCallback(
@@ -219,11 +217,13 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
         e.preventDefault()
         e.stopPropagation()
         setGridFocusedIndex(newIndex)
-        
+
         // Focus the new element
         const container = gridContainerRef.current
         if (container) {
-          const button = container.querySelector(`[data-kaomoji-index="${newIndex}"]`) as HTMLElement
+          const button = container.querySelector(
+            `[data-kaomoji-index="${newIndex}"]`
+          ) as HTMLElement
           button?.focus()
         }
       }
@@ -236,11 +236,11 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
       {/* Search */}
       <div className="px-3 pt-3 pb-2 flex-shrink-0">
         <SearchBar
-           value={searchQuery}
-           onChange={setSearchQuery}
-           placeholder="Search kaomoji..."
-           isDark={isDark}
-           opacity={opacity}
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search kaomoji..."
+          isDark={isDark}
+          opacity={opacity}
         />
       </div>
 
@@ -254,55 +254,55 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
           <ChevronLeft className="w-4 h-4" />
         </button>
 
-        <div 
+        <div
           ref={scrollContainerRef}
           className="flex gap-1.5 overflow-x-hidden scroll-smooth flex-1"
           role="tablist"
           aria-label="Kaomoji categories"
         >
           <CategoryPill
-              category="All"
-              isActive={selectedCategory === null}
-              onClick={() => setSelectedCategory(null)}
-              tabIndex={categoryFocusedIndex === 0 ? 0 : -1}
-              onKeyDown={(e: React.KeyboardEvent) => handleCategoryKeyDown(e, 0)}
-              onFocus={() => setCategoryFocusedIndex(0)}
-              data-category-index={0}
-              isDark={isDark}
-              opacity={opacity}
+            category="All"
+            isActive={selectedCategory === null}
+            onClick={() => setSelectedCategory(null)}
+            tabIndex={categoryFocusedIndex === 0 ? 0 : -1}
+            onKeyDown={(e: React.KeyboardEvent) => handleCategoryKeyDown(e, 0)}
+            onFocus={() => setCategoryFocusedIndex(0)}
+            data-category-index={0}
+            isDark={isDark}
+            opacity={opacity}
           />
           {customKaomojis.length > 0 && (
-              <CategoryPill
-                  category="Custom"
-                  isActive={selectedCategory === 'Custom'}
-                  onClick={() => setSelectedCategory('Custom')}
-                  tabIndex={categoryFocusedIndex === 1 ? 0 : -1}
-                  onKeyDown={(e: React.KeyboardEvent) => handleCategoryKeyDown(e, 1)}
-                  onFocus={() => setCategoryFocusedIndex(1)}
-                  data-category-index={1}
-                  isDark={isDark}
-                  opacity={opacity}
-              />
+            <CategoryPill
+              category="Custom"
+              isActive={selectedCategory === 'Custom'}
+              onClick={() => setSelectedCategory('Custom')}
+              tabIndex={categoryFocusedIndex === 1 ? 0 : -1}
+              onKeyDown={(e: React.KeyboardEvent) => handleCategoryKeyDown(e, 1)}
+              onFocus={() => setCategoryFocusedIndex(1)}
+              data-category-index={1}
+              isDark={isDark}
+              opacity={opacity}
+            />
           )}
           {KAOMOJI_CATEGORIES.map((cat, idx) => {
-                // Determine the correct index based on whether custom exists
-                const hasCustom = customKaomojis.length > 0
-                const actualIndex = idx + (hasCustom ? 2 : 1)
+            // Determine the correct index based on whether custom exists
+            const hasCustom = customKaomojis.length > 0
+            const actualIndex = idx + (hasCustom ? 2 : 1)
 
-                return (
-                 <CategoryPill
-                    key={cat}
-                    category={cat}
-                    isActive={selectedCategory === cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    tabIndex={categoryFocusedIndex === actualIndex ? 0 : -1}
-                    onKeyDown={(e: React.KeyboardEvent) => handleCategoryKeyDown(e, actualIndex)}
-                    onFocus={() => setCategoryFocusedIndex(actualIndex)}
-                    data-category-index={actualIndex}
-                    isDark={isDark}
-                    opacity={opacity}
-                />
-               )
+            return (
+              <CategoryPill
+                key={cat}
+                category={cat}
+                isActive={selectedCategory === cat}
+                onClick={() => setSelectedCategory(cat)}
+                tabIndex={categoryFocusedIndex === actualIndex ? 0 : -1}
+                onKeyDown={(e: React.KeyboardEvent) => handleCategoryKeyDown(e, actualIndex)}
+                onFocus={() => setCategoryFocusedIndex(actualIndex)}
+                data-category-index={actualIndex}
+                isDark={isDark}
+                opacity={opacity}
+              />
+            )
           })}
         </div>
 
@@ -317,40 +317,40 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
 
       {/* Grid */}
       <div ref={containerRef} className="flex-1 overflow-y-auto p-3 pt-0 scrollbar-win11">
-        <div 
+        <div
           ref={gridContainerRef}
           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"
           role="grid"
           aria-label="Kaomoji grid"
         >
-            {kaomojis.map((item, index) => (
-                <button
-                    key={item.id}
-                    data-kaomoji-index={index}
-                    tabIndex={index === gridFocusedIndex ? 0 : -1}
-                    onClick={() => handlePaste(item.text)}
-                    onFocus={() => setGridFocusedIndex(index)}
-                    onKeyDown={(e) => handleGridKeyDown(e, index)}
-                    onMouseEnter={() => setHoveredKaomoji({ text: item.text, category: item.category })}
-                    onMouseLeave={() => setHoveredKaomoji(null)}
-                    className={clsx(
-                        "h-12 flex items-center justify-center rounded-md text-sm",
-                        "hover:scale-105 transition-transform duration-100",
-                        "border border-transparent hover:border-win11-border-subtle",
-                        "focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent",
-                         isDark ? "hover:bg-win11-bg-card-hover" : "hover:bg-win11Light-bg-card-hover"
-                    )}
-                    title={item.category}
-                    aria-label={`${item.text} - ${item.category}`}
-                >
-                    {item.text}
-                </button>
-            ))}
-            {kaomojis.length === 0 && (
-                <div className="col-span-full py-8 text-center text-sm opacity-60">
-                    No kaomojis found
-                </div>
-            )}
+          {kaomojis.map((item, index) => (
+            <button
+              key={item.id}
+              data-kaomoji-index={index}
+              tabIndex={index === gridFocusedIndex ? 0 : -1}
+              onClick={() => handlePaste(item.text)}
+              onFocus={() => setGridFocusedIndex(index)}
+              onKeyDown={(e) => handleGridKeyDown(e, index)}
+              onMouseEnter={() => setHoveredKaomoji({ text: item.text, category: item.category })}
+              onMouseLeave={() => setHoveredKaomoji(null)}
+              className={clsx(
+                'h-12 flex items-center justify-center rounded-md text-sm',
+                'hover:scale-105 transition-transform duration-100',
+                'border border-transparent hover:border-win11-border-subtle',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent',
+                isDark ? 'hover:bg-win11-bg-card-hover' : 'hover:bg-win11Light-bg-card-hover'
+              )}
+              title={item.category}
+              aria-label={`${item.text} - ${item.category}`}
+            >
+              {item.text}
+            </button>
+          ))}
+          {kaomojis.length === 0 && (
+            <div className="col-span-full py-8 text-center text-sm opacity-60">
+              No kaomojis found
+            </div>
+          )}
         </div>
       </div>
 

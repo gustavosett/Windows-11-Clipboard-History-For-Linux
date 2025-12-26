@@ -39,14 +39,11 @@ export function ClipboardTab(props: {
 
   const [searchQuery, setSearchQuery] = useState('')
 
-  
-
-
   const [focusedIndex, setFocusedIndex] = useState(0)
 
   // Refs
   const historyItemRefs = useRef<(HTMLDivElement | null)[]>([])
-  
+
   // Filter history
   const filteredHistory = useMemo(() => {
     if (!searchQuery) return history
@@ -66,29 +63,27 @@ export function ClipboardTab(props: {
     historyItemRefs,
     tabBarRef,
   })
-  
 
-  
-  
   // Ref for stable access to filtered history in event listener
   const filteredHistoryRef = useRef(filteredHistory)
   useEffect(() => {
-      filteredHistoryRef.current = filteredHistory
+    filteredHistoryRef.current = filteredHistory
   }, [filteredHistory])
-  
-  useEffect(() => {
-      const focusFirstItem = () => {
-          setTimeout(() => {
-              if (filteredHistoryRef.current.length > 0) {
-                  setFocusedIndex(0)
-                  historyItemRefs.current[0]?.focus()
-              }
-          }, 100)
-      }
-       const unlistenWindowShown = listen('window-shown', focusFirstItem)
-       return () => { unlistenWindowShown.then(u => u()) }
-  }, [])
 
+  useEffect(() => {
+    const focusFirstItem = () => {
+      setTimeout(() => {
+        if (filteredHistoryRef.current.length > 0) {
+          setFocusedIndex(0)
+          historyItemRefs.current[0]?.focus()
+        }
+      }, 100)
+    }
+    const unlistenWindowShown = listen('window-shown', focusFirstItem)
+    return () => {
+      unlistenWindowShown.then((u) => u())
+    }
+  }, [])
 
   if (isLoading) {
     return (
@@ -112,43 +107,47 @@ export function ClipboardTab(props: {
       />
       {/* Search Bar for Clipboard & Favorites */}
       <div className="px-3 pb-2 pt-1">
-           <SearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              isDark={isDark}
-              opacity={secondaryOpacity}
-              placeholder="Search history..."
-              onClear={() => setSearchQuery('')}
-           />
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          isDark={isDark}
+          opacity={secondaryOpacity}
+          placeholder="Search history..."
+          onClear={() => setSearchQuery('')}
+        />
       </div>
-      
-      {filteredHistory.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center opacity-60">
-              <p className={clsx("text-sm", isDark ? "text-win11-text-secondary" : "text-win11Light-text-secondary")}>
-                  No items found
-              </p>
-          </div>
-      ) : (
-          <div className="flex flex-col gap-2 p-3" role="listbox" aria-label="Clipboard history">
-            {filteredHistory.map((item, index) => (
-              <HistoryItem
-                key={item.id}
-                ref={(el) => {
-                  historyItemRefs.current[index] = el
-                }}
-                item={item}
-                index={index}
-                isFocused={index === focusedIndex}
-                onPaste={onPaste}
-                onDelete={deleteItem}
-                onTogglePin={togglePin}
-                onFocus={() => setFocusedIndex(index)}
-                isDark={isDark}
-                secondaryOpacity={secondaryOpacity}
 
-              />
-            ))}
-          </div>
+      {filteredHistory.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-8 text-center opacity-60">
+          <p
+            className={clsx(
+              'text-sm',
+              isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
+            )}
+          >
+            No items found
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 p-3" role="listbox" aria-label="Clipboard history">
+          {filteredHistory.map((item, index) => (
+            <HistoryItem
+              key={item.id}
+              ref={(el) => {
+                historyItemRefs.current[index] = el
+              }}
+              item={item}
+              index={index}
+              isFocused={index === focusedIndex}
+              onPaste={onPaste}
+              onDelete={deleteItem}
+              onTogglePin={togglePin}
+              onFocus={() => setFocusedIndex(index)}
+              isDark={isDark}
+              secondaryOpacity={secondaryOpacity}
+            />
+          ))}
+        </div>
       )}
     </>
   )

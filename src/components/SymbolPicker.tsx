@@ -203,17 +203,23 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
   // Roving tabindex state for categories
   const [categoryFocusedIndex, setCategoryFocusedIndex] = useState(0)
 
-  const handleSearchChange = useCallback((query: string) => {
-    setSearchQuery(query)
-    setRecentFocusedIndex(0)
-    setMainFocusedIndex(0)
-  }, [setSearchQuery])
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchQuery(query)
+      setRecentFocusedIndex(0)
+      setMainFocusedIndex(0)
+    },
+    [setSearchQuery]
+  )
 
-  const handleCategorySelect = useCallback((category: string | null) => {
-    setSelectedCategory(category)
-    setRecentFocusedIndex(0)
-    setMainFocusedIndex(0)
-  }, [setSelectedCategory])
+  const handleCategorySelect = useCallback(
+    (category: string | null) => {
+      setSelectedCategory(category)
+      setRecentFocusedIndex(0)
+      setMainFocusedIndex(0)
+    },
+    [setSelectedCategory]
+  )
 
   // Measure container size
   useLayoutEffect(() => {
@@ -302,7 +308,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
         case 'Enter':
         case ' ':
           e.preventDefault()
-        if (currentIndex === 0) {
+          if (currentIndex === 0) {
             handleCategorySelect(null)
           } else {
             handleCategorySelect(categories[currentIndex - 1])
@@ -522,15 +528,9 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
               Recently used
             </span>
           </div>
-          <div 
-             ref={recentGridRef}
-             className="flex flex-wrap gap-1 pb-2"
-          >
+          <div ref={recentGridRef} className="flex flex-wrap gap-1 pb-2">
             {recentSymbols.slice(0, 16).map((symbol, index) => (
-              <div 
-                key={`recent-${symbol.char}-${index}`} 
-                className="w-10 h-10 p-0.5"
-              >
+              <div key={`recent-${symbol.char}-${index}`} className="w-10 h-10 p-0.5">
                 <SymbolCell
                   symbol={symbol}
                   onSelect={handleSelect}
@@ -599,7 +599,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
       )}
 
       {/* Symbol grid */}
-      <div 
+      <div
         ref={containerRef}
         className="flex-1 min-h-0 overflow-hidden border-t dark:border-win11-border-subtle border-win11Light-border"
       >
@@ -610,11 +610,11 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
             </p>
           </div>
         ) : (
-          <div 
-             ref={mainGridContainerRef}
-             role="grid"
-             aria-label="Symbol grid"
-             style={{ height: gridHeight }}
+          <div
+            ref={mainGridContainerRef}
+            role="grid"
+            aria-label="Symbol grid"
+            style={{ height: gridHeight }}
           >
             {dimensions.width > 0 && dimensions.height > 0 && (
               <Grid<SymbolGridData>
