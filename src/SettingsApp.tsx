@@ -526,9 +526,9 @@ function SettingsApp() {
                 onChange={(e) => {
                   const raw = e.target.value
                   const parsed = Number.parseInt(raw, 10)
-                  // If parsing fails (e.g. empty input), prefer MAX to avoid
-                  // accidentally cropping the user's history to the minimum.
-                  const safe = Number.isNaN(parsed) ? MAX_HISTORY_SIZE : parsed
+                  // If parsing fails (e.g. empty input), preserve the current setting
+                  // instead of jumping to the maximum value.
+                  const safe = Number.isNaN(parsed) ? settings.max_history_size : parsed
                   const value = Math.max(MIN_HISTORY_SIZE, Math.min(MAX_HISTORY_SIZE, safe))
                   updateSettings({ max_history_size: value })
                 }}
