@@ -796,7 +796,7 @@ fn main() {
                 _ => {}
             });
 
-            start_clipboard_watcher(app_handle.clone(), clipboard_manager);
+            start_clipboard_watcher(app_handle.clone(), clipboard_manager.clone());
 
             // Register global shortcut (Super+V) with the desktop environment
             // This runs in a background thread to avoid blocking startup

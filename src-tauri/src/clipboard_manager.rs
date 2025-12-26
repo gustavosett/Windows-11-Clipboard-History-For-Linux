@@ -471,7 +471,12 @@ impl ClipboardManager {
 
     fn insert_item(&mut self, item: ClipboardItem) {
         // Insert after pinned items (first non-pinned slot)
-        let insert_pos = self.history.iter().position(|i| !i.pinned).unwrap_or(0);
+        // If all items are pinned, insert at the end to preserve pinned ordering
+        let insert_pos = self
+            .history
+            .iter()
+            .position(|i| !i.pinned)
+            .unwrap_or(self.history.len());
         self.history.insert(insert_pos, item);
 
         // Trim history

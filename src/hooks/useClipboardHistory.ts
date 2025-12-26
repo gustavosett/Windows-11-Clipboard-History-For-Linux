@@ -109,45 +109,22 @@ export function useClipboardHistory() {
     let unlistenSync: UnlistenFn | undefined
 
     const setupListeners = async () => {
-      unlistenChanged = await listen<ClipboardItem>('clipboard-changed', (event) => {
-        setHistory((prev) => {
-          const newItem = event.payload
-
-          // Check if item already exists by id
-          if (prev.some((i) => i.id === newItem.id)) {
-            return prev
-          }
-
-          // Helper to get plain text from any text-based content
-          const getPlainText = (content: ClipboardItem['content']): string | null => {
-            if (content.type === 'Text') return content.data
-            if (content.type === 'RichText') return content.data.plain
-            return null
-          }
-
-          // Also check for content duplicates in the first few unpinned items
-          // This handles race conditions between fetchHistory and events
-          const unpinnedItems = prev.filter((i) => !i.pinned)
-          const newPlainText = getPlainText(newItem.content)
-          const isDuplicate =
-            newPlainText !== null &&
-            unpinnedItems.slice(0, 5).some((i) => {
-              const existingPlainText = getPlainText(i.content)
-              return existingPlainText === newPlainText
-            })
-
-          if (isDuplicate) {
-            return prev
-          }
-
-          // Add new item at the top (after pinned items)
-          const pinnedItems = prev.filter((i) => i.pinned)
-          return [...pinnedItems, newItem, ...unpinnedItems.slice(0, 49)]
-        })
+      unlistenChanged = await listen<ClipboardItem>('clipboard-changed', async () => {
+        // Backend emits the event and already enforces trimming. Fetch full history
+        // to keep frontend in sync with backend limits and ordering.
+        try {
+          await fetchHistory()
+        } catch (e) {
+          console.warn('[useClipboardHistory] Failed to refresh history on clipboard-changed', e)
+        }
       })
 
-      unlistenCleared = await listen('history-cleared', () => {
-        setHistory((prev) => prev.filter((item) => item.pinned))
+      unlistenCleared = await listen('history-cleared', async () => {
+        try {
+          await fetchHistory()
+        } catch (e) {
+          console.warn('[useClipboardHistory] Failed to refresh history on history-cleared', e)
+        }
       })
 
       // Listen for history sync events (triggered when backend detects desync)
