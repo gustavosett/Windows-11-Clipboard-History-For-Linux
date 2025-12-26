@@ -176,11 +176,8 @@ pub struct ClipboardManager {
 
 impl ClipboardManager {
     pub fn new(persistence_path: PathBuf, max_history_size: usize) -> Self {
-        let max_size = if max_history_size == 0 {
-            DEFAULT_MAX_HISTORY_SIZE
-        } else {
-            max_history_size
-        };
+        // Clamp to the same valid range used in `set_max_history_size`
+        let max_size = max_history_size.clamp(1, 100_000);
         let mut manager = Self {
             history: Vec::with_capacity(max_size),
             last_pasted_text: None,
