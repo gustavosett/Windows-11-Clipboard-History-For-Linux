@@ -52,7 +52,7 @@ fn default_true() -> bool {
 }
 
 fn default_max_history_size() -> usize {
-    50
+    crate::clipboard_manager::DEFAULT_MAX_HISTORY_SIZE
 }
 
 impl Default for UserSettings {
