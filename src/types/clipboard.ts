@@ -58,8 +58,8 @@ export interface UserSettings {
   dark_background_opacity: number
   light_background_opacity: number
   enable_smart_actions: boolean
-
   enable_ui_polish: boolean
+  max_history_size: number
   custom_kaomojis: CustomKaomoji[]
 }
 

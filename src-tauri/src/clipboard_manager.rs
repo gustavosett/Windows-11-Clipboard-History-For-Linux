@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 // --- Constants ---
 
-const MAX_HISTORY_SIZE: usize = 50;
+pub const DEFAULT_MAX_HISTORY_SIZE: usize = 50;
 const PREVIEW_TEXT_MAX_LEN: usize = 100;
 const GIF_CACHE_MARKER: &str = "win11-clipboard-history/gifs/";
 const FILE_URI_PREFIX: &str = "file://";
@@ -170,19 +170,57 @@ pub struct ClipboardManager {
     last_added_text_hash: Option<u64>,
     /// Path to save the history file
     persistence_path: PathBuf,
+    /// Maximum number of history items to keep
+    max_history_size: usize,
 }
 
 impl ClipboardManager {
-    pub fn new(persistence_path: PathBuf) -> Self {
+    fn clamp_max_history_size(size: usize) -> usize {
+        match size {
+            0 => DEFAULT_MAX_HISTORY_SIZE,
+            1..=100_000 => size,
+            _ => 100_000,
+        }
+    }
+
+    pub fn new(persistence_path: PathBuf, max_history_size: usize) -> Self {
+        // Normalize the requested max size and avoid huge allocations
+        let max_size = Self::clamp_max_history_size(max_history_size);
         let mut manager = Self {
-            history: Vec::with_capacity(MAX_HISTORY_SIZE),
+            history: Vec::with_capacity(max_size),
             last_pasted_text: None,
             last_pasted_image_hash: None,
             last_added_text_hash: None,
             persistence_path,
+            max_history_size: max_size,
         };
         manager.load_history();
         manager
+    }
+
+    /// Updates the maximum history size and enforces the new limit
+    pub fn set_max_history_size(&mut self, new_size: usize) {
+        let mut clamped = Self::clamp_max_history_size(new_size);
+        // Do not set max less than number of pinned items; we won't delete pins automatically
+        let pinned_count = self.history.iter().filter(|i| i.pinned).count();
+        if clamped < pinned_count {
+            eprintln!(
+                "clipboard_manager: requested max history size ({}) is less than the number of pinned items ({}); increasing limit to preserve pinned items.",
+                clamped,
+                pinned_count
+            );
+            clamped = pinned_count;
+        }
+        self.max_history_size = clamped;
+        let trimmed = self.enforce_history_limit();
+        if trimmed {
+            self.save_history();
+        }
+    }
+
+    /// Gets the current maximum history size
+    pub fn get_max_history_size(&self) -> usize {
+        self.max_history_size
     }
 
     fn load_history(&mut self) {
@@ -194,8 +232,27 @@ impl ClipboardManager {
             Ok(content) => {
                 match serde_json::from_str::<Vec<ClipboardItem>>(&content) {
                     Ok(items) => {
-                        self.history = items;
+                        // Reorder items so pinned come first while preserving order within each group
+                        let mut pinned_items = Vec::new();
+                        let mut unpinned_items = Vec::new();
 
+                        for item in items {
+                            if item.pinned {
+                                pinned_items.push(item);
+                            } else {
+                                unpinned_items.push(item);
+                            }
+                        }
+
+                        pinned_items.extend(unpinned_items);
+                        self.history = pinned_items;
+                        // Ensure loaded history respects configured limit immediately
+                        let history_trimmed = self.enforce_history_limit();
+                        // If the loaded history was trimmed, persist it so disk stays in sync.
+                        // Avoid saving when nothing changed.
+                        if history_trimmed {
+                            self.save_history();
+                        }
                         // Initialize last_added_text_hash from the most recent item (even if pinned)
                         // This prevents duplication on startup if the clipboard content matches the top item
                         if let Some(first) = self.history.first() {
@@ -419,7 +476,12 @@ impl ClipboardManager {
 
     fn insert_item(&mut self, item: ClipboardItem) {
         // Insert after pinned items (first non-pinned slot)
-        let insert_pos = self.history.iter().position(|i| !i.pinned).unwrap_or(0);
+        // If all items are pinned, insert at the end to preserve pinned ordering
+        let insert_pos = self
+            .history
+            .iter()
+            .position(|i| !i.pinned)
+            .unwrap_or(self.history.len());
         self.history.insert(insert_pos, item);
 
         // Trim history
@@ -427,16 +489,19 @@ impl ClipboardManager {
         self.save_history();
     }
 
-    fn enforce_history_limit(&mut self) {
-        while self.history.len() > MAX_HISTORY_SIZE {
+    /// Enforce the configured history size. Returns true if trimming occurred.
+    fn enforce_history_limit(&mut self) -> bool {
+        let before = self.history.len();
+        while self.history.len() > self.max_history_size {
             // Remove from the end, skipping pinned items if possible
             if let Some(pos) = self.history.iter().rposition(|i| !i.pinned) {
                 self.history.remove(pos);
             } else {
-                // All items are pinned. We stop removing.
+                // All items are pinned. We stopped removing to avoid deleting pins.
                 break;
             }
         }
+        self.history.len() != before
     }
 
     // --- Accessors ---

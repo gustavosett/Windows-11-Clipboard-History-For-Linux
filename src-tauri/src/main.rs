@@ -87,9 +87,21 @@ fn get_user_settings() -> Result<UserSettings, String> {
 }
 
 #[tauri::command]
-fn set_user_settings(app: AppHandle, new_settings: UserSettings) -> Result<(), String> {
+fn set_user_settings(
+    app: AppHandle,
+    state: State<AppState>,
+    new_settings: UserSettings,
+) -> Result<(), String> {
     let manager = UserSettingsManager::new();
     manager.save(&new_settings)?;
+
+    // Update clipboard manager's max history size if it changed
+    {
+        let mut clipboard_manager = state.clipboard_manager.lock();
+        if clipboard_manager.get_max_history_size() != new_settings.max_history_size {
+            clipboard_manager.set_max_history_size(new_settings.max_history_size);
+        }
+    }
 
     // Emit event to notify all windows that settings have changed
     app.emit("app-settings-changed", &new_settings)
@@ -639,7 +651,13 @@ fn main() {
     }
 
     let history_path = base_dir.join("history.json");
-    let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new(history_path)));
+
+    // Load user settings to get max_history_size
+    let user_settings = UserSettingsManager::new().load();
+    let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new(
+        history_path,
+        user_settings.max_history_size,
+    )));
 
     let emoji_manager = Arc::new(Mutex::new(EmojiManager::new(base_dir.clone())));
 
@@ -778,7 +796,7 @@ fn main() {
                 _ => {}
             });
 
-            start_clipboard_watcher(app_handle.clone(), clipboard_manager);
+            start_clipboard_watcher(app_handle.clone(), clipboard_manager.clone());
 
             // Register global shortcut (Super+V) with the desktop environment
             // This runs in a background thread to avoid blocking startup

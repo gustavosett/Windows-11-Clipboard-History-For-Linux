@@ -28,6 +28,11 @@ pub struct UserSettings {
     #[serde(default = "default_true")]
     pub enable_ui_polish: bool,
 
+    // --- History Settings ---
+    /// Maximum number of clipboard history items to keep (1 to 100000)
+    #[serde(default = "default_max_history_size")]
+    pub max_history_size: usize,
+
     // --- Custom Data ---
     /// User-defined Kaomojis
     #[serde(default)]
@@ -46,6 +51,10 @@ fn default_true() -> bool {
     true
 }
 
+fn default_max_history_size() -> usize {
+    crate::clipboard_manager::DEFAULT_MAX_HISTORY_SIZE
+}
+
 impl Default for UserSettings {
     fn default() -> Self {
         Self {
@@ -54,6 +63,7 @@ impl Default for UserSettings {
             light_background_opacity: 0.70,
             enable_smart_actions: true,
             enable_ui_polish: true,
+            max_history_size: default_max_history_size(),
             custom_kaomojis: Vec::new(),
         }
     }
@@ -69,6 +79,9 @@ impl UserSettings {
         if !["system", "dark", "light"].contains(&self.theme_mode.as_str()) {
             self.theme_mode = "system".to_string();
         }
+
+        // Validate max_history_size (1 to 100000)
+        self.max_history_size = self.max_history_size.clamp(1, 100_000);
     }
 }
 
