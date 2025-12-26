@@ -101,15 +101,23 @@ export function useClipboardHistory() {
             return prev
           }
 
+          // Helper to get plain text from any text-based content
+          const getPlainText = (content: ClipboardItem['content']): string | null => {
+            if (content.type === 'Text') return content.data
+            if (content.type === 'RichText') return content.data.plain
+            return null
+          }
+
           // Also check for content duplicates in the first few unpinned items
           // This handles race conditions between fetchHistory and events
           const unpinnedItems = prev.filter((i) => !i.pinned)
-          const isDuplicate = unpinnedItems.slice(0, 5).some((i) => {
-            if (i.content.type === 'Text' && newItem.content.type === 'Text') {
-              return i.content.data === newItem.content.data
-            }
-            return false
-          })
+          const newPlainText = getPlainText(newItem.content)
+          const isDuplicate =
+            newPlainText !== null &&
+            unpinnedItems.slice(0, 5).some((i) => {
+              const existingPlainText = getPlainText(i.content)
+              return existingPlainText === newPlainText
+            })
 
           if (isDuplicate) {
             return prev

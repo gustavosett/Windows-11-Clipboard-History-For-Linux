@@ -49,7 +49,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
   },
   ref
 ) {
-  const isText = item.content.type === 'Text'
+  const isText = item.content.type === 'Text' || item.content.type === 'RichText'
 
   // Use compact mode only if enabled by flag
   const effectiveCompact = enableUiPolish ? isCompact : false

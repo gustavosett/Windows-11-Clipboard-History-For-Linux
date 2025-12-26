@@ -152,7 +152,7 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
 
   const handlePaste = useCallback(async (text: string) => {
     try {
-      await invoke('paste_text', { text, itemType: 'kaomoji' })
+      await invoke('paste_text', { text })
       // No need for toast or close_window here, backend handles it
     } catch (err) {
       console.error('Failed to paste kaomoji', err)
@@ -316,7 +316,7 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
       </div>
 
       {/* Grid */}
-      <div ref={containerRef} className="flex-1 overflow-y-auto p-3 pt-0 scrollbar-win11">
+      <div ref={containerRef} className="flex-1 overflow-y-scroll p-3 pt-0 scrollbar-win11">
         <div
           ref={gridContainerRef}
           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"
@@ -335,7 +335,7 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
               onMouseLeave={() => setHoveredKaomoji(null)}
               className={clsx(
                 'h-12 flex items-center justify-center rounded-md text-sm',
-                'hover:scale-105 transition-transform duration-100',
+                'hover:scale-105 transition-transform duration-100 transform-gpu',
                 'border border-transparent hover:border-win11-border-subtle',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent',
                 isDark ? 'hover:bg-win11-bg-card-hover' : 'hover:bg-win11Light-bg-card-hover'

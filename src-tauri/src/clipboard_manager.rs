@@ -42,6 +42,8 @@ fn get_system_clipboard() -> Result<Clipboard, String> {
 pub enum ClipboardContent {
     /// Plain text content
     Text(String),
+    /// Rich text with HTML formatting (plain text + optional HTML)
+    RichText { plain: String, html: String },
     /// Image as base64 encoded PNG
     Image {
         base64: String,
@@ -77,6 +79,19 @@ impl ClipboardItem {
         };
 
         Self::create(ClipboardContent::Text(text), preview)
+    }
+
+    pub fn new_rich_text(plain: String, html: String) -> Self {
+        let preview = if plain.chars().count() > PREVIEW_TEXT_MAX_LEN {
+            format!(
+                "{}...",
+                &plain.chars().take(PREVIEW_TEXT_MAX_LEN).collect::<String>()
+            )
+        } else {
+            plain.clone()
+        };
+
+        Self::create(ClipboardContent::RichText { plain, html }, preview)
     }
 
     pub fn new_image(base64: String, width: u32, height: u32, hash: u64) -> Self {
@@ -153,6 +168,12 @@ impl ClipboardManager {
         Clipboard::new()?.get_text()
     }
 
+    /// Try to get HTML content from clipboard. Returns None if not available.
+    pub fn get_current_html(&self) -> Option<String> {
+        let mut clipboard = get_system_clipboard().ok()?;
+        clipboard.get().html().ok()
+    }
+
     pub fn get_current_image(
         &mut self,
     ) -> Result<Option<(ImageData<'static>, u64)>, arboard::Error> {
@@ -175,7 +196,8 @@ impl ClipboardManager {
 
     // --- Adding Items ---
 
-    pub fn add_text(&mut self, text: String) -> Option<ClipboardItem> {
+    /// Add text content to history, with optional HTML for rich text
+    pub fn add_text(&mut self, text: String, html: Option<String>) -> Option<ClipboardItem> {
         if self.should_skip_text(&text) {
             return None;
         }
@@ -198,8 +220,13 @@ impl ClipboardManager {
         // If so, remove the old entry so we can add fresh at top
         self.remove_duplicate_text_from_history(&text);
 
-        // Create new item and add to history
-        let item = ClipboardItem::new_text(text);
+        // Create new item - use RichText if HTML is available, otherwise plain Text
+        let item = match html {
+            Some(html_content) if !html_content.trim().is_empty() => {
+                ClipboardItem::new_rich_text(text, html_content)
+            }
+            _ => ClipboardItem::new_text(text),
+        };
         self.insert_item(item.clone());
 
         self.last_added_text_hash = Some(text_hash);
@@ -275,8 +302,10 @@ impl ClipboardManager {
         // Check only the very first non-pinned item for exact match logic
         // used in rapid detection
         if let Some(item) = self.history.iter().find(|item| !item.pinned) {
-            if matches!(&item.content, ClipboardContent::Text(t) if t == text) {
-                return true;
+            match &item.content {
+                ClipboardContent::Text(t) if t == text => return true,
+                ClipboardContent::RichText { plain, .. } if plain == text => return true,
+                _ => {}
             }
         }
         false
@@ -284,7 +313,14 @@ impl ClipboardManager {
 
     fn remove_duplicate_text_from_history(&mut self, text: &str) {
         if let Some(pos) = self.history.iter().position(|item| {
-            !item.pinned && matches!(&item.content, ClipboardContent::Text(t) if t == text)
+            if item.pinned {
+                return false;
+            }
+            match &item.content {
+                ClipboardContent::Text(t) => t == text,
+                ClipboardContent::RichText { plain, .. } => plain == text,
+                _ => false,
+            }
         }) {
             self.history.remove(pos);
         }
@@ -357,6 +393,10 @@ impl ClipboardManager {
                 self.last_pasted_text = Some(text.clone());
                 self.last_pasted_image_hash = None;
             }
+            ClipboardContent::RichText { plain, .. } => {
+                self.last_pasted_text = Some(plain.clone());
+                self.last_pasted_image_hash = None;
+            }
             ClipboardContent::Image { .. } => {
                 if let Some(hash) = item.extract_image_hash() {
                     self.last_pasted_image_hash = Some(hash);
@@ -383,6 +423,12 @@ impl ClipboardManager {
         match &item.content {
             ClipboardContent::Text(text) => {
                 clipboard.set_text(text).map_err(|e| e.to_string())?;
+            }
+            ClipboardContent::RichText { plain, html } => {
+                // Set HTML with plain text as fallback - this preserves formatting
+                clipboard
+                    .set_html(html, Some(plain))
+                    .map_err(|e| e.to_string())?;
             }
             ClipboardContent::Image {
                 base64,

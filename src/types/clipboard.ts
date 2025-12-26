@@ -1,10 +1,19 @@
 /** Clipboard content types */
-export type ClipboardContentType = 'text' | 'image'
+export type ClipboardContentType = 'text' | 'RichText' | 'image'
 
 /** Text content */
 export interface TextContent {
   type: 'Text'
   data: string
+}
+
+/** Rich text content with HTML formatting */
+export interface RichTextContent {
+  type: 'RichText'
+  data: {
+    plain: string
+    html: string
+  }
 }
 
 /** Image content */
@@ -18,7 +27,7 @@ export interface ImageContent {
 }
 
 /** Union of all content types */
-export type ClipboardContent = TextContent | ImageContent
+export type ClipboardContent = TextContent | RichTextContent | ImageContent
 
 /** A single clipboard history item */
 export interface ClipboardItem {

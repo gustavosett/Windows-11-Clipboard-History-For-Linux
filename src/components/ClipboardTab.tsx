@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { clsx } from 'clsx'
 
@@ -50,11 +50,62 @@ export function ClipboardTab(props: {
   useEffect(() => {
     localStorage.setItem('clipboard-history-compact-mode', String(isCompact))
   }, [isCompact])
+  const [isSearchVisible, setIsSearchVisible] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const [focusedIndex, setFocusedIndex] = useState(0)
 
   // Refs
   const historyItemRefs = useRef<(HTMLDivElement | null)[]>([])
+
+  // Toggle search visibility with Ctrl+F
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault()
+        setIsSearchVisible((prev) => {
+          const newValue = !prev
+          if (!newValue) {
+            // Clear search when hiding
+            setSearchQuery('')
+          }
+          return newValue
+        })
+      }
+      // Close search with Escape
+      if (e.key === 'Escape' && isSearchVisible) {
+        e.preventDefault()
+        setIsSearchVisible(false)
+        setSearchQuery('')
+      }
+    },
+    [isSearchVisible]
+  )
+
+  // Listen for Ctrl+F
+  useEffect(() => {
+    globalThis.addEventListener('keydown', handleKeyDown)
+    return () => globalThis.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
+
+  // Focus search input when it becomes visible
+  useEffect(() => {
+    if (isSearchVisible && searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }, [isSearchVisible])
+
+  // Reset search when window is shown (app reopened)
+  useEffect(() => {
+    const resetSearch = () => {
+      setIsSearchVisible(false)
+      setSearchQuery('')
+    }
+    const unlistenWindowShown = listen('window-shown', resetSearch)
+    return () => {
+      unlistenWindowShown.then((u) => u())
+    }
+  }, [])
 
   // Filter history
   const filteredHistory = useMemo(() => {
@@ -130,19 +181,25 @@ export function ClipboardTab(props: {
         isCompact={isCompact}
         onToggleCompact={() => setIsCompact(!isCompact)}
       />
-      {/* Search Bar for Clipboard & Favorites */}
-      <div className="px-3 pb-2 pt-1">
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          isDark={isDark}
-          opacity={secondaryOpacity}
-          placeholder="Search history..."
-          isRegex={isRegexMode}
-          onToggleRegex={() => setIsRegexMode(!isRegexMode)}
-          onClear={() => setSearchQuery('')}
-        />
-      </div>
+      {/* Search Bar - only visible when Ctrl+F is pressed */}
+      {isSearchVisible && (
+        <div className="px-3 pb-2 pt-1">
+          <SearchBar
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={setSearchQuery}
+            isDark={isDark}
+            opacity={secondaryOpacity}
+            placeholder="Search history..."
+            isRegex={isRegexMode}
+            onToggleRegex={() => setIsRegexMode(!isRegexMode)}
+            onClear={() => {
+              setSearchQuery('')
+              setIsSearchVisible(false)
+            }}
+          />
+        </div>
+      )}
 
       {filteredHistory.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-8 text-center opacity-60">
