@@ -51,7 +51,24 @@ export function useClipboardHistory() {
       try {
         const updatedItem = await invoke<ClipboardItem>('toggle_pin', { id })
         if (updatedItem) {
-          setHistory((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
+          setHistory((prev) => {
+            // Remove the item from its current position
+            const otherItems = prev.filter((item) => item.id !== id)
+            const pinnedItems = otherItems.filter((item) => item.pinned)
+            const unpinnedItems = otherItems.filter((item) => !item.pinned)
+
+            if (updatedItem.pinned) {
+              // Item was pinned - add to the end of pinned items (top of list)
+              return [...pinnedItems, updatedItem, ...unpinnedItems]
+            } else {
+              // Item was unpinned - insert in correct position by timestamp
+              const allUnpinned = [updatedItem, ...unpinnedItems]
+              allUnpinned.sort(
+                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              )
+              return [...pinnedItems, ...allUnpinned]
+            }
+          })
         } else {
           // Item not found - refresh history
           console.warn('[useClipboardHistory] Toggle pin returned null, refreshing history')
