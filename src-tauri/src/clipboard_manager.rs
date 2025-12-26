@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 // --- Constants ---
 
-const MAX_HISTORY_SIZE: usize = 50;
+const DEFAULT_MAX_HISTORY_SIZE: usize = 50;
 const PREVIEW_TEXT_MAX_LEN: usize = 100;
 const GIF_CACHE_MARKER: &str = "win11-clipboard-history/gifs/";
 const FILE_URI_PREFIX: &str = "file://";
@@ -170,19 +170,39 @@ pub struct ClipboardManager {
     last_added_text_hash: Option<u64>,
     /// Path to save the history file
     persistence_path: PathBuf,
+    /// Maximum number of history items to keep
+    max_history_size: usize,
 }
 
 impl ClipboardManager {
-    pub fn new(persistence_path: PathBuf) -> Self {
+    pub fn new(persistence_path: PathBuf, max_history_size: usize) -> Self {
+        let max_size = if max_history_size == 0 {
+            DEFAULT_MAX_HISTORY_SIZE
+        } else {
+            max_history_size
+        };
         let mut manager = Self {
-            history: Vec::with_capacity(MAX_HISTORY_SIZE),
+            history: Vec::with_capacity(max_size),
             last_pasted_text: None,
             last_pasted_image_hash: None,
             last_added_text_hash: None,
             persistence_path,
+            max_history_size: max_size,
         };
         manager.load_history();
         manager
+    }
+
+    /// Updates the maximum history size and enforces the new limit
+    pub fn set_max_history_size(&mut self, new_size: usize) {
+        self.max_history_size = new_size.clamp(1, 100_000);
+        self.enforce_history_limit();
+        self.save_history();
+    }
+
+    /// Gets the current maximum history size
+    pub fn get_max_history_size(&self) -> usize {
+        self.max_history_size
     }
 
     fn load_history(&mut self) {
@@ -430,7 +450,7 @@ impl ClipboardManager {
     }
 
     fn enforce_history_limit(&mut self) {
-        while self.history.len() > MAX_HISTORY_SIZE {
+        while self.history.len() > self.max_history_size {
             // Remove from the end, skipping pinned items if possible
             if let Some(pos) = self.history.iter().rposition(|i| !i.pinned) {
                 self.history.remove(pos);

@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   light_background_opacity: 0.7,
   enable_smart_actions: true,
   enable_ui_polish: true,
+  max_history_size: 50,
   custom_kaomojis: [],
 }
 

@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   light_background_opacity: 0.7,
   enable_smart_actions: true,
   enable_ui_polish: true,
+  max_history_size: 50,
   custom_kaomojis: [],
 }
 
@@ -483,6 +484,52 @@ function SettingsApp() {
                 onMouseUp={commitOpacityChange}
                 onTouchEnd={commitOpacityChange}
                 className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-win11-bg-accent"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* History Settings Section */}
+        <section
+          className={clsx(
+            'rounded-xl border shadow-sm overflow-hidden',
+            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
+          )}
+        >
+          <div className="p-6 border-b border-inherit">
+            <h2 className="text-base font-semibold mb-1">History Settings</h2>
+            <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              Configure clipboard history behavior
+            </p>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <label htmlFor="max-history" className="text-sm font-medium">
+                  Maximum History Size
+                </label>
+                <p className={clsx('text-xs mt-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                  Number of clipboard items to keep (1 - 100,000)
+                </p>
+              </div>
+              <input
+                id="max-history"
+                type="number"
+                min="1"
+                max="100000"
+                value={settings.max_history_size}
+                onChange={(e) => {
+                  const value = Math.max(1, Math.min(100000, Number.parseInt(e.target.value) || 1))
+                  updateSettings({ max_history_size: value })
+                }}
+                className={clsx(
+                  'w-28 text-right font-mono border rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-win11-bg-accent/50',
+                  'input-number-compact no-number-spinner',
+                  isDark
+                    ? 'bg-white/5 border-white/10 text-white'
+                    : 'bg-gray-50 border-gray-200 text-gray-900'
+                )}
               />
             </div>
           </div>

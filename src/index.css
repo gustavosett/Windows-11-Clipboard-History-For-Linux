@@ -169,3 +169,23 @@ body {
     @apply outline-none ring-2 ring-win11-bg-accent ring-offset-2 ring-offset-transparent;
   }
 }
+
+/* Hide native number input spinners for better cross-browser styling */
+/* Utility class: apply to inputs to remove native spinner controls */
+.no-number-spinner::-webkit-outer-spin-button,
+.no-number-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-number-spinner {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+/* Small numeric input consistent with other controls */
+.input-number-compact {
+  padding: 0.45rem 0.6rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+}
