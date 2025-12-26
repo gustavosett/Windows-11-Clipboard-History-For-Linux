@@ -120,17 +120,33 @@ export function useClipboardHistory() {
       })
 
       unlistenCleared = await listen('history-cleared', async () => {
-        try {
-          await fetchHistory()
-        } catch (e) {
-          console.warn('[useClipboardHistory] Failed to refresh history on history-cleared', e)
-        }
-      })
+        unlistenChanged = await listen<ClipboardItem>('clipboard-changed', (event) => {
+          console.log('[useClipboardHistory] clipboard-changed event received')
+          const newItem = event.payload
 
-      // Listen for history sync events (triggered when backend detects desync)
-      unlistenSync = await listen<ClipboardItem[]>('history-sync', (event) => {
-        console.log('[useClipboardHistory] Received history-sync event, refreshing history')
-        setHistory(event.payload)
+          if (!newItem) {
+            // Fallback: if backend did not send a payload, refresh full history.
+            fetchHistory().catch((e) => {
+              console.warn(
+                '[useClipboardHistory] Failed to refresh history on clipboard-changed (no payload)',
+                e
+              )
+            })
+            return
+          }
+
+          // Apply delta update locally to avoid fetching entire history for large limits.
+          setHistory((prev) => {
+            // If the item already exists, ignore the event (duplicate)
+            if (prev.some((i) => i.id === newItem.id)) return prev
+
+            const pinnedItems = prev.filter((i) => i.pinned)
+            const unpinnedItems = prev.filter((i) => !i.pinned)
+
+            // Insert new item at the top of unpinned items (after pins)
+            return [...pinnedItems, newItem, ...unpinnedItems]
+          })
+        })
       })
     }
 
