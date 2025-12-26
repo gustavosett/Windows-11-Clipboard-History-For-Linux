@@ -501,7 +501,7 @@ impl ClipboardManager {
                 break;
             }
         }
-        self.history.len() < before
+        self.history.len() != before
     }
 
     // --- Accessors ---
