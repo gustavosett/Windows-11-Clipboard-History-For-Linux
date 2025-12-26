@@ -122,12 +122,19 @@ export function ClipboardTab(props: {
     }
 
     return history.filter((item) => {
-      if (item.content.type !== 'Text') return false
+      let searchableText = ''
+      if (item.content.type === 'Text') {
+        searchableText = item.content.data
+      } else if (item.content.type === 'RichText') {
+        searchableText = item.content.data.plain
+      } else {
+        return false
+      }
 
       if (isRegexMode && regex) {
-        return regex.test(item.content.data)
+        return regex.test(searchableText)
       } else if (!isRegexMode) {
-        return item.content.data.toLowerCase().includes(searchQuery.toLowerCase())
+        return searchableText.toLowerCase().includes(searchQuery.toLowerCase())
       }
       return false
     })
