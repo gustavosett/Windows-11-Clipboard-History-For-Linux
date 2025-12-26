@@ -234,14 +234,12 @@ impl ClipboardManager {
                         pinned_items.extend(unpinned_items);
                         self.history = pinned_items;
                         // Ensure loaded history respects configured limit immediately
-                        let before = self.history.len();
-                        self.enforce_history_limit();
-                        // If the loaded history exceeded the configured limit, we trimmed items.
-                        // Persist trimmed history so disk stays in sync. Avoid saving when nothing changed.
-                        if before > self.max_history_size {
+                        let history_trimmed = self.enforce_history_limit();
+                        // If the loaded history was trimmed, persist it so disk stays in sync.
+                        // Avoid saving when nothing changed.
+                        if history_trimmed {
                             self.save_history();
                         }
-
                         // Initialize last_added_text_hash from the most recent item (even if pinned)
                         // This prevents duplication on startup if the clipboard content matches the top item
                         if let Some(first) = self.history.first() {
