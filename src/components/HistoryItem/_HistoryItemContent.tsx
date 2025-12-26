@@ -10,7 +10,12 @@ export function TextContent({
   isDark: boolean
   effectiveCompact: boolean
 }) {
-  if (item.content.type !== 'Text') return null
+  if (item.content.type !== 'Text' && item.content.type !== 'RichText') return null
+  
+  const textToDisplay = item.content.type === 'Text' 
+    ? item.content.data 
+    : item.content.data.plain
+
   return (
     <p
       className={clsx(
@@ -19,7 +24,7 @@ export function TextContent({
         isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
       )}
     >
-      {item.content.data}
+      {textToDisplay}
     </p>
   )
 }

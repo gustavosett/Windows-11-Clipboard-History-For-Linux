@@ -584,10 +584,10 @@ function SettingsApp() {
         </section>
 
         {/* Features Section */}
-        <FeaturesSection 
-            settings={settings}
-            isDark={isDark}
-            onToggle={handleToggle}
+        <FeaturesSection
+          settings={settings}
+          isDark={isDark}
+          onToggle={handleToggle}
         />
 
         {/* Reset Section */}

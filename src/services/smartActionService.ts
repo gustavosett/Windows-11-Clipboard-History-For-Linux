@@ -15,15 +15,14 @@ export const smartActionService = {
 
     const trimmed = content.trim()
 
-    // URL Detection
-    // Basic regex for URL, usually sufficient for UI hints
-    const urlRegex = /^(https?:\/\/[^\s]+)$/i
+    // More robust regex for URLs with basic domain validation
+    const urlRegex = /^https?:\/\/(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?::[/?#][^\s]*)?$/i
     if (urlRegex.test(trimmed)) {
       actions.push({ id: 'open-link', label: 'Open Link', data: trimmed })
     }
 
     // Email Detection
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (emailRegex.test(trimmed)) {
       actions.push({ id: 'compose-email', label: 'Compose Email', data: `mailto:${trimmed}` })
     }
@@ -52,8 +51,7 @@ export const smartActionService = {
         case 'compose-email':
           if (action.data) await open(action.data)
           break
-        // Color preview is passive, no execution needed usually,
-        // but could open color picker or something in future
+        // Color preview actions are passive; no additional execution is required
         default:
           console.warn('Unknown smart action', action.id)
       }

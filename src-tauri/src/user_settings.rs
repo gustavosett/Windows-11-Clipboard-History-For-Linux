@@ -30,7 +30,7 @@ pub struct UserSettings {
 
     // --- Custom Data ---
     /// User-defined Kaomojis
-    #[serde(default = "Vec::new")]
+    #[serde(default)]
     pub custom_kaomojis: Vec<CustomKaomoji>,
 }
 

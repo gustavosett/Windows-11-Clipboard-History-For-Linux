@@ -61,13 +61,12 @@ export const SearchBar = memo(
             'focus:outline-none focus:ring-2 focus:ring-win11-bg-accent',
             'transition-all duration-150',
             // Adjust padding-right based on what buttons are present
-            rightActions
-              ? onToggleRegex
-                ? 'pr-24'
-                : 'pr-16'
-              : onToggleRegex
-                ? 'pr-16'
-                : 'pr-8'
+            (() => {
+              let padding = 'pr-8' // Default padding for clearing button
+              if (onToggleRegex) padding = 'pr-16'
+              if (rightActions) padding = onToggleRegex ? 'pr-24' : 'pr-16'
+              return padding
+            })()
           )}
           style={{ backgroundColor }}
         />

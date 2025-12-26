@@ -19,7 +19,7 @@ export function useSmartActions(item: ClipboardItem, enableSmartActions: boolean
       await smartActionService.execute(action)
     } catch (err) {
       if (import.meta.env.DEV) {
-        alert(`Failed to execute action "${action.label}": ${err}`)
+        console.error(`Failed to execute action "${action.label}":`, err)
       }
     }
   }, [])

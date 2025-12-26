@@ -74,7 +74,7 @@ export function Header({
             }
             title={isCompact ? 'Detail View' : 'Compact View'}
           >
-            {isCompact ? <LayoutList size={16} /> : <LayoutList size={16} className="opacity-50" />}
+            <LayoutList size={16} className={clsx(!isCompact && 'opacity-50')} />
           </button>
         )}
 

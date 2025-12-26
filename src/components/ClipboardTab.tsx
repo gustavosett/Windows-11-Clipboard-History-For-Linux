@@ -111,20 +111,25 @@ export function ClipboardTab(props: {
   const filteredHistory = useMemo(() => {
     if (!searchQuery) return history
 
+    let regex: RegExp | null = null
+    if (isRegexMode) {
+      try {
+        regex = new RegExp(searchQuery, 'i')
+      } catch (err) {
+        console.error('Invalid regex pattern in clipboard search query:', searchQuery, err)
+        return []
+      }
+    }
+
     return history.filter((item) => {
       if (item.content.type !== 'Text') return false
 
-      try {
-        if (isRegexMode) {
-          const regex = new RegExp(searchQuery, 'i')
-          return regex.test(item.content.data)
-        } else {
-          return item.content.data.toLowerCase().includes(searchQuery.toLowerCase())
-        }
-      } catch {
-        // Invalid regex
-        return false
+      if (isRegexMode && regex) {
+        return regex.test(item.content.data)
+      } else if (!isRegexMode) {
+        return item.content.data.toLowerCase().includes(searchQuery.toLowerCase())
       }
+      return false
     })
   }, [history, searchQuery, isRegexMode])
 

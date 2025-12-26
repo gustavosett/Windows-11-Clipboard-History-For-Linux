@@ -5,6 +5,8 @@ import type { ClipboardItem } from '../../types/clipboard'
 import { getCardBackgroundStyle, getTertiaryBackgroundStyle } from '../../utils/themeUtils'
 import { useSmartActions } from '../../hooks/useSmartActions'
 import { HistorySmartActions } from '../HistorySmartActions'
+import { TextContent, ImageContent, Timestamp } from './_HistoryItemContent'
+import { getIconSize, getIconContainerClasses } from './_HistoryItemUtils'
 
 interface HistoryItemProps {
   item: ClipboardItem
@@ -22,15 +24,7 @@ interface HistoryItemProps {
   enableUiPolish: boolean
 }
 
-import {
-  TextContent,
-  ImageContent,
-  Timestamp,
-} from './_HistoryItemContent'
-import {
-  getIconSize,
-  getIconContainerClasses,
-} from './_HistoryItemUtils'
+
 
 export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function HistoryItem(
   {

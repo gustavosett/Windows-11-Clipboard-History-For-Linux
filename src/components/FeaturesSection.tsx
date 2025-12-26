@@ -51,7 +51,7 @@ export function FeaturesSection({
               </div>
             </div>
             <Switch
-              checked={!!settings[feature.key]} // explicit cast not strictly needed with correct types but safe
+              checked={settings[feature.key]}
               onChange={() => onToggle(feature.key)}
               isDark={isDark}
             />
