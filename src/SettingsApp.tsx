@@ -524,8 +524,12 @@ function SettingsApp() {
                 max={MAX_HISTORY_SIZE}
                 value={settings.max_history_size}
                 onChange={(e) => {
-                  const parsed = Number.parseInt(e.target.value) || MIN_HISTORY_SIZE
-                  const value = Math.max(MIN_HISTORY_SIZE, Math.min(MAX_HISTORY_SIZE, parsed))
+                  const raw = e.target.value
+                  const parsed = Number.parseInt(raw, 10)
+                  // If parsing fails (e.g. empty input), prefer MAX to avoid
+                  // accidentally cropping the user's history to the minimum.
+                  const safe = Number.isNaN(parsed) ? MAX_HISTORY_SIZE : parsed
+                  const value = Math.max(MIN_HISTORY_SIZE, Math.min(MAX_HISTORY_SIZE, safe))
                   updateSettings({ max_history_size: value })
                 }}
                 className={clsx(
