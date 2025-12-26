@@ -193,7 +193,9 @@ impl ClipboardManager {
         match fs::read_to_string(&self.persistence_path) {
             Ok(content) => {
                 match serde_json::from_str::<Vec<ClipboardItem>>(&content) {
-                    Ok(items) => {
+                    Ok(mut items) => {
+                        // Sort items: pinned first (preserving order within each group)
+                        items.sort_by_key(|item| !item.pinned);
                         self.history = items;
 
                         // Initialize last_added_text_hash from the most recent item (even if pinned)
