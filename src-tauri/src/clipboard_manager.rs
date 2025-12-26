@@ -204,6 +204,11 @@ impl ClipboardManager {
         // Do not set max less than number of pinned items; we won't delete pins automatically
         let pinned_count = self.history.iter().filter(|i| i.pinned).count();
         if clamped < pinned_count {
+            eprintln!(
+                "clipboard_manager: requested max history size ({}) is less than the number of pinned items ({}); increasing limit to preserve pinned items.",
+                clamped,
+                pinned_count
+            );
             clamped = pinned_count;
         }
         self.max_history_size = clamped;
