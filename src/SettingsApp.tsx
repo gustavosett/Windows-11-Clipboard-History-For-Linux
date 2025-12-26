@@ -8,6 +8,9 @@ import { clsx } from 'clsx'
 import type { UserSettings, CustomKaomoji, BooleanSettingKey } from './types/clipboard'
 import { FeaturesSection } from './components/FeaturesSection'
 
+const MIN_HISTORY_SIZE = 1
+const MAX_HISTORY_SIZE = 100_000
+
 const DEFAULT_SETTINGS: UserSettings = {
   theme_mode: 'system',
   dark_background_opacity: 0.7,
@@ -510,17 +513,19 @@ function SettingsApp() {
                   Maximum History Size
                 </label>
                 <p className={clsx('text-xs mt-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                  Number of clipboard items to keep (1 - 100,000)
+                  Number of clipboard items to keep ({MIN_HISTORY_SIZE} -{' '}
+                  {MAX_HISTORY_SIZE.toLocaleString()})
                 </p>
               </div>
               <input
                 id="max-history"
                 type="number"
-                min="1"
-                max="100000"
+                min={MIN_HISTORY_SIZE}
+                max={MAX_HISTORY_SIZE}
                 value={settings.max_history_size}
                 onChange={(e) => {
-                  const value = Math.max(1, Math.min(100000, Number.parseInt(e.target.value) || 1))
+                  const parsed = Number.parseInt(e.target.value) || MIN_HISTORY_SIZE
+                  const value = Math.max(MIN_HISTORY_SIZE, Math.min(MAX_HISTORY_SIZE, parsed))
                   updateSettings({ max_history_size: value })
                 }}
                 className={clsx(
