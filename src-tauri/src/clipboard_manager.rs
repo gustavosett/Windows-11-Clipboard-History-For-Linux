@@ -236,8 +236,9 @@ impl ClipboardManager {
                         // Ensure loaded history respects configured limit immediately
                         let before = self.history.len();
                         self.enforce_history_limit();
-                        // If we trimmed items, persist the trimmed history so disk stays in sync
-                        if self.history.len() != before {
+                        // If the loaded history exceeded the configured limit, we trimmed items.
+                        // Persist trimmed history so disk stays in sync. Avoid saving when nothing changed.
+                        if before > self.max_history_size {
                             self.save_history();
                         }
 
