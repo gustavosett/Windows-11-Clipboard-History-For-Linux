@@ -52,10 +52,21 @@ export const smartActionService = {
   },
 
   async execute(action: SmartAction) {
-    if (action.id === 'open-link' || action.id === 'compose-email') {
-      if (action.data) {
-        await open(action.data)
+    try {
+      switch (action.id) {
+        case 'open-link':
+          if (action.data) await open(action.data)
+          break
+        case 'compose-email':
+          if (action.data) await open(action.data)
+          break
+        // Color preview actions are passive; no additional execution is required
+        default:
+          console.warn('Unknown smart action', action.id)
       }
+    } catch (e) {
+      console.error('Failed to execute smart action', e)
+      throw e // Propagate error for UI handling
     }
   },
 }
