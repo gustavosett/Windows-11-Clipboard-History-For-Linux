@@ -200,9 +200,17 @@ impl ClipboardManager {
 
     /// Updates the maximum history size and enforces the new limit
     pub fn set_max_history_size(&mut self, new_size: usize) {
-        self.max_history_size = Self::clamp_max_history_size(new_size);
-        self.enforce_history_limit();
-        self.save_history();
+        let mut clamped = Self::clamp_max_history_size(new_size);
+        // Do not set max less than number of pinned items; we won't delete pins automatically
+        let pinned_count = self.history.iter().filter(|i| i.pinned).count();
+        if clamped < pinned_count {
+            clamped = pinned_count;
+        }
+        self.max_history_size = clamped;
+        let trimmed = self.enforce_history_limit();
+        if trimmed {
+            self.save_history();
+        }
     }
 
     /// Gets the current maximum history size
@@ -471,16 +479,19 @@ impl ClipboardManager {
         self.save_history();
     }
 
-    fn enforce_history_limit(&mut self) {
+    /// Enforce the configured history size. Returns true if trimming occurred.
+    fn enforce_history_limit(&mut self) -> bool {
+        let before = self.history.len();
         while self.history.len() > self.max_history_size {
             // Remove from the end, skipping pinned items if possible
             if let Some(pos) = self.history.iter().rposition(|i| !i.pinned) {
                 self.history.remove(pos);
             } else {
-                // All items are pinned. We stop removing.
+                // All items are pinned. We stop removing to avoid deleting pins.
                 break;
             }
         }
+        self.history.len() < before
     }
 
     // --- Accessors ---
