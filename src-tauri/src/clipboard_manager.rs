@@ -497,7 +497,7 @@ impl ClipboardManager {
             if let Some(pos) = self.history.iter().rposition(|i| !i.pinned) {
                 self.history.remove(pos);
             } else {
-                // All items are pinned. We stop removing to avoid deleting pins.
+                // All items are pinned. We stopped removing to avoid deleting pins.
                 break;
             }
         }
