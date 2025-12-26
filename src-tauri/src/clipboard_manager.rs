@@ -218,11 +218,21 @@ impl ClipboardManager {
         match fs::read_to_string(&self.persistence_path) {
             Ok(content) => {
                 match serde_json::from_str::<Vec<ClipboardItem>>(&content) {
-                    Ok(mut items) => {
-                        // Sort items: pinned first (preserving order within each group)
-                        items.sort_by(|a, b| (!a.pinned).cmp(&!b.pinned));
-                        self.history = items;
+                    Ok(items) => {
+                        // Reorder items so pinned come first while preserving order within each group
+                        let mut pinned_items = Vec::new();
+                        let mut unpinned_items = Vec::new();
 
+                        for item in items {
+                            if item.pinned {
+                                pinned_items.push(item);
+                            } else {
+                                unpinned_items.push(item);
+                            }
+                        }
+
+                        pinned_items.extend(unpinned_items);
+                        self.history = pinned_items;
                         // Ensure loaded history respects configured limit immediately
                         let before = self.history.len();
                         self.enforce_history_limit();
