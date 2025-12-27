@@ -1,0 +1,5 @@
+package-lock.json linguist-generated
+package.json linguist-generated
+*.json linguist-generated
+
+src/data/* linguist-vendored
