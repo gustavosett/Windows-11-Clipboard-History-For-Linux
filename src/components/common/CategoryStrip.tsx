@@ -37,7 +37,6 @@ export function CategoryStrip({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, currentIndex: number) => {
-      // 1 (All) + 1 (Custom se tiver) + Categorias
       const totalItems = 1 + (hasCustom ? 1 : 0) + categories.length
       let newIndex = currentIndex
       let handled = false

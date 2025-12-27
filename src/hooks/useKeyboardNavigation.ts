@@ -61,7 +61,6 @@ export function useKeyboardNavigation<T>({
           if (e.ctrlKey) {
             newIndex = 0
           } else {
-            // Início da linha atual
             const currentRow = Math.floor(currentIndex / columnCount)
             newIndex = currentRow * columnCount
           }
@@ -71,7 +70,6 @@ export function useKeyboardNavigation<T>({
           if (e.ctrlKey) {
             newIndex = items.length - 1
           } else {
-            // Fim da linha atual
             const currentRow = Math.floor(currentIndex / columnCount)
             newIndex = Math.min((currentRow + 1) * columnCount - 1, items.length - 1)
           }
@@ -99,7 +97,6 @@ export function useKeyboardNavigation<T>({
         e.stopPropagation()
         setFocusedIndex(newIndex)
 
-        // Lógica React Window V2
         if (gridRef?.current?.scrollToCell) {
           const targetRow = Math.floor(newIndex / columnCount)
           const targetCol = newIndex % columnCount
@@ -111,9 +108,7 @@ export function useKeyboardNavigation<T>({
           })
         }
 
-        // Lógica DOM Nativo (Kaomoji / Recentes)
         if (containerRef?.current && dataAttributeName) {
-          // Pequeno timeout para garantir que o DOM renderizou/está pronto
           setTimeout(() => {
             const element = containerRef.current?.querySelector(
               `[${dataAttributeName}="${newIndex}"]`

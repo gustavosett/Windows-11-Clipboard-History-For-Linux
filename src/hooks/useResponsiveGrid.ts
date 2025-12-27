@@ -10,7 +10,6 @@ export function useResponsiveGrid() {
     const updateSize = () => {
       if (containerRef.current) {
         const { width, height } = containerRef.current.getBoundingClientRect()
-        // Só atualiza se for maior que zero para evitar glitches iniciais
         if (width > 0 && height > 0) {
           dimensionsCaptured = true
           setDimensions((prev) => {
@@ -23,13 +22,10 @@ export function useResponsiveGrid() {
       }
     }
 
-    // Tentativa inicial
     updateSize()
 
-    // Fallback: requestAnimationFrame
     const rafId = requestAnimationFrame(updateSize)
 
-    // Fallback agressivo (igual ao que você tinha no EmojiPicker)
     let retryCount = 0
     const retryInterval = setInterval(() => {
       if (dimensionsCaptured || retryCount >= 10) {

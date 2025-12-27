@@ -3,7 +3,6 @@ import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
 
-// Componentes Refatorados
 import { PickerLayout } from './PickerLayout'
 import { CategoryStrip } from './CategoryStrip'
 import { SymbolItem } from '@/services/symbolService'
@@ -208,7 +207,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
                       onHover={setHoveredSymbol}
                       tabIndex={index === recentFocusedIndex ? 0 : -1}
                       data-main-index={index}
-                      data-recent-index={index} // Necessário para o hook
+                      data-recent-index={index}
                       onKeyDown={(e) => handleRecentKeyDown(e, index)}
                       onItemFocus={() => setRecentFocusedIndex(index)}
                     />
