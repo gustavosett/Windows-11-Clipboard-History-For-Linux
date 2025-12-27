@@ -3,7 +3,7 @@ import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Search, RefreshCw, TrendingUp } from 'lucide-react'
 import { useGifPicker } from '../hooks/useGifPicker'
-import { SearchBar } from './SearchBar'
+import { SearchBar } from './common/SearchBar'
 import type { Gif } from '../types/gif'
 import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
 

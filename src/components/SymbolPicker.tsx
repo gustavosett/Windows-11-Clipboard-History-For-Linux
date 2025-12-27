@@ -3,7 +3,7 @@ import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
 import { useSymbolPicker } from '../hooks/useSymbolPicker'
-import { SearchBar } from './SearchBar'
+import { SearchBar } from './common/SearchBar'
 import type { SymbolItem } from '../services/symbolService'
 
 import { PickerLayout } from './common/PickerLayout'

@@ -3,7 +3,7 @@ import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
 import { useEmojiPicker } from '../hooks/useEmojiPicker'
-import { SearchBar } from './SearchBar'
+import { SearchBar } from './common/SearchBar'
 import type { Emoji } from '../services/emojiService'
 
 import { PickerLayout } from './common/PickerLayout'

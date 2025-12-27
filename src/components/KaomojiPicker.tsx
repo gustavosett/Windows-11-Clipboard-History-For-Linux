@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { clsx } from 'clsx'
 import { invoke } from '@tauri-apps/api/core'
 import { KAOMOJI_CATEGORIES, getKaomojis } from '../services/kaomojiService'
-import { SearchBar } from './SearchBar'
+import { SearchBar } from './common/SearchBar'
 import type { CustomKaomoji } from '../types/clipboard'
 
 import { PickerLayout } from './common/PickerLayout'
