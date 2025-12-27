@@ -10,7 +10,7 @@ import { SymbolItem } from '@/services/symbolService'
 import { useSymbolPicker } from '@/hooks/useSymbolPicker'
 import { useResponsiveGrid } from '@/hooks/useResponsiveGrid'
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation'
-import SearchBar from '../SearchBar'
+import SearchBar from './SearchBar'
 
 /** Size of each symbol cell */
 const CELL_SIZE = 40

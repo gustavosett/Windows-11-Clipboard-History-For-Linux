@@ -1,7 +1,7 @@
 import { forwardRef, memo, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { Search, X, Regex } from 'lucide-react'
-import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
+import { getTertiaryBackgroundStyle } from '@/utils/themeUtils'
 
 export interface SearchBarProps {
   value: string
