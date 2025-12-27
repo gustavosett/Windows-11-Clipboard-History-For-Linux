@@ -1,15 +1,16 @@
-import { useState, useCallback, memo, useRef } from 'react'
+import { useState, memo, useRef } from 'react'
 import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
-import { useSymbolPicker } from '../hooks/useSymbolPicker'
-import { SearchBar } from './SearchBar'
-import type { SymbolItem } from '../services/symbolService'
 
-import { PickerLayout } from './common/PickerLayout'
-import { CategoryStrip } from './common/CategoryStrip'
-import { useResponsiveGrid } from '../hooks/useResponsiveGrid'
-import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
+// Componentes Refatorados
+import { PickerLayout } from './PickerLayout'
+import { CategoryStrip } from './CategoryStrip'
+import { SymbolItem } from '@/services/symbolService'
+import { useSymbolPicker } from '@/hooks/useSymbolPicker'
+import { useResponsiveGrid } from '@/hooks/useResponsiveGrid'
+import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation'
+import SearchBar from '../SearchBar'
 
 /** Size of each symbol cell */
 const CELL_SIZE = 40
@@ -22,19 +23,16 @@ interface SymbolCellProps {
   onHover?: (symbol: SymbolItem | null) => void
   tabIndex?: number
   'data-main-index'?: number
-  'data-recent-index'?: number
   onKeyDown?: (e: React.KeyboardEvent) => void
   onItemFocus?: () => void
 }
 
-/** Individual symbol cell - memoized for performance */
 const SymbolCell = memo(function SymbolCell({
   symbol,
   onSelect,
   onHover,
   tabIndex = -1,
   'data-main-index': mainIndex,
-  'data-recent-index': recentIndex,
   onKeyDown,
   onItemFocus,
 }: SymbolCellProps) {
@@ -47,7 +45,6 @@ const SymbolCell = memo(function SymbolCell({
       onKeyDown={onKeyDown}
       tabIndex={tabIndex}
       data-main-index={mainIndex}
-      data-recent-index={recentIndex}
       className={clsx(
         'flex items-center justify-center',
         'w-full h-full text-xl',
@@ -144,66 +141,33 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
 
   const [hoveredSymbol, setHoveredSymbol] = useState<SymbolItem | null>(null)
 
-  // Use shared hook for sizing
   const { containerRef, dimensions } = useResponsiveGrid()
 
   const gridRef = useGridRef(null)
   const recentGridRef = useRef<HTMLDivElement>(null)
-  const mainGridContainerRef = useRef<HTMLDivElement>(null)
 
-  // Roving tabindex states
   const [recentFocusedIndex, setRecentFocusedIndex] = useState(0)
   const [mainFocusedIndex, setMainFocusedIndex] = useState(0)
   const [categoryFocusedIndex, setCategoryFocusedIndex] = useState(0)
 
-  const handleSearchChange = useCallback(
-    (val: string) => {
-      setSearchQuery(val)
-      setRecentFocusedIndex(0)
-      setMainFocusedIndex(0)
-    },
-    [setSearchQuery]
-  )
-
-  const handleCategorySelect = useCallback(
-    (category: string | null) => {
-      setSelectedCategory(category)
-      setRecentFocusedIndex(0)
-      setMainFocusedIndex(0)
-    },
-    [setSelectedCategory]
-  )
-
-  // Handle symbol selection
-  const handleSelect = useCallback(
-    (symbol: SymbolItem) => {
-      pasteSymbol(symbol)
-    },
-    [pasteSymbol]
-  )
-
-  // Calculate grid dimensions
   const innerWidth = Math.max(0, dimensions.width - GRID_PADDING * 2)
   const columnCount = Math.max(1, Math.floor(innerWidth / CELL_SIZE))
   const columnWidth = columnCount > 0 ? innerWidth / columnCount : CELL_SIZE
   const rowCount = Math.ceil(filteredSymbols.length / columnCount)
   const recentColumnCount = 10
 
-  // Use shared hook for keyboard navigation
   const handleMainGridKeyDown = useKeyboardNavigation({
     items: filteredSymbols,
     columnCount,
-    onSelect: handleSelect,
+    onSelect: pasteSymbol,
     setFocusedIndex: setMainFocusedIndex,
     gridRef,
-    containerRef: mainGridContainerRef,
-    dataAttributeName: 'data-main-index',
   })
 
   const handleRecentKeyDown = useKeyboardNavigation({
     items: recentSymbols.slice(0, 16),
     columnCount: recentColumnCount,
-    onSelect: handleSelect,
+    onSelect: pasteSymbol,
     setFocusedIndex: setRecentFocusedIndex,
     containerRef: recentGridRef,
     dataAttributeName: 'data-recent-index',
@@ -214,7 +178,11 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
       header={
         <SearchBar
           value={searchQuery}
-          onChange={handleSearchChange}
+          onChange={(val) => {
+            setSearchQuery(val)
+            setRecentFocusedIndex(0)
+            setMainFocusedIndex(0)
+          }}
           placeholder="Search symbols..."
           isDark={isDark}
           opacity={opacity}
@@ -224,7 +192,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
         <>
           {/* Recent symbols */}
           {!searchQuery && !selectedCategory && recentSymbols.length > 0 && (
-            <div className="px-3 pb-2 flex-shrink-0 border-b dark:border-win11-border-subtle border-win11Light-border mb-2">
+            <div className="border-b dark:border-win11-border-subtle border-win11Light-border mb-2">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Clock className="w-3 h-3 dark:text-win11-text-tertiary text-win11Light-text-secondary" />
                 <span className="text-xs dark:text-win11-text-tertiary text-win11Light-text-secondary">
@@ -236,11 +204,11 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
                   <div key={`recent-${symbol.char}-${index}`} className="w-10 h-10 p-0.5">
                     <SymbolCell
                       symbol={symbol}
-                      onSelect={handleSelect}
+                      onSelect={pasteSymbol}
                       onHover={setHoveredSymbol}
                       tabIndex={index === recentFocusedIndex ? 0 : -1}
                       data-main-index={index}
-                      data-recent-index={index}
+                      data-recent-index={index} // Necessário para o hook
                       onKeyDown={(e) => handleRecentKeyDown(e, index)}
                       onItemFocus={() => setRecentFocusedIndex(index)}
                     />
@@ -255,7 +223,11 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
             <CategoryStrip
               categories={categories}
               selectedCategory={selectedCategory}
-              onSelectCategory={handleCategorySelect}
+              onSelectCategory={(cat) => {
+                setSelectedCategory(cat)
+                setRecentFocusedIndex(0)
+                setMainFocusedIndex(0)
+              }}
               focusedIndex={categoryFocusedIndex}
               setFocusedIndex={setCategoryFocusedIndex}
               isDark={isDark}
@@ -279,7 +251,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
         )
       }
     >
-      {/* Symbol grid */}
+      {/* Main Grid */}
       <div
         ref={containerRef}
         className="h-full w-full border-t dark:border-win11-border-subtle border-win11Light-border"
@@ -293,35 +265,28 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
         ) : (
           dimensions.width > 0 &&
           dimensions.height > 0 && (
-            <div
-              ref={mainGridContainerRef}
-              role="grid"
-              aria-label="Symbol grid"
-              style={{ height: dimensions.height }}
-            >
-              <Grid<SymbolGridData>
-                gridRef={gridRef}
-                columnCount={columnCount}
-                columnWidth={columnWidth}
-                rowCount={rowCount}
-                rowHeight={CELL_SIZE}
-                defaultHeight={dimensions.height}
-                defaultWidth={dimensions.width}
-                className="scrollbar-win11"
-                style={{ overflowX: 'hidden', overflowY: 'scroll' }}
-                cellProps={{
-                  symbols: filteredSymbols,
-                  onSelect: handleSelect,
-                  onHover: setHoveredSymbol,
-                  focusedIndex: mainFocusedIndex,
-                  onKeyDown: handleMainGridKeyDown,
-                  onItemFocus: setMainFocusedIndex,
-                  columnCount,
-                  columnWidth,
-                }}
-                cellComponent={SymbolGridCell}
-              />
-            </div>
+            <Grid<SymbolGridData>
+              gridRef={gridRef}
+              columnCount={columnCount}
+              columnWidth={columnWidth}
+              rowCount={rowCount}
+              rowHeight={CELL_SIZE}
+              defaultHeight={dimensions.height}
+              defaultWidth={dimensions.width}
+              className="scrollbar-win11"
+              style={{ overflowX: 'hidden', overflowY: 'scroll' }}
+              cellProps={{
+                symbols: filteredSymbols,
+                onSelect: pasteSymbol,
+                onHover: setHoveredSymbol,
+                focusedIndex: mainFocusedIndex,
+                onKeyDown: handleMainGridKeyDown, // Hook
+                onItemFocus: setMainFocusedIndex,
+                columnCount,
+                columnWidth,
+              }}
+              cellComponent={SymbolGridCell}
+            />
           )
         )}
       </div>

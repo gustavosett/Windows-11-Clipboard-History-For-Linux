@@ -1,8 +1,4 @@
-/**
- * GIF Picker Component
- * Windows 11 style GIF picker with virtualized grid for performance
- */
-import { useState, memo, useRef, useLayoutEffect, useCallback } from 'react'
+import { useState, memo, useRef, useCallback } from 'react'
 import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Search, RefreshCw, TrendingUp } from 'lucide-react'
@@ -10,6 +6,10 @@ import { useGifPicker } from '../hooks/useGifPicker'
 import { SearchBar } from './SearchBar'
 import type { Gif } from '../types/gif'
 import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
+
+import { PickerLayout } from './common/PickerLayout'
+import { useResponsiveGrid } from '../hooks/useResponsiveGrid'
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
 
 /** Number of columns in the grid */
 const COLUMN_COUNT = 2
@@ -201,42 +201,13 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
     refreshTrending,
   } = useGifPicker()
 
-  const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const gridRef = useGridRef(null)
   const gridContainerRef = useRef<HTMLDivElement>(null)
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const [focusedIndex, setFocusedIndex] = useState(0)
 
-  // Measure container size
-  useLayoutEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        const { width, height } = containerRef.current.getBoundingClientRect()
-        if (width > 0 && height > 0) {
-          setDimensions((prev) => {
-            if (prev.width !== width || prev.height !== height) {
-              return { width, height }
-            }
-            return prev
-          })
-        }
-      }
-    }
-
-    updateSize()
-    const rafId = requestAnimationFrame(updateSize)
-
-    const observer = new ResizeObserver(updateSize)
-    if (containerRef.current) {
-      observer.observe(containerRef.current)
-    }
-
-    return () => {
-      cancelAnimationFrame(rafId)
-      observer.disconnect()
-    }
-  }, [])
+  // Use shared hook for sizing
+  const { containerRef, dimensions } = useResponsiveGrid()
 
   // Handle GIF selection
   const handleSelect = useCallback(
@@ -259,109 +230,16 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
   const rowCount = Math.ceil(gifs.length / COLUMN_COUNT)
   const gridHeight = dimensions.height
 
-  // Keyboard navigation for GIF grid
-  const handleGridKeyDown = useCallback(
-    (e: React.KeyboardEvent, currentIndex: number) => {
-      if (gifs.length === 0) return
-
-      let newIndex = currentIndex
-      let handled = false
-
-      switch (e.key) {
-        case 'ArrowRight':
-          if (currentIndex < gifs.length - 1) {
-            newIndex = currentIndex + 1
-            handled = true
-          }
-          break
-        case 'ArrowLeft':
-          if (currentIndex > 0) {
-            newIndex = currentIndex - 1
-            handled = true
-          }
-          break
-        case 'ArrowDown': {
-          const nextRowIndex = currentIndex + COLUMN_COUNT
-          if (nextRowIndex < gifs.length) {
-            newIndex = nextRowIndex
-            handled = true
-          }
-          break
-        }
-        case 'ArrowUp': {
-          const prevRowIndex = currentIndex - COLUMN_COUNT
-          if (prevRowIndex >= 0) {
-            newIndex = prevRowIndex
-            handled = true
-          }
-          break
-        }
-        case 'Home':
-          if (e.ctrlKey) {
-            newIndex = 0
-          } else {
-            // Go to start of current row
-            const currentRow = Math.floor(currentIndex / COLUMN_COUNT)
-            newIndex = currentRow * COLUMN_COUNT
-          }
-          handled = true
-          break
-        case 'End':
-          if (e.ctrlKey) {
-            newIndex = gifs.length - 1
-          } else {
-            // Go to end of current row
-            const currentRow = Math.floor(currentIndex / COLUMN_COUNT)
-            newIndex = Math.min((currentRow + 1) * COLUMN_COUNT - 1, gifs.length - 1)
-          }
-          handled = true
-          break
-        case 'PageDown':
-          newIndex = Math.min(currentIndex + COLUMN_COUNT * 3, gifs.length - 1)
-          handled = true
-          break
-        case 'PageUp':
-          newIndex = Math.max(currentIndex - COLUMN_COUNT * 3, 0)
-          handled = true
-          break
-        case 'Enter':
-        case ' ':
-          e.preventDefault()
-          if (gifs[currentIndex]) {
-            handleSelect(gifs[currentIndex])
-          }
-          return
-      }
-
-      if (handled) {
-        e.preventDefault()
-        e.stopPropagation()
-        setFocusedIndex(newIndex)
-
-        // Scroll the grid to show the focused item
-        if (gridRef.current) {
-          const targetRow = Math.floor(newIndex / COLUMN_COUNT)
-          const targetCol = newIndex % COLUMN_COUNT
-          gridRef.current.scrollToCell({
-            rowIndex: targetRow,
-            columnIndex: targetCol,
-            rowAlign: 'smart',
-            columnAlign: 'smart',
-          })
-        }
-
-        // Focus the new element after a small delay to allow scroll
-        setTimeout(() => {
-          const container = gridContainerRef.current
-          if (container) {
-            const button = container.querySelector(`[data-gif-index="${newIndex}"]`) as HTMLElement
-            button?.focus()
-          }
-        }, 10)
-      }
-    },
-    [gifs, handleSelect, gridRef]
-  )
+  // Use shared hook for keyboard navigation
+  const handleGridKeyDown = useKeyboardNavigation({
+    items: gifs,
+    columnCount: COLUMN_COUNT,
+    onSelect: handleSelect,
+    setFocusedIndex,
+    gridRef,
+    containerRef: gridContainerRef,
+    dataAttributeName: 'data-gif-index',
+  })
 
   // Render grid content based on state
   const renderGridContent = () => {
@@ -412,25 +290,12 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden relative select-none">
-      {/* Loading Overlay */}
-      {isPasting && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/20 backdrop-blur-[1px]">
-          <div className="bg-win11Light-bg-card dark:bg-win11-bg-card p-4 rounded-xl shadow-lg flex flex-col items-center gap-3 border border-win11Light-border-subtle dark:border-win11-border-subtle">
-            <div className="w-8 h-8 border-4 border-win11-bg-accent border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-medium text-win11Light-text-primary dark:text-win11-text-primary">
-              Pasting GIF...
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Search Bar */}
-      <div className="px-3 pt-3 pb-2 flex-shrink-0">
+    <PickerLayout
+      header={
         <SearchBar
           ref={inputRef}
           value={searchQuery}
-          onChange={setSearchQuery}
+          onChange={(val: string) => setSearchQuery(val)}
           onClear={handleClearSearch}
           placeholder="Search Tenor GIFs..."
           aria-label="Search Tenor GIFs"
@@ -453,10 +318,8 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
             </button>
           }
         />
-      </div>
-
-      {/* Category indicator */}
-      <div className="px-3 pb-2 flex-shrink-0">
+      }
+      subHeader={
         <div className="flex items-center gap-2 text-xs dark:text-win11-text-secondary text-win11Light-text-secondary">
           {searchQuery ? (
             <>
@@ -471,19 +334,31 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
           )}
           {isLoading && <RefreshCw size={12} className="animate-spin ml-auto" />}
         </div>
-      </div>
+      }
+      footer={
+        <div className="w-full text-center">
+          <span className="text-[10px] dark:text-win11-text-disabled text-win11Light-text-disabled">
+            Powered by Tenor
+          </span>
+        </div>
+      }
+    >
+      {/* Loading Overlay */}
+      {isPasting && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/20 backdrop-blur-[1px]">
+          <div className="bg-win11Light-bg-card dark:bg-win11-bg-card p-4 rounded-xl shadow-lg flex flex-col items-center gap-3 border border-win11Light-border-subtle dark:border-win11-border-subtle">
+            <div className="w-8 h-8 border-4 border-win11-bg-accent border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-medium text-win11Light-text-primary dark:text-win11-text-primary">
+              Pasting GIF...
+            </span>
+          </div>
+        </div>
+      )}
 
-      {/* GIF Grid Container */}
-      <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden px-3 pb-3">
+      {/* Grid Container */}
+      <div ref={containerRef} className="h-full w-full px-3 pb-3">
         {renderGridContent()}
       </div>
-
-      {/* Tenor Attribution */}
-      <div className="px-3 py-2 text-center flex-shrink-0">
-        <span className="text-[10px] dark:text-win11-text-disabled text-win11Light-text-disabled">
-          Powered by Tenor
-        </span>
-      </div>
-    </div>
+    </PickerLayout>
   )
 }
