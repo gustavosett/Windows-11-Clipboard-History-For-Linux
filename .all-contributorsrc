@@ -20,6 +20,15 @@
         "code",
         "design"
       ]
+    },
+    {
+      "login": "Tallin-Boston-Technology",
+      "name": "Tallin-Boston-Technology",
+      "avatar_url": "https://avatars.githubusercontent.com/u/247321893?v=4",
+      "profile": "https://github.com/Tallin-Boston-Technology",
+      "contributions": [
+        "ideas"
+      ]
     }
   ],
   "contributorsPerLine": 7,
