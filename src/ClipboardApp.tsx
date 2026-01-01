@@ -29,7 +29,8 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 /**
  * Maps theme mode setting to actual dark mode state.
- * Uses shared system theme detection for 'system' mode.
+ * For 'system' mode, this hook delegates system theme detection
+ * to useSystemThemePreference().
  */
 function useThemeMode(themeMode: 'system' | 'dark' | 'light'): boolean {
   const systemPrefersDark = useSystemThemePreference()
