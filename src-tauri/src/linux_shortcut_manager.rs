@@ -903,7 +903,10 @@ impl ShortcutHandler for LxqtHandler {
 
         let full_cmd = s.full_command();
         // LXQt uses INI format for shortcuts
-        let section = format!("Meta+V%2F{}", s.id);
+        // Section name is URL-encoded keybinding followed by shortcut ID
+        // e.g., "Meta+V" -> "Meta%2BV", "Meta+." -> "Meta%2B."
+        let encoded_binding = s.kde_binding.replace('+', "%2B");
+        let section = format!("{}%2F{}", encoded_binding, s.id);
         let entry = format!(
             "\n[{}]\nComment={}\nEnabled=true\nExec={}",
             section, s.name, full_cmd
@@ -930,7 +933,9 @@ impl ShortcutHandler for LxqtHandler {
             return Ok(());
         }
 
-        let section = format!("Meta+V%2F{}", s.id);
+        // Use same encoding as register for consistency
+        let encoded_binding = s.kde_binding.replace('+', "%2B");
+        let section = format!("{}%2F{}", encoded_binding, s.id);
 
         Utils::modify_file_atomic(&path, |content| {
             if !content.contains(&format!("[{}]", section)) {
