@@ -1,6 +1,6 @@
 //! Linux Desktop Environment Shortcut Manager
 
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
@@ -8,6 +8,26 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+
+// Characters that need encoding in INI section names: / \ [ ] = ; # and control chars
+const INI_SECTION_ENCODE: &AsciiSet = &CONTROLS
+    .add(b'/')
+    .add(b'\\')
+    .add(b'[')
+    .add(b']')
+    .add(b'=')
+    .add(b';')
+    .add(b'#')
+    .add(b' ');
+
+/// Escape special XML characters to prevent XML injection
+fn escape_xml(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
 
 // =============================================================================
 // Configuration
@@ -909,8 +929,8 @@ impl ShortcutHandler for LxqtHandler {
         let full_cmd = s.full_command();
         // LXQt uses INI format for shortcuts
         // Section name is URL-encoded keybinding followed by shortcut ID
-        // e.g., "Meta+V" -> "Meta%2BV", "Meta+." -> "Meta%2B%2E"
-        let encoded_binding = utf8_percent_encode(s.kde_binding, NON_ALPHANUMERIC).to_string();
+        // Only encode characters problematic for INI format: / \ [ ] = ; # and spaces
+        let encoded_binding = utf8_percent_encode(s.kde_binding, INI_SECTION_ENCODE).to_string();
         let section = format!("{}/{}", encoded_binding, s.id);
         let entry = format!(
             "\n[{}]\nComment={}\nEnabled=true\nExec={}",
@@ -939,7 +959,7 @@ impl ShortcutHandler for LxqtHandler {
         }
 
         // Use same encoding as register for consistency
-        let encoded_binding = utf8_percent_encode(s.kde_binding, NON_ALPHANUMERIC).to_string();
+        let encoded_binding = utf8_percent_encode(s.kde_binding, INI_SECTION_ENCODE).to_string();
         let section = format!("{}/{}", encoded_binding, s.id);
 
         Utils::modify_file_atomic(&path, |content| {
@@ -1000,17 +1020,20 @@ impl ShortcutHandler for LxdeHandler {
 
         let full_cmd = s.full_command();
         // The keybind XML to add - use the LXDE/Openbox-specific binding
+        // Escape XML special characters to prevent XML injection
+        let escaped_binding = escape_xml(s.lxde_binding);
+        let escaped_cmd = escape_xml(&full_cmd);
         let keybind = format!(
             r#"    <keybind key="{}">
       <action name="Execute">
         <command>{}</command>
       </action>
     </keybind>"#,
-            s.lxde_binding, full_cmd
+            escaped_binding, escaped_cmd
         );
 
         Utils::modify_file_atomic(&path, |content| {
-            if content.contains(&format!("<command>{}</command>", full_cmd)) {
+            if content.contains(&format!("<command>{}</command>", escaped_cmd)) {
                 return Ok(None); // Already exists
             }
 
@@ -1048,20 +1071,23 @@ impl ShortcutHandler for LxdeHandler {
         }
 
         let full_cmd = s.full_command();
+        let escaped_binding = escape_xml(s.lxde_binding);
+        let escaped_cmd = escape_xml(&full_cmd);
+
         Utils::modify_file_atomic(&path, |content| {
-            if !content.contains(&format!("<command>{}</command>", full_cmd)) {
+            if !content.contains(&format!("<command>{}</command>", escaped_cmd)) {
                 return Ok(None);
             }
 
             // Remove the keybind block - this is a simplified approach
             // A proper XML parser would be better but adds dependency
             let pattern = format!(
-                r#"    <keybind key="W-v">
+                r#"    <keybind key="{}">
       <action name="Execute">
         <command>{}</command>
       </action>
     </keybind>"#,
-                full_cmd
+                escaped_binding, escaped_cmd
             );
 
             let new_content = content.replace(&pattern, "");
