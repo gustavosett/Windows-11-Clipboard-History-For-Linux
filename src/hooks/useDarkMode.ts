@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import type { ThemeInfo } from '../types/clipboard'
 
 /**
@@ -21,8 +22,20 @@ async function getSystemThemeFromPortal(): Promise<boolean | null> {
 }
 
 /**
+ * Check if the D-Bus event listener is active
+ */
+async function isEventListenerActive(): Promise<boolean> {
+  try {
+    return await invoke<boolean>('is_theme_listener_active')
+  } catch {
+    return false
+  }
+}
+
+/**
  * Hook for detecting system dark mode preference.
  * Uses CSS media query with XDG Desktop Portal fallback for COSMIC DE and others.
+ * Listens for D-Bus theme change events, with polling fallback (10s) if events unavailable.
  */
 export function useDarkMode(): boolean {
   const [isDark, setIsDark] = useState(() => {
@@ -76,19 +89,45 @@ export function useDarkMode(): boolean {
     }
   }, [])
 
-  // Periodically check portal for theme changes (handles DEs that don't propagate to media query)
+  // Listen for theme change events from the backend (D-Bus signals)
   useEffect(() => {
-    const checkInterval = setInterval(async () => {
-      const portalPrefersDark = await getSystemThemeFromPortal()
-      if (portalPrefersDark !== null) {
-        setIsDark((prev) => {
-          if (prev !== portalPrefersDark) return portalPrefersDark
-          return prev
-        })
-      }
-    }, 5000) // Check every 5 seconds
+    const unlistenPromise = listen<ThemeInfo>('system-theme-changed', (event) => {
+      const themeInfo = event.payload
+      setIsDark(themeInfo.prefers_dark)
+    })
 
-    return () => clearInterval(checkInterval)
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten())
+    }
+  }, [])
+
+  // Polling fallback: Only poll if D-Bus event listener is not active
+  // This handles DEs that don't support portal signals or if the listener failed
+  useEffect(() => {
+    let checkInterval: number | null = null
+
+    const setupPolling = async () => {
+      const hasEventListener = await isEventListenerActive()
+
+      if (!hasEventListener) {
+        // Event listener not available, use polling fallback
+        checkInterval = setInterval(async () => {
+          const portalPrefersDark = await getSystemThemeFromPortal()
+          if (portalPrefersDark !== null) {
+            setIsDark((prev) => {
+              if (prev !== portalPrefersDark) return portalPrefersDark
+              return prev
+            })
+          }
+        }, 10000) // Check every 10 seconds
+      }
+    }
+
+    setupPolling()
+
+    return () => {
+      if (checkInterval) clearInterval(checkInterval)
+    }
   }, [])
 
   return isDark

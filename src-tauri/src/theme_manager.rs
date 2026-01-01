@@ -3,11 +3,17 @@
 //! This is essential for DEs like COSMIC that use the portal standard
 //! instead of GNOME settings.
 
-use std::sync::OnceLock;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    OnceLock,
+};
 use tokio::sync::RwLock;
 
 /// Cached system theme preference
 static SYSTEM_THEME: OnceLock<RwLock<Option<ColorScheme>>> = OnceLock::new();
+
+/// Flag to track if the event listener is running
+static EVENT_LISTENER_RUNNING: AtomicBool = AtomicBool::new(false);
 
 /// Color scheme values from the XDG Desktop Portal
 /// See: https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Settings.html
@@ -187,6 +193,116 @@ pub async fn get_system_color_scheme() -> ThemeInfo {
         prefers_dark: false,
         source: "unsupported-platform".to_string(),
     }
+}
+
+/// Start listening for theme changes via D-Bus signals
+/// This is more efficient than polling as it reacts to actual system changes
+#[cfg(target_os = "linux")]
+pub async fn start_theme_listener(
+    app_handle: tauri::AppHandle,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Only start one listener
+    if EVENT_LISTENER_RUNNING.swap(true, Ordering::SeqCst) {
+        return Ok(());
+    }
+
+    tokio::spawn(async move {
+        eprintln!("[ThemeManager] Starting D-Bus event listener for theme changes");
+
+        match listen_for_theme_changes(app_handle).await {
+            Ok(_) => eprintln!("[ThemeManager] Theme listener ended gracefully"),
+            Err(e) => {
+                eprintln!("[ThemeManager] Theme listener error: {}", e);
+                EVENT_LISTENER_RUNNING.store(false, Ordering::SeqCst);
+            }
+        }
+    });
+
+    Ok(())
+}
+
+/// Listen for SettingChanged signals from the XDG Desktop Portal
+#[cfg(target_os = "linux")]
+async fn listen_for_theme_changes(
+    app_handle: tauri::AppHandle,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    use futures_lite::stream::StreamExt;
+    use tauri::Emitter;
+    use zbus::{Connection, MatchRule, MessageStream};
+
+    let connection = Connection::session().await?;
+
+    // Subscribe to SettingChanged signals
+    // Signal: org.freedesktop.portal.Settings.SettingChanged
+    let rule = MatchRule::builder()
+        .msg_type(zbus::message::Type::Signal)
+        .sender("org.freedesktop.portal.Desktop")?
+        .interface("org.freedesktop.portal.Settings")?
+        .member("SettingChanged")?
+        .build();
+
+    let mut stream = MessageStream::for_match_rule(rule, &connection, None).await?;
+
+    eprintln!("[ThemeManager] Listening for theme change signals...");
+
+    while let Some(msg) = stream.next().await {
+        if let Ok(msg) = msg {
+            // SettingChanged signature: (namespace: string, key: string, value: variant)
+            let body = msg.body();
+            if let Ok((namespace, key, value)) =
+                body.deserialize::<(String, String, zbus::zvariant::OwnedValue)>()
+            {
+                if namespace == "org.freedesktop.appearance" && key == "color-scheme" {
+                    // Parse the new color scheme value
+                    if let Ok(color_value) = value.downcast_ref::<u32>() {
+                        let scheme = ColorScheme::from_portal_value(color_value);
+
+                        // Ignore NoPreference as it's not a meaningful theme state
+                        if scheme == ColorScheme::NoPreference {
+                            continue;
+                        }
+
+                        // Check if theme actually changed before emitting
+                        let cache = SYSTEM_THEME.get_or_init(|| RwLock::new(None));
+                        let previous_scheme = *cache.read().await;
+
+                        // Only emit if the theme actually changed
+                        if previous_scheme != Some(scheme) {
+                            eprintln!(
+                                "[ThemeManager] Theme changed via D-Bus signal: {:?}",
+                                scheme
+                            );
+
+                            // Update cache
+                            *cache.write().await = Some(scheme);
+
+                            // Emit Tauri event to notify frontend
+                            let theme_info = ThemeInfo {
+                                color_scheme: scheme,
+                                prefers_dark: scheme.is_dark(),
+                                source: "dbus-signal".to_string(),
+                            };
+
+                            if let Err(e) = app_handle.emit("system-theme-changed", &theme_info) {
+                                eprintln!(
+                                    "[ThemeManager] Failed to emit theme change event: {}",
+                                    e
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Check if the event listener is running
+#[cfg(target_os = "linux")]
+pub fn is_event_listener_running() -> bool {
+    EVENT_LISTENER_RUNNING.load(Ordering::SeqCst)
 }
 
 /// Non-Linux stub implementation

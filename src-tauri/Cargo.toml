@@ -66,6 +66,7 @@ libc = "0.2"
 gtk = "0.18"
 # D-Bus for XDG Desktop Portal (theme detection for COSMIC and other DEs)
 zbus = { version = "5", default-features = false, features = ["tokio"] }
+futures-lite = "2"
 
 [features]
 default = ["custom-protocol"]

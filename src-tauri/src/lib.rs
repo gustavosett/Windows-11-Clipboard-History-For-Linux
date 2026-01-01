@@ -38,5 +38,8 @@ pub use shortcut_setup::{
     check_shortcut_tools, detect_conflicts, get_desktop_environment, register_de_shortcut,
     resolve_conflicts, ShortcutToolsStatus,
 };
-pub use theme_manager::{clear_theme_cache, get_system_color_scheme, ColorScheme, ThemeInfo};
+pub use theme_manager::{
+    clear_theme_cache, get_system_color_scheme, is_event_listener_running, start_theme_listener,
+    ColorScheme, ThemeInfo,
+};
 pub use user_settings::{UserSettings, UserSettingsManager};

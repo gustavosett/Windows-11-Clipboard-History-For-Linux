@@ -133,6 +133,12 @@ async fn refresh_system_theme() -> ThemeInfo {
     theme_manager::get_system_color_scheme().await
 }
 
+/// Check if the D-Bus event listener is running for theme changes
+#[tauri::command]
+fn is_theme_listener_active() -> bool {
+    theme_manager::is_event_listener_running()
+}
+
 #[tauri::command]
 async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> Result<(), String> {
     // 1. Get Item (Scope lock tightly)
@@ -841,6 +847,19 @@ fn main() {
 
             start_clipboard_watcher(app_handle.clone(), clipboard_manager.clone());
 
+            // Start theme change listener (D-Bus event-based, more efficient than polling)
+            #[cfg(target_os = "linux")]
+            {
+                let app_handle_for_theme = app_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) =
+                        theme_manager::start_theme_listener(app_handle_for_theme).await
+                    {
+                        eprintln!("[ThemeManager] Failed to start theme listener: {}", e);
+                    }
+                });
+            }
+
             // Register global shortcut (Super+V) with the desktop environment
             // This runs in a background thread to avoid blocking startup
             #[cfg(target_os = "linux")]
@@ -919,6 +938,7 @@ fn main() {
             copy_text_to_clipboard,
             get_system_theme,
             refresh_system_theme,
+            is_theme_listener_active,
             permission_checker::check_permissions,
             permission_checker::fix_permissions_now,
             permission_checker::is_first_run,

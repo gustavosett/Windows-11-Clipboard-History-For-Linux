@@ -77,19 +77,46 @@ function useThemeMode(themeMode: 'system' | 'dark' | 'light'): boolean {
     return () => mediaQuery.removeEventListener('change', handleChange)
   }, [])
 
-  // Periodically check portal for theme changes (handles DEs that don't propagate to media query)
+  // Listen for theme change events from the backend (D-Bus signals)
   useEffect(() => {
     if (themeMode !== 'system') return
 
-    const checkInterval = setInterval(async () => {
-      const portalPrefersDark = await getSystemThemeFromPortal()
-      if (portalPrefersDark !== null && portalPrefersDark !== systemPrefersDark) {
-        setSystemPrefersDark(portalPrefersDark)
-      }
-    }, 5000)
+    const unlistenPromise = listen<ThemeInfo>('system-theme-changed', (event) => {
+      const themeInfo = event.payload
+      setSystemPrefersDark(themeInfo.prefers_dark)
+    })
 
-    return () => clearInterval(checkInterval)
-  }, [themeMode, systemPrefersDark])
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten())
+    }
+  }, [themeMode])
+
+  // Polling fallback: Only poll if D-Bus event listener is not active
+  useEffect(() => {
+    if (themeMode !== 'system') return
+
+    let checkInterval: number | null = null
+
+    const setupPolling = async () => {
+      const hasEventListener = await invoke<boolean>('is_theme_listener_active')
+
+      if (!hasEventListener) {
+        // Event listener not available, use polling fallback
+        checkInterval = setInterval(async () => {
+          const portalPrefersDark = await getSystemThemeFromPortal()
+          if (portalPrefersDark !== null) {
+            setSystemPrefersDark(portalPrefersDark)
+          }
+        }, 10000) // Check every 10 seconds
+      }
+    }
+
+    setupPolling()
+
+    return () => {
+      if (checkInterval) clearInterval(checkInterval)
+    }
+  }, [themeMode])
 
   // Determine actual dark mode based on theme setting
   if (themeMode === 'dark') return true
