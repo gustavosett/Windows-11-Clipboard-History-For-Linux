@@ -1,4 +1,4 @@
-import { useCallback, forwardRef } from 'react'
+import { useCallback, useRef, useEffect, forwardRef } from 'react'
 import { clsx } from 'clsx'
 import { Pin, X, Image as ImageIcon, Type } from 'lucide-react'
 import type { ClipboardItem } from '../../types/clipboard'
@@ -24,186 +24,207 @@ interface HistoryItemProps {
   enableUiPolish: boolean
 }
 
-export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function HistoryItem(
-  {
-    item,
-    onPaste,
-    onDelete,
-    onTogglePin,
-    onFocus,
-    index,
-    isFocused = false,
-    isDark,
-    secondaryOpacity,
-    isCompact = false,
-    enableSmartActions,
-    enableUiPolish,
-  },
-  ref
-) {
-  const isText = item.content.type === 'Text' || item.content.type === 'RichText'
-
-  // Use compact mode only if enabled by flag
-  const effectiveCompact = enableUiPolish ? isCompact : false
-  const iconSize = getIconSize(effectiveCompact)
-  const iconContainerClasses = getIconContainerClasses(effectiveCompact)
-
-  // Smart Actions Hook
-  const { colorPreview, linkAction, emailAction, handleSmartAction } = useSmartActions(
-    item,
-    enableSmartActions
-  )
-
-  // Handle paste on click
-  const handleClick = useCallback(() => {
-    onPaste(item.id)
-  }, [item.id, onPaste])
-
-  // Handle delete with stopPropagation
-  const handleDelete = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation()
-      onDelete(item.id)
+const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(
+  (
+    {
+      item,
+      onPaste,
+      onDelete,
+      onTogglePin,
+      onFocus,
+      index,
+      isFocused = false,
+      isDark,
+      secondaryOpacity,
+      isCompact = false,
+      enableSmartActions,
+      enableUiPolish,
     },
-    [item.id, onDelete]
-  )
+    ref
+  ) => {
+    // Local ref for focus management
+    const localRef = useRef<HTMLDivElement>(null)
+    // Use forwarded ref if provided, else local
+    const combinedRef = (node: HTMLDivElement) => {
+      if (typeof ref === 'function') ref(node)
+      else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node
+      localRef.current = node
+    }
 
-  // Handle pin toggle with stopPropagation
-  const handleTogglePin = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation()
-      onTogglePin(item.id)
-    },
-    [item.id, onTogglePin]
-  )
+    // Focus the item when isFocused changes to true
+    useEffect(() => {
+      if (isFocused && localRef.current) {
+        localRef.current.focus()
+      }
+    }, [isFocused])
+    const isText = item.content.type === 'Text' || item.content.type === 'RichText'
 
-  // Green ring if pinned & focused
-  const greenRing = item.pinned && isFocused ? 'ring-2 ring-green-500' : undefined
-  return (
-    <div
-      ref={ref}
-      className={clsx(
-        'group relative rounded-win11 cursor-pointer',
-        effectiveCompact ? 'p-2' : 'p-3',
-        'transition-all duration-150 ease-out',
-        'animate-in',
-        // Green ring has priority
-        greenRing,
-        // Otherwise default focused ring
-        !greenRing && isFocused ? 'ring-2 ring-red-500' : undefined,
-        isDark
-          ? 'hover:bg-win11-bg-card-hover border border-win11-border-subtle'
-          : 'hover:bg-win11Light-bg-card-hover border border-win11Light-border',
-        // Pinned indicator (keep accent ring for pinned, but not if green ring is active)
-        item.pinned && !greenRing && 'ring-1 ring-win11-bg-accent',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
-      )}
-      onClick={handleClick}
-      onFocus={onFocus}
-      role="button"
-      tabIndex={isFocused ? 0 : -1}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          handleClick()
-        }
-      }}
-      style={{
-        animationDelay: `${index * 30}ms`,
-        ...getCardBackgroundStyle(isDark, secondaryOpacity),
-      }}
-    >
-      {/* Content type indicator */}
-      <div className="flex items-start gap-3">
-        {/* Icon */}
-        <div
-          className={clsx(iconContainerClasses, colorPreview && 'shadow-sm')}
-          style={
-            colorPreview && colorPreview.data
-              ? { backgroundColor: colorPreview.data }
-              : getTertiaryBackgroundStyle(isDark, secondaryOpacity)
+    // Use compact mode only if enabled by flag
+    const effectiveCompact = enableUiPolish ? isCompact : false
+    const iconSize = getIconSize(effectiveCompact)
+    const iconContainerClasses = getIconContainerClasses(effectiveCompact)
+
+    // Smart Actions Hook
+    const { colorPreview, linkAction, emailAction, handleSmartAction } = useSmartActions(
+      item,
+      enableSmartActions
+    )
+
+    // Handle paste on click
+    const handleClick = useCallback(() => {
+      onPaste(item.id)
+    }, [item.id, onPaste])
+
+    // Handle delete with stopPropagation
+    const handleDelete = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation()
+        onDelete(item.id)
+      },
+      [item.id, onDelete]
+    )
+
+    // Handle pin toggle with stopPropagation
+    const handleTogglePin = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation()
+        onTogglePin(item.id)
+      },
+      [item.id, onTogglePin]
+    )
+
+    // Compute ring class based on pinned/focused state
+    let ringClass = ''
+    if (item.pinned && isFocused) {
+      ringClass = 'ring-2 ring-green-500'
+    } else if (isFocused) {
+      ringClass = 'ring-2 ring-red-500'
+    } else if (item.pinned) {
+      ringClass = 'ring-1 ring-win11-bg-accent'
+    }
+    return (
+      <div
+        ref={combinedRef}
+        className={clsx(
+          'group relative rounded-win11 cursor-pointer',
+          effectiveCompact ? 'p-2' : 'p-3',
+          'transition-all duration-150 ease-out',
+          'animate-in',
+          ringClass,
+          isDark
+            ? 'hover:bg-win11-bg-card-hover border border-win11-border-subtle'
+            : 'hover:bg-win11Light-bg-card-hover border border-win11Light-border',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
+        )}
+        onClick={handleClick}
+        onFocus={onFocus}
+        role="button"
+        tabIndex={isFocused ? 0 : -1}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleClick()
           }
-          title={colorPreview ? `Color: ${colorPreview.data}` : undefined}
-        >
-          {colorPreview ? null : isText ? (
-            <Type
-              className={clsx(
-                iconSize,
-                isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-              )}
-            />
-          ) : (
-            <ImageIcon
-              className={clsx(
-                iconSize,
-                isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-              )}
-            />
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <TextContent item={item} isDark={isDark} effectiveCompact={effectiveCompact} />
-          <ImageContent item={item} isDark={isDark} effectiveCompact={effectiveCompact} />
-          <Timestamp show={!effectiveCompact} isDark={isDark} timestamp={item.timestamp} />
-        </div>
-
-        {/* Action buttons - visible on hover */}
-        <div
-          className={clsx(
-            'flex items-center gap-1 opacity-0 group-hover:opacity-100',
-            'transition-opacity duration-150'
-          )}
-        >
-          {/* Smart Actions Buttons */}
-          <HistorySmartActions
-            linkAction={linkAction}
-            emailAction={emailAction}
-            isDark={isDark}
-            onActionClick={handleSmartAction}
-          />
-
-          {/* Pin button */}
-          <button
-            onClick={handleTogglePin}
-            className={clsx(
-              'p-1.5 rounded-md transition-colors',
-              isDark ? 'hover:bg-win11-bg-tertiary' : 'hover:bg-win11Light-bg-tertiary',
-              item.pinned
-                ? 'text-win11-bg-accent'
-                : isDark
-                  ? 'text-win11-text-tertiary'
-                  : 'text-win11Light-text-secondary'
-            )}
-            title={item.pinned ? 'Unpin' : 'Pin'}
-            tabIndex={-1}
+        }}
+        style={{
+          animationDelay: `${index * 30}ms`,
+          ...getCardBackgroundStyle(isDark, secondaryOpacity),
+        }}
+      >
+        {/* Content type indicator */}
+        <div className="flex items-start gap-3">
+          {/* Icon */}
+          <div
+            className={clsx(iconContainerClasses, colorPreview && 'shadow-sm')}
+            style={
+              colorPreview && colorPreview.data
+                ? { backgroundColor: colorPreview.data }
+                : getTertiaryBackgroundStyle(isDark, secondaryOpacity)
+            }
+            title={colorPreview ? `Color: ${colorPreview.data}` : undefined}
           >
-            <Pin className="w-4 h-4" fill={item.pinned ? 'currentColor' : 'none'} />
-          </button>
-
-          {/* Delete button */}
-          <button
-            onClick={handleDelete}
-            className={clsx(
-              'p-1.5 rounded-md transition-colors',
-              isDark
-                ? 'text-win11-text-tertiary hover:bg-win11-bg-tertiary'
-                : 'text-win11Light-text-secondary hover:bg-win11Light-bg-tertiary',
-              'hover:text-win11-error'
+            {colorPreview ? null : isText ? (
+              <Type
+                className={clsx(
+                  iconSize,
+                  isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
+                )}
+              />
+            ) : (
+              <ImageIcon
+                className={clsx(
+                  iconSize,
+                  isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
+                )}
+              />
             )}
-            title="Delete"
-            tabIndex={-1}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <TextContent item={item} isDark={isDark} effectiveCompact={effectiveCompact} />
+            <ImageContent item={item} isDark={isDark} effectiveCompact={effectiveCompact} />
+            <Timestamp show={!effectiveCompact} isDark={isDark} timestamp={item.timestamp} />
+          </div>
+
+          {/* Action buttons - visible on hover */}
+          <div
+            className={clsx(
+              'flex items-center gap-1 opacity-0 group-hover:opacity-100',
+              'transition-opacity duration-150'
+            )}
           >
-            <X className="w-4 h-4" />
-          </button>
+            {/* Smart Actions Buttons */}
+            <HistorySmartActions
+              linkAction={linkAction}
+              emailAction={emailAction}
+              isDark={isDark}
+              onActionClick={handleSmartAction}
+            />
+
+            {/* Pin button */}
+            <button
+              onClick={handleTogglePin}
+              className={clsx(
+                'p-1.5 rounded-md transition-colors',
+                isDark ? 'hover:bg-win11-bg-tertiary' : 'hover:bg-win11Light-bg-tertiary',
+                item.pinned
+                  ? 'text-win11-bg-accent'
+                  : isDark
+                    ? 'text-win11-text-tertiary'
+                    : 'text-win11Light-text-secondary'
+              )}
+              title={item.pinned ? 'Unpin' : 'Pin'}
+              tabIndex={-1}
+            >
+              <Pin className="w-4 h-4" fill={item.pinned ? 'currentColor' : 'none'} />
+            </button>
+
+            {/* Delete button */}
+            <button
+              onClick={handleDelete}
+              className={clsx(
+                'p-1.5 rounded-md transition-colors',
+                isDark
+                  ? 'text-win11-text-tertiary hover:bg-win11-bg-tertiary'
+                  : 'text-win11Light-text-secondary hover:bg-win11Light-bg-tertiary',
+                'hover:text-win11-error'
+              )}
+              title="Delete"
+              tabIndex={-1}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
+
+        {/* Pinned badge */}
+        {item.pinned && (
+          <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-win11-bg-accent" />
+        )}
       </div>
+    )
+  }
+)
 
-      {/* Pinned badge */}
-      {item.pinned && (
-        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-win11-bg-accent" />
-      )}
-    </div>
-  )
-})
+export { HistoryItem }
