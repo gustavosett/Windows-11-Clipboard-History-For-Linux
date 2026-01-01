@@ -44,6 +44,16 @@ export type ActiveTab = 'clipboard' | 'gifs' | 'emoji' | 'kaomoji' | 'symbols'
 /** Theme mode */
 export type ThemeMode = 'light' | 'dark' | 'system'
 
+/** Color scheme from XDG Desktop Portal */
+export type ColorScheme = 'nopreference' | 'dark' | 'light'
+
+/** System theme information from the backend */
+export interface ThemeInfo {
+  color_scheme: ColorScheme
+  prefers_dark: boolean
+  source: string
+}
+
 export interface Kaomoji {
   id: string
   text: string

@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow, Window } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
 import { emit } from '@tauri-apps/api/event'
 import { clsx } from 'clsx'
 
-import type { UserSettings, CustomKaomoji, BooleanSettingKey } from './types/clipboard'
+import type { UserSettings, CustomKaomoji, BooleanSettingKey, ThemeInfo } from './types/clipboard'
 import { FeaturesSection } from './components/FeaturesSection'
 
 const MIN_HISTORY_SIZE = 1
@@ -25,7 +25,24 @@ const DEFAULT_SETTINGS: UserSettings = {
 type ThemeMode = 'system' | 'dark' | 'light'
 
 /**
- * Determines if dark mode should be active based on theme mode setting
+ * Query the backend for system color scheme via XDG Desktop Portal.
+ * This works with COSMIC, GNOME, KDE, and other portal-compliant DEs.
+ */
+async function getSystemThemeFromPortal(): Promise<boolean | null> {
+  try {
+    const themeInfo = await invoke<ThemeInfo>('get_system_theme')
+    if (themeInfo.source !== 'default') {
+      return themeInfo.prefers_dark
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Determines if dark mode should be active based on theme mode setting.
+ * Uses CSS media query with XDG Desktop Portal fallback for COSMIC DE and others.
  */
 function useThemeMode(themeMode: ThemeMode): boolean {
   const [systemPrefersDark, setSystemPrefersDark] = useState(() => {
@@ -34,7 +51,21 @@ function useThemeMode(themeMode: ThemeMode): boolean {
     }
     return true
   })
+  const hasCheckedPortal = useRef(false)
 
+  // Check XDG portal for initial theme (handles COSMIC and other DEs)
+  useEffect(() => {
+    if (hasCheckedPortal.current) return
+    hasCheckedPortal.current = true
+
+    getSystemThemeFromPortal().then((portalPrefersDark) => {
+      if (portalPrefersDark !== null) {
+        setSystemPrefersDark(portalPrefersDark)
+      }
+    })
+  }, [])
+
+  // Listen for media query changes
   useEffect(() => {
     const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)')
     const handleChange = (e: MediaQueryListEvent) => {
@@ -43,6 +74,20 @@ function useThemeMode(themeMode: ThemeMode): boolean {
     mediaQuery.addEventListener('change', handleChange)
     return () => mediaQuery.removeEventListener('change', handleChange)
   }, [])
+
+  // Periodically check portal for theme changes (handles DEs that don't propagate to media query)
+  useEffect(() => {
+    if (themeMode !== 'system') return
+
+    const checkInterval = setInterval(async () => {
+      const portalPrefersDark = await getSystemThemeFromPortal()
+      if (portalPrefersDark !== null && portalPrefersDark !== systemPrefersDark) {
+        setSystemPrefersDark(portalPrefersDark)
+      }
+    }, 5000)
+
+    return () => clearInterval(checkInterval)
+  }, [themeMode, systemPrefersDark])
 
   if (themeMode === 'dark') return true
   if (themeMode === 'light') return false

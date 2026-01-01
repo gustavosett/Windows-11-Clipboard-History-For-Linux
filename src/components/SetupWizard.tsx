@@ -1,8 +1,9 @@
 import { invoke } from '@tauri-apps/api/core'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { clsx } from 'clsx'
 import { useAutostart } from '../hooks/useAutostart'
 import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
+import type { ThemeInfo } from '../types/clipboard'
 import {
   CheckCircle,
   AlertTriangle,
@@ -53,6 +54,21 @@ interface SetupWizardProps {
   readonly onComplete: () => void
 }
 
+/**
+ * Query the backend for system color scheme via XDG Desktop Portal.
+ */
+async function getSystemThemeFromPortal(): Promise<boolean | null> {
+  try {
+    const themeInfo = await invoke<ThemeInfo>('get_system_theme')
+    if (themeInfo.source !== 'default') {
+      return themeInfo.prefers_dark
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 function useSystemDarkMode(): boolean {
   const [isDark, setIsDark] = useState(() => {
     if (globalThis.matchMedia) {
@@ -60,7 +76,21 @@ function useSystemDarkMode(): boolean {
     }
     return true
   })
+  const hasCheckedPortal = useRef(false)
 
+  // Check XDG portal for initial theme (handles COSMIC and other DEs)
+  useEffect(() => {
+    if (hasCheckedPortal.current) return
+    hasCheckedPortal.current = true
+
+    getSystemThemeFromPortal().then((portalPrefersDark) => {
+      if (portalPrefersDark !== null) {
+        setIsDark(portalPrefersDark)
+      }
+    })
+  }, [])
+
+  // Listen for media query changes
   useEffect(() => {
     const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)')
     const handleChange = (e: MediaQueryListEvent) => setIsDark(e.matches)

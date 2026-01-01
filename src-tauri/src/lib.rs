@@ -12,6 +12,7 @@ pub mod permission_checker;
 pub mod session;
 pub mod shortcut_conflict_detector;
 pub mod shortcut_setup;
+pub mod theme_manager;
 pub mod user_settings;
 
 #[cfg(target_os = "linux")]
@@ -37,4 +38,5 @@ pub use shortcut_setup::{
     check_shortcut_tools, detect_conflicts, get_desktop_environment, register_de_shortcut,
     resolve_conflicts, ShortcutToolsStatus,
 };
+pub use theme_manager::{clear_theme_cache, get_system_color_scheme, ColorScheme, ThemeInfo};
 pub use user_settings::{UserSettings, UserSettingsManager};
