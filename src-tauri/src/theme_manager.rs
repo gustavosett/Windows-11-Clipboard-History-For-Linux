@@ -185,16 +185,6 @@ pub async fn clear_theme_cache() {
     }
 }
 
-/// Non-Linux stub implementation
-#[cfg(not(target_os = "linux"))]
-pub async fn get_system_color_scheme() -> ThemeInfo {
-    ThemeInfo {
-        color_scheme: ColorScheme::NoPreference,
-        prefers_dark: false,
-        source: "unsupported-platform".to_string(),
-    }
-}
-
 /// Start listening for theme changes via D-Bus signals
 /// This is more efficient than polling as it reacts to actual system changes
 #[cfg(target_os = "linux")]
@@ -210,7 +200,10 @@ pub async fn start_theme_listener(
         eprintln!("[ThemeManager] Starting D-Bus event listener for theme changes");
 
         match listen_for_theme_changes(app_handle).await {
-            Ok(_) => eprintln!("[ThemeManager] Theme listener ended gracefully"),
+            Ok(_) => {
+                eprintln!("[ThemeManager] Theme listener ended gracefully");
+                EVENT_LISTENER_RUNNING.store(false, Ordering::SeqCst);
+            }
             Err(e) => {
                 eprintln!("[ThemeManager] Theme listener error: {}", e);
                 EVENT_LISTENER_RUNNING.store(false, Ordering::SeqCst);
@@ -304,10 +297,6 @@ async fn listen_for_theme_changes(
 pub fn is_event_listener_running() -> bool {
     EVENT_LISTENER_RUNNING.load(Ordering::SeqCst)
 }
-
-/// Non-Linux stub implementation
-#[cfg(not(target_os = "linux"))]
-pub async fn clear_theme_cache() {}
 
 #[cfg(test)]
 mod tests {
