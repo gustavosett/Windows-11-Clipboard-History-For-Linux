@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   enable_ui_polish: true,
   max_history_size: 50,
   custom_kaomojis: [],
+  ui_scale: 1,
 }
 
 type ThemeMode = 'system' | 'dark' | 'light'
@@ -488,6 +489,57 @@ function SettingsApp() {
                 onTouchEnd={commitOpacityChange}
                 className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-win11-bg-accent"
               />
+            </div>
+          </div>
+        </section>
+
+        {/* UI Scale Section */}
+        <section
+          className={clsx(
+            'rounded-xl border shadow-sm overflow-hidden',
+            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
+          )}
+        >
+          <div className="p-6 border-b border-inherit">
+            <h2 className="text-base font-semibold mb-1">UI Scale</h2>
+            <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              Adjust the clipboard window size for your display
+            </p>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <label htmlFor="ui-scale" className="text-sm font-medium">
+                  Clipboard Window Scale
+                </label>
+                <div
+                  className={clsx(
+                    'px-2 py-1 rounded text-xs font-mono font-medium',
+                    isDark ? 'bg-black/20' : 'bg-gray-100'
+                  )}
+                >
+                  {Math.round(settings.ui_scale * 100)}%
+                </div>
+              </div>
+              <input
+                id="ui-scale"
+                type="range"
+                min="0.5"
+                max="2"
+                step="0.1"
+                value={settings.ui_scale}
+                onChange={(e) => {
+                  const value = Number.parseFloat(e.target.value)
+                  setSettings((prev) => ({ ...prev, ui_scale: value }))
+                }}
+                onMouseUp={commitOpacityChange}
+                onTouchEnd={commitOpacityChange}
+                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-win11-bg-accent"
+              />
+              <p className={clsx('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                This setting only affects the clipboard popup, not this settings window
+              </p>
             </div>
           </div>
         </section>

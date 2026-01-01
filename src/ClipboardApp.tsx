@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { clsx } from 'clsx'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { useClipboardHistory } from './hooks/useClipboardHistory'
@@ -22,6 +23,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   enable_ui_polish: true,
   max_history_size: 50,
   custom_kaomojis: [],
+  ui_scale: 1,
 }
 
 /**
@@ -82,6 +84,17 @@ function applyThemeClass(isDark: boolean) {
 }
 
 /**
+ * Applies the UI scale/zoom level to the webview
+ */
+async function applyUIScale(scale: number) {
+  try {
+    await getCurrentWebview().setZoom(scale)
+  } catch (err) {
+    console.error('Failed to apply UI scale:', err)
+  }
+}
+
+/**
  * Main Clipboard App Component
  */
 function ClipboardApp() {
@@ -108,11 +121,13 @@ function ClipboardApp() {
       .then((loadedSettings) => {
         setSettings(loadedSettings)
         applyBackgroundOpacity(loadedSettings)
+        applyUIScale(loadedSettings.ui_scale)
         setSettingsLoaded(true)
       })
       .catch((err) => {
         console.error('Failed to load user settings:', err)
         applyBackgroundOpacity(DEFAULT_SETTINGS)
+        applyUIScale(DEFAULT_SETTINGS.ui_scale)
         setSettingsLoaded(true)
       })
 
@@ -121,6 +136,7 @@ function ClipboardApp() {
       const newSettings = event.payload
       setSettings(newSettings)
       applyBackgroundOpacity(newSettings)
+      applyUIScale(newSettings.ui_scale)
     })
 
     return () => {

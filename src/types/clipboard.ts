@@ -61,6 +61,7 @@ export interface UserSettings {
   enable_ui_polish: boolean
   max_history_size: number
   custom_kaomojis: CustomKaomoji[]
+  ui_scale: number
 }
 
 /** Helper type for boolean settings keys */

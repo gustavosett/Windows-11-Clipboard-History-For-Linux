@@ -37,6 +37,11 @@ pub struct UserSettings {
     /// User-defined Kaomojis
     #[serde(default)]
     pub custom_kaomojis: Vec<CustomKaomoji>,
+
+    // --- UI Scale ---
+    /// UI scale factor for the clipboard window (0.5 to 2.0, default 1.0)
+    #[serde(default = "default_ui_scale")]
+    pub ui_scale: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -55,6 +60,10 @@ fn default_max_history_size() -> usize {
     crate::clipboard_manager::DEFAULT_MAX_HISTORY_SIZE
 }
 
+fn default_ui_scale() -> f32 {
+    1.0
+}
+
 impl Default for UserSettings {
     fn default() -> Self {
         Self {
@@ -65,6 +74,7 @@ impl Default for UserSettings {
             enable_ui_polish: true,
             max_history_size: default_max_history_size(),
             custom_kaomojis: Vec::new(),
+            ui_scale: default_ui_scale(),
         }
     }
 }
@@ -82,6 +92,9 @@ impl UserSettings {
 
         // Validate max_history_size (1 to 100000)
         self.max_history_size = self.max_history_size.clamp(1, 100_000);
+
+        // Validate ui_scale (0.5 to 2.0)
+        self.ui_scale = self.ui_scale.clamp(0.5, 2.0);
     }
 }
 
