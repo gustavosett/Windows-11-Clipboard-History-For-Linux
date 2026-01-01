@@ -261,24 +261,28 @@ async fn listen_for_theme_changes(
                     if let Ok(color_value) = value.downcast_ref::<u32>() {
                         let scheme = ColorScheme::from_portal_value(color_value);
 
-                        // Ignore NoPreference as it's not a meaningful theme state
-                        if scheme == ColorScheme::NoPreference {
-                            continue;
-                        }
-
                         // Check if theme actually changed before emitting
                         let cache = SYSTEM_THEME.get_or_init(|| RwLock::new(None));
-                        let previous_scheme = *cache.read().await;
+                        let mut cache_guard = cache.write().await;
+                        let previous_scheme = *cache_guard;
+
+                        // Represent NoPreference by clearing the cache (None)
+                        // This allows the frontend to fall back to CSS media queries
+                        let new_cache_value = if scheme == ColorScheme::NoPreference {
+                            None
+                        } else {
+                            Some(scheme)
+                        };
 
                         // Only emit if the theme actually changed
-                        if previous_scheme != Some(scheme) {
+                        if previous_scheme != new_cache_value {
                             eprintln!(
                                 "[ThemeManager] Theme changed via D-Bus signal: {:?}",
                                 scheme
                             );
 
-                            // Update cache
-                            *cache.write().await = Some(scheme);
+                            // Update cache to reflect the new state
+                            *cache_guard = new_cache_value;
 
                             // Emit Tauri event to notify frontend
                             let theme_info = ThemeInfo {
