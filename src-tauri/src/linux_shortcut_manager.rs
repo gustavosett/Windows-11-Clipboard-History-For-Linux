@@ -28,6 +28,7 @@ pub struct ShortcutConfig {
     pub i3_binding: &'static str,
     pub sway_binding: &'static str,
     pub hyprland_binding: &'static str,
+    pub lxde_binding: &'static str,
 }
 
 impl ShortcutConfig {
@@ -73,6 +74,7 @@ const SHORTCUTS: &[ShortcutConfig] = &[
         i3_binding: "$mod+v",
         sway_binding: "$mod+v",
         hyprland_binding: "SUPER, V",
+        lxde_binding: "W-v",
     },
     ShortcutConfig {
         id: "win11-clipboard-history-alt",
@@ -87,6 +89,7 @@ const SHORTCUTS: &[ShortcutConfig] = &[
         i3_binding: "Ctrl+Mod1+v",
         sway_binding: "Ctrl+Mod1+v",
         hyprland_binding: "CTRL ALT, V",
+        lxde_binding: "C-A-v",
     },
     ShortcutConfig {
         id: "win11-clipboard-history-emoji",
@@ -101,6 +104,7 @@ const SHORTCUTS: &[ShortcutConfig] = &[
         i3_binding: "$mod+period",
         sway_binding: "$mod+period",
         hyprland_binding: "SUPER, period",
+        lxde_binding: "W-period",
     },
 ];
 
@@ -995,14 +999,14 @@ impl ShortcutHandler for LxdeHandler {
         }
 
         let full_cmd = s.full_command();
-        // The keybind XML to add
+        // The keybind XML to add - use the LXDE/Openbox-specific binding
         let keybind = format!(
-            r#"    <keybind key="W-v">
+            r#"    <keybind key="{}">
       <action name="Execute">
         <command>{}</command>
       </action>
     </keybind>"#,
-            full_cmd
+            s.lxde_binding, full_cmd
         );
 
         Utils::modify_file_atomic(&path, |content| {
