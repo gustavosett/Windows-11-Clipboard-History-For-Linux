@@ -12,7 +12,8 @@ import { GifPicker } from './components/GifPicker'
 import { KaomojiPicker } from './components/KaomojiPicker'
 import { SymbolPicker } from './components/SymbolPicker'
 import { calculateSecondaryOpacity, calculateTertiaryOpacity } from './utils/themeUtils'
-import type { ActiveTab, UserSettings, ThemeInfo } from './types/clipboard'
+import { useSystemThemePreference } from './utils/systemTheme'
+import type { ActiveTab, UserSettings } from './types/clipboard'
 import { ClipboardTab } from './components/ClipboardTab'
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -27,98 +28,12 @@ const DEFAULT_SETTINGS: UserSettings = {
 }
 
 /**
- * Query the backend for system color scheme via XDG Desktop Portal.
- * This works with COSMIC, GNOME, KDE, and other portal-compliant DEs.
- */
-async function getSystemThemeFromPortal(): Promise<boolean | null> {
-  try {
-    const themeInfo = await invoke<ThemeInfo>('get_system_theme')
-    if (themeInfo.source !== 'default') {
-      return themeInfo.prefers_dark
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-/**
- * Determines if dark mode should be active based on theme mode setting.
- * Uses CSS media query with XDG Desktop Portal fallback for COSMIC DE and others.
+ * Maps theme mode setting to actual dark mode state.
+ * Uses shared system theme detection for 'system' mode.
  */
 function useThemeMode(themeMode: 'system' | 'dark' | 'light'): boolean {
-  const [systemPrefersDark, setSystemPrefersDark] = useState(() => {
-    if (globalThis.matchMedia) {
-      return globalThis.matchMedia('(prefers-color-scheme: dark)').matches
-    }
-    return true
-  })
-  const hasCheckedPortal = useRef(false)
+  const systemPrefersDark = useSystemThemePreference()
 
-  // Check XDG portal for initial theme (handles COSMIC and other DEs)
-  useEffect(() => {
-    if (hasCheckedPortal.current) return
-    hasCheckedPortal.current = true
-
-    getSystemThemeFromPortal().then((portalPrefersDark) => {
-      if (portalPrefersDark !== null) {
-        setSystemPrefersDark(portalPrefersDark)
-      }
-    })
-  }, [])
-
-  // Listen for media query changes
-  useEffect(() => {
-    const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)')
-    const handleChange = (e: MediaQueryListEvent) => {
-      setSystemPrefersDark(e.matches)
-    }
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [])
-
-  // Listen for theme change events from the backend (D-Bus signals)
-  useEffect(() => {
-    if (themeMode !== 'system') return
-
-    const unlistenPromise = listen<ThemeInfo>('system-theme-changed', (event) => {
-      const themeInfo = event.payload
-      setSystemPrefersDark(themeInfo.prefers_dark)
-    })
-
-    return () => {
-      unlistenPromise.then((unlisten) => unlisten())
-    }
-  }, [themeMode])
-
-  // Polling fallback: Only poll if D-Bus event listener is not active
-  useEffect(() => {
-    if (themeMode !== 'system') return
-
-    let checkInterval: number | null = null
-
-    const setupPolling = async () => {
-      const hasEventListener = await invoke<boolean>('is_theme_listener_active')
-
-      if (!hasEventListener) {
-        // Event listener not available, use polling fallback
-        checkInterval = setInterval(async () => {
-          const portalPrefersDark = await getSystemThemeFromPortal()
-          if (portalPrefersDark !== null) {
-            setSystemPrefersDark(portalPrefersDark)
-          }
-        }, 10000) // Check every 10 seconds
-      }
-    }
-
-    setupPolling()
-
-    return () => {
-      if (checkInterval) clearInterval(checkInterval)
-    }
-  }, [themeMode])
-
-  // Determine actual dark mode based on theme setting
   if (themeMode === 'dark') return true
   if (themeMode === 'light') return false
   return systemPrefersDark // 'system' mode

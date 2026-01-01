@@ -1,9 +1,9 @@
 import { invoke } from '@tauri-apps/api/core'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { clsx } from 'clsx'
 import { useAutostart } from '../hooks/useAutostart'
 import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
-import type { ThemeInfo } from '../types/clipboard'
+import { useSystemThemePreference } from '../utils/systemTheme'
 import {
   CheckCircle,
   AlertTriangle,
@@ -52,53 +52,6 @@ interface ConflictDetectionResult {
 
 interface SetupWizardProps {
   readonly onComplete: () => void
-}
-
-/**
- * Query the backend for system color scheme via XDG Desktop Portal.
- */
-async function getSystemThemeFromPortal(): Promise<boolean | null> {
-  try {
-    const themeInfo = await invoke<ThemeInfo>('get_system_theme')
-    if (themeInfo.source !== 'default') {
-      return themeInfo.prefers_dark
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-function useSystemDarkMode(): boolean {
-  const [isDark, setIsDark] = useState(() => {
-    if (globalThis.matchMedia) {
-      return globalThis.matchMedia('(prefers-color-scheme: dark)').matches
-    }
-    return true
-  })
-  const hasCheckedPortal = useRef(false)
-
-  // Check XDG portal for initial theme (handles COSMIC and other DEs)
-  useEffect(() => {
-    if (hasCheckedPortal.current) return
-    hasCheckedPortal.current = true
-
-    getSystemThemeFromPortal().then((portalPrefersDark) => {
-      if (portalPrefersDark !== null) {
-        setIsDark(portalPrefersDark)
-      }
-    })
-  }, [])
-
-  // Listen for media query changes
-  useEffect(() => {
-    const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)')
-    const handleChange = (e: MediaQueryListEvent) => setIsDark(e.matches)
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [])
-
-  return isDark
 }
 
 interface WizardButtonProps {
@@ -168,7 +121,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   const [copied, setCopied] = useState(false)
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
   const { enableAutostart } = useAutostart()
-  const isDark = useSystemDarkMode()
+  const isDark = useSystemThemePreference()
 
   // Fixed opacity for the wizard (similar to main app default)
   const tertiaryOpacity = 0.85
