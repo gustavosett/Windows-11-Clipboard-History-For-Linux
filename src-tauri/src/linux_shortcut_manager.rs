@@ -17,6 +17,7 @@ pub struct ShortcutConfig {
     pub id: &'static str,
     pub name: &'static str,
     pub command: &'static str,
+    pub args: &'static str, // Command line arguments (e.g., "--emoji")
     pub gnome_binding: &'static str,
     pub kde_binding: &'static str,
     pub xfce_binding: &'static str,
@@ -26,6 +27,17 @@ pub struct ShortcutConfig {
     pub i3_binding: &'static str,
     pub sway_binding: &'static str,
     pub hyprland_binding: &'static str,
+}
+
+impl ShortcutConfig {
+    /// Returns the full command string including any arguments
+    pub fn full_command(&self) -> String {
+        if self.args.is_empty() {
+            self.command.to_string()
+        } else {
+            format!("{} {}", self.command, self.args)
+        }
+    }
 }
 
 fn get_command_path() -> &'static str {
@@ -51,6 +63,7 @@ const SHORTCUTS: &[ShortcutConfig] = &[
         id: "win11-clipboard-history",
         name: "Clipboard History",
         command: "win11-clipboard-history", // Will be replaced at runtime
+        args: "",
         gnome_binding: "<Super>v",
         kde_binding: "Meta+V",
         xfce_binding: "<Super>v",
@@ -64,6 +77,7 @@ const SHORTCUTS: &[ShortcutConfig] = &[
         id: "win11-clipboard-history-alt",
         name: "Clipboard History (Alt)",
         command: "win11-clipboard-history", // Will be replaced at runtime
+        args: "",
         gnome_binding: "<Ctrl><Alt>v",
         kde_binding: "Ctrl+Alt+V",
         xfce_binding: "<Primary><Alt>v",
@@ -72,6 +86,20 @@ const SHORTCUTS: &[ShortcutConfig] = &[
         i3_binding: "Ctrl+Mod1+v",
         sway_binding: "Ctrl+Mod1+v",
         hyprland_binding: "CTRL ALT, V",
+    },
+    ShortcutConfig {
+        id: "win11-clipboard-history-emoji",
+        name: "Emoji Picker",
+        command: "win11-clipboard-history", // Will be replaced at runtime
+        args: "--emoji",
+        gnome_binding: "<Super>period",
+        kde_binding: "Meta+.",
+        xfce_binding: "<Super>period",
+        cosmic_mods: "Super",
+        cosmic_key: "period",
+        i3_binding: "$mod+period",
+        sway_binding: "$mod+period",
+        hyprland_binding: "SUPER, period",
     },
 ];
 
@@ -462,13 +490,11 @@ impl GSettings {
 
         let path = format!("{}/{}/", self.path_prefix, shortcut.id);
         let schema_path = format!("{}:{}", self.binding_schema, path);
+        let full_cmd = shortcut.full_command();
 
         // Idempotent setting
         Utils::run("gsettings", &["set", &schema_path, "name", shortcut.name])?;
-        Utils::run(
-            "gsettings",
-            &["set", &schema_path, "command", shortcut.command],
-        )?;
+        Utils::run("gsettings", &["set", &schema_path, "command", &full_cmd])?;
 
         let binding_val = if use_array_for_binding {
             format!("['{}']", shortcut.gnome_binding)
@@ -619,10 +645,11 @@ impl ShortcutHandler for KdeHandler {
             // but consistency across runs (idempotency)
             let namespace = Uuid::NAMESPACE_DNS;
             let uuid = Uuid::new_v5(&namespace, s.id.as_bytes()).to_string();
+            let full_cmd = s.full_command();
 
             let entry = format!(
                 "\n[{0}]\nComment={1}\nEnabled=true\nName={1}\nType=SIMPLE_ACTION_DATA\n\n[{0}/Actions]\nActionsCount=1\n\n[{0}/Actions/Action0]\nCommandURL={2}\nType=COMMAND_URL\n\n[{0}/Conditions]\nComment=\nConditionsCount=0\n\n[{0}/Triggers]\nTriggersCount=1\n\n[{0}/Triggers/Trigger0]\nKey={3}\nType=SHORTCUT\nUuid={{{4}}}\n",
-                section_name, s.name, s.command, s.kde_binding, uuid
+                section_name, s.name, full_cmd, s.kde_binding, uuid
             );
 
             lines.push(entry);
@@ -701,7 +728,7 @@ impl ShortcutHandler for XfceHandler {
                     "-t",
                     "string",
                     "-s",
-                    s.command,
+                    &s.full_command(),
                 ],
             )?;
         }
@@ -734,6 +761,8 @@ impl ShortcutHandler for MateHandler {
             return Err(ShortcutError::DependencyMissing("gsettings".into()));
         }
 
+        let full_cmd = s.full_command();
+
         // Logic similar to original but with Utils::run for better errors
         for i in 1..=12 {
             let cmd_key = format!("command-{}", i);
@@ -743,7 +772,7 @@ impl ShortcutHandler for MateHandler {
             )?;
             let current = current.trim_matches('\'');
 
-            if current == s.command {
+            if current == full_cmd {
                 return Ok(());
             } // Already done
 
@@ -755,7 +784,7 @@ impl ShortcutHandler for MateHandler {
                         "set",
                         "org.mate.Marco.keybinding-commands",
                         &cmd_key,
-                        s.command,
+                        &full_cmd,
                     ],
                 )?;
                 Utils::run(
@@ -779,6 +808,7 @@ impl ShortcutHandler for MateHandler {
         if !Utils::command_exists("gsettings") {
             return Ok(());
         }
+        let full_cmd = s.full_command();
         for i in 1..=12 {
             let cmd_key = format!("command-{}", i);
             let current = Utils::run(
@@ -786,7 +816,7 @@ impl ShortcutHandler for MateHandler {
                 &["get", "org.mate.Marco.keybinding-commands", &cmd_key],
             )?;
 
-            if current.contains(s.command) {
+            if current.contains(&full_cmd) {
                 Utils::run(
                     "gsettings",
                     &["reset", "org.mate.Marco.keybinding-commands", &cmd_key],
@@ -819,10 +849,11 @@ impl ShortcutHandler for CosmicHandler {
         let path = PathBuf::from(home)
             .join(".config/cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom");
 
+        let full_cmd = s.full_command();
         // Naive but safer append
         let entry = format!(
             "(modifiers: [{}], key: \"{}\"): Spawn(\"{}\"),",
-            s.cosmic_mods, s.cosmic_key, s.command
+            s.cosmic_mods, s.cosmic_key, full_cmd
         );
 
         Utils::modify_file_atomic(&path, |content| {
@@ -870,11 +901,12 @@ impl ShortcutHandler for LxqtHandler {
             .map_err(|_| ShortcutError::UnsupportedEnvironment("HOME not set".into()))?;
         let path = PathBuf::from(home).join(".config/lxqt/globalkeyshortcuts.conf");
 
+        let full_cmd = s.full_command();
         // LXQt uses INI format for shortcuts
         let section = format!("Meta+V%2F{}", s.id);
         let entry = format!(
             "\n[{}]\nComment={}\nEnabled=true\nExec={}",
-            section, s.name, s.command
+            section, s.name, full_cmd
         );
 
         Utils::modify_file_atomic(&path, |content| {
@@ -956,6 +988,7 @@ impl ShortcutHandler for LxdeHandler {
             )));
         }
 
+        let full_cmd = s.full_command();
         // The keybind XML to add
         let keybind = format!(
             r#"    <keybind key="W-v">
@@ -963,11 +996,11 @@ impl ShortcutHandler for LxdeHandler {
         <command>{}</command>
       </action>
     </keybind>"#,
-            s.command
+            full_cmd
         );
 
         Utils::modify_file_atomic(&path, |content| {
-            if content.contains(&format!("<command>{}</command>", s.command)) {
+            if content.contains(&format!("<command>{}</command>", full_cmd)) {
                 return Ok(None); // Already exists
             }
 
@@ -1004,8 +1037,9 @@ impl ShortcutHandler for LxdeHandler {
             return Ok(());
         }
 
+        let full_cmd = s.full_command();
         Utils::modify_file_atomic(&path, |content| {
-            if !content.contains(&format!("<command>{}</command>", s.command)) {
+            if !content.contains(&format!("<command>{}</command>", full_cmd)) {
                 return Ok(None);
             }
 
@@ -1017,7 +1051,7 @@ impl ShortcutHandler for LxdeHandler {
         <command>{}</command>
       </action>
     </keybind>"#,
-                s.command
+                full_cmd
             );
 
             let new_content = content.replace(&pattern, "");
@@ -1069,12 +1103,13 @@ impl ShortcutHandler for I3Handler {
     fn register(&self, s: &ShortcutConfig) -> Result<()> {
         let path = Self::get_config_path()?;
 
+        let full_cmd = s.full_command();
         // i3 binding format: bindsym $mod+v exec command
-        let binding_line = format!("bindsym {} exec {}", s.i3_binding, s.command);
+        let binding_line = format!("bindsym {} exec {}", s.i3_binding, full_cmd);
 
         let modified = Utils::modify_file_atomic(&path, |content| {
             // Check if already registered
-            if content.contains(s.command) {
+            if content.contains(&full_cmd) {
                 return Ok(None);
             }
 
@@ -1120,8 +1155,9 @@ impl ShortcutHandler for I3Handler {
             return Ok(());
         }
 
+        let full_cmd = s.full_command();
         let modified = Utils::modify_file_atomic(&path, |content| {
-            if !content.contains(s.command) {
+            if !content.contains(&full_cmd) {
                 return Ok(None);
             }
 
@@ -1136,7 +1172,7 @@ impl ShortcutHandler for I3Handler {
                     continue;
                 }
                 // Skip our binding line
-                if skip_comment && line.contains(s.command) {
+                if skip_comment && line.contains(&full_cmd) {
                     skip_comment = false;
                     continue;
                 }
@@ -1199,10 +1235,11 @@ impl ShortcutHandler for SwayHandler {
     fn register(&self, s: &ShortcutConfig) -> Result<()> {
         let path = Self::get_config_path()?;
 
-        let binding_line = format!("bindsym {} exec {}", s.sway_binding, s.command);
+        let full_cmd = s.full_command();
+        let binding_line = format!("bindsym {} exec {}", s.sway_binding, full_cmd);
 
         let modified = Utils::modify_file_atomic(&path, |content| {
-            if content.contains(s.command) {
+            if content.contains(&full_cmd) {
                 return Ok(None);
             }
 
@@ -1245,8 +1282,9 @@ impl ShortcutHandler for SwayHandler {
             return Ok(());
         }
 
+        let full_cmd = s.full_command();
         let modified = Utils::modify_file_atomic(&path, |content| {
-            if !content.contains(s.command) {
+            if !content.contains(&full_cmd) {
                 return Ok(None);
             }
 
@@ -1259,7 +1297,7 @@ impl ShortcutHandler for SwayHandler {
                     skip_comment = true;
                     continue;
                 }
-                if skip_comment && line.contains(s.command) {
+                if skip_comment && line.contains(&full_cmd) {
                     skip_comment = false;
                     continue;
                 }
@@ -1310,11 +1348,12 @@ impl ShortcutHandler for HyprlandHandler {
     fn register(&self, s: &ShortcutConfig) -> Result<()> {
         let path = Self::get_config_path()?;
 
+        let full_cmd = s.full_command();
         // Hyprland format: bind = SUPER, V, exec, command
-        let binding_line = format!("bind = {}, exec, {}", s.hyprland_binding, s.command);
+        let binding_line = format!("bind = {}, exec, {}", s.hyprland_binding, full_cmd);
 
         Utils::modify_file_atomic(&path, |content| {
-            if content.contains(s.command) {
+            if content.contains(&full_cmd) {
                 return Ok(None);
             }
 
@@ -1356,8 +1395,9 @@ impl ShortcutHandler for HyprlandHandler {
             return Ok(());
         }
 
+        let full_cmd = s.full_command();
         Utils::modify_file_atomic(&path, |content| {
-            if !content.contains(s.command) {
+            if !content.contains(&full_cmd) {
                 return Ok(None);
             }
 
@@ -1370,7 +1410,7 @@ impl ShortcutHandler for HyprlandHandler {
                     skip_comment = true;
                     continue;
                 }
-                if skip_comment && line.contains(s.command) {
+                if skip_comment && line.contains(&full_cmd) {
                     skip_comment = false;
                     continue;
                 }

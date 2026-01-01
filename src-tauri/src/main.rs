@@ -261,6 +261,12 @@ struct WindowController;
 
 impl WindowController {
     pub fn toggle(app: &AppHandle) {
+        Self::toggle_with_tab(app, None);
+    }
+
+    /// Toggle window visibility with optional tab selection
+    /// If tab is Some("emoji"), it will emit an event to switch to the emoji tab
+    pub fn toggle_with_tab(app: &AppHandle, tab: Option<&str>) {
         // User-initiated toggle - mark that we're now allowing shows
         // This stops the background enforcer from hiding the window
         if STARTED_IN_BACKGROUND.load(Ordering::SeqCst) {
@@ -269,9 +275,19 @@ impl WindowController {
 
         if let Some(window) = app.get_webview_window("main") {
             if window.is_visible().unwrap_or(false) {
-                let _ = window.hide();
+                // If window is visible, emit tab switch event if tab is specified
+                // This allows Super+. to switch to emoji tab even when window is open
+                if let Some(tab_name) = tab {
+                    let _ = app.emit("switch-tab", tab_name);
+                } else {
+                    let _ = window.hide();
+                }
             } else {
                 save_focused_window();
+                // Emit tab switch event before showing window
+                if let Some(tab_name) = tab {
+                    let _ = app.emit("switch-tab", tab_name);
+                }
                 Self::position_and_show(&window, app);
             }
         }
@@ -618,9 +634,11 @@ fn main() {
         println!("    -v, --version    Show version information");
         println!("        --background Start minimized to system tray (for autostart)");
         println!("        --settings   Open settings window on startup");
+        println!("        --emoji      Open with emoji picker tab selected");
         println!();
         println!("SHORTCUTS:");
         println!("    Super+V          Open clipboard history");
+        println!("    Super+.          Open emoji picker");
         println!("    Ctrl+Alt+V       Alternative shortcut");
         return;
     }
@@ -635,8 +653,12 @@ fn main() {
     // Check if --settings flag is present (for first instance startup)
     let open_settings_on_start = args.iter().any(|arg| arg == "--settings");
 
+    // Check if --emoji flag is present (open with emoji tab)
+    let open_emoji_on_start = args.iter().any(|arg| arg == "--emoji");
+
     // Clone for use in setup closure
     let start_in_background_clone = start_in_background;
+    let open_emoji_on_start_clone = open_emoji_on_start;
 
     win11_clipboard_history_lib::session::init();
 
@@ -676,6 +698,11 @@ fn main() {
                     "[SingleInstance] Secondary instance with --settings flag, opening settings..."
                 );
                 SettingsController::show(app);
+            } else if argv.iter().any(|arg| arg == "--emoji") {
+                println!(
+                    "[SingleInstance] Secondary instance with --emoji flag, opening emoji picker..."
+                );
+                WindowController::toggle_with_tab(app, Some("emoji"));
             } else {
                 println!("[SingleInstance] Secondary instance detected, toggling window...");
                 WindowController::toggle(app);
@@ -810,6 +837,17 @@ fn main() {
             // If --settings flag was passed on first startup, open the settings window
             if open_settings_on_start {
                 SettingsController::show(&app_handle);
+            }
+
+            // If --emoji flag was passed on first startup, emit switch-tab event
+            // This needs a small delay to ensure the frontend is ready
+            if open_emoji_on_start_clone {
+                let app_handle_for_emoji = app_handle.clone();
+                std::thread::spawn(move || {
+                    // Wait for frontend to be ready
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                    let _ = app_handle_for_emoji.emit("switch-tab", "emoji");
+                });
             }
 
             // If --background flag was passed, ensure the main window stays hidden

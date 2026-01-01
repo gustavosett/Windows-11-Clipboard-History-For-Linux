@@ -139,8 +139,17 @@ function ClipboardApp() {
       applyUIScale(newSettings.ui_scale)
     })
 
+    // Listen for switch-tab events from Rust (e.g., when Super+. is pressed)
+    const unlistenSwitchTab = listen<string>('switch-tab', (event) => {
+      const tabName = event.payload as ActiveTab
+      if (['clipboard', 'emoji', 'gifs', 'kaomoji', 'symbols'].includes(tabName)) {
+        setActiveTab(tabName)
+      }
+    })
+
     return () => {
       unlistenPromise.then((unlisten) => unlisten())
+      unlistenSwitchTab.then((unlisten) => unlisten())
     }
   }, [])
 
