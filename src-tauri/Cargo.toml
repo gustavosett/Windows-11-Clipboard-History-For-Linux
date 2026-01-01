@@ -56,6 +56,9 @@ tauri-plugin-global-shortcut = "2"
 # System information
 whoami = "1.5"
 
+# URL encoding for LXQt shortcuts
+percent-encoding = "2.3"
+
 # X11 Simulation for paste injection (Linux)
 [target.'cfg(target_os = "linux")'.dependencies]
 x11rb = { version = "0.13", features = ["allow-unsafe-code", "xtest"] }

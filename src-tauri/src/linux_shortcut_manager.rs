@@ -1,5 +1,6 @@
 //! Linux Desktop Environment Shortcut Manager
 
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
@@ -904,9 +905,9 @@ impl ShortcutHandler for LxqtHandler {
         let full_cmd = s.full_command();
         // LXQt uses INI format for shortcuts
         // Section name is URL-encoded keybinding followed by shortcut ID
-        // e.g., "Meta+V" -> "Meta%2BV", "Meta+." -> "Meta%2B."
-        let encoded_binding = s.kde_binding.replace('+', "%2B");
-        let section = format!("{}%2F{}", encoded_binding, s.id);
+        // e.g., "Meta+V" -> "Meta%2BV", "Meta+." -> "Meta%2B%2E"
+        let encoded_binding = utf8_percent_encode(s.kde_binding, NON_ALPHANUMERIC).to_string();
+        let section = format!("{}/{}", encoded_binding, s.id);
         let entry = format!(
             "\n[{}]\nComment={}\nEnabled=true\nExec={}",
             section, s.name, full_cmd
@@ -934,8 +935,8 @@ impl ShortcutHandler for LxqtHandler {
         }
 
         // Use same encoding as register for consistency
-        let encoded_binding = s.kde_binding.replace('+', "%2B");
-        let section = format!("{}%2F{}", encoded_binding, s.id);
+        let encoded_binding = utf8_percent_encode(s.kde_binding, NON_ALPHANUMERIC).to_string();
+        let section = format!("{}/{}", encoded_binding, s.id);
 
         Utils::modify_file_atomic(&path, |content| {
             if !content.contains(&format!("[{}]", section)) {
