@@ -27,7 +27,7 @@ type ThemeMode = 'system' | 'dark' | 'light'
 
 /**
  * Maps theme mode setting to actual dark mode state.
- * Uses shared system theme detection for 'system' mode.
+ * For 'system' mode, delegates to the shared useSystemThemePreference hook.
  */
 function useThemeMode(themeMode: ThemeMode): boolean {
   const systemPrefersDark = useSystemThemePreference()
