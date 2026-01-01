@@ -166,7 +166,18 @@ fn read_cosmic_theme_file() -> Result<bool, Box<dyn std::error::Error>> {
 
     if config_path.exists() {
         let content = std::fs::read_to_string(&config_path)?;
-        let is_dark = content.trim().eq_ignore_ascii_case("true");
+        let trimmed = content.trim();
+        let is_dark = match trimmed {
+            "true" => true,
+            "false" => false,
+            _ => {
+                return Err(format!(
+                    "Invalid COSMIC theme value '{}' (expected 'true' or 'false')",
+                    trimmed
+                )
+                .into());
+            }
+        };
         eprintln!(
             "[ThemeManager] Read COSMIC config file: is_dark={}",
             is_dark
