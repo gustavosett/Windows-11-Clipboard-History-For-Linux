@@ -87,6 +87,8 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
         'transition-all duration-150 ease-out',
         // Animation delay based on index
         'animate-in',
+        // is Focused styles
+        isFocused ? 'ring-2 ring-red-500' : undefined,
         // Dark mode styles
         isDark
           ? 'hover:bg-win11-bg-card-hover border border-win11-border-subtle'
