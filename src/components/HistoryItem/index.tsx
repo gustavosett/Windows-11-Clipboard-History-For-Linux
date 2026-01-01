@@ -77,25 +77,25 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
     [item.id, onTogglePin]
   )
 
+  // Green ring if pinned & focused
+  const greenRing = item.pinned && isFocused ? 'ring-2 ring-green-500' : undefined
   return (
     <div
       ref={ref}
       className={clsx(
-        // Base styles
         'group relative rounded-win11 cursor-pointer',
         effectiveCompact ? 'p-2' : 'p-3',
         'transition-all duration-150 ease-out',
-        // Animation delay based on index
         'animate-in',
-        // is Focused styles
-        isFocused ? 'ring-2 ring-red-500' : undefined,
-        // Dark mode styles
+        // Green ring has priority
+        greenRing,
+        // Otherwise default focused ring
+        !greenRing && isFocused ? 'ring-2 ring-red-500' : undefined,
         isDark
           ? 'hover:bg-win11-bg-card-hover border border-win11-border-subtle'
           : 'hover:bg-win11Light-bg-card-hover border border-win11Light-border',
-        // Pinned indicator
-        item.pinned && 'ring-1 ring-win11-bg-accent',
-        // Focus styles
+        // Pinned indicator (keep accent ring for pinned, but not if green ring is active)
+        item.pinned && !greenRing && 'ring-1 ring-win11-bg-accent',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
       )}
       onClick={handleClick}
