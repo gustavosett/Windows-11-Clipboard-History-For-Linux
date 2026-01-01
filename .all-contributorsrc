@@ -47,6 +47,15 @@
       "contributions": [
         "ideas"
       ]
+    },
+    {
+      "login": "olksndrdevhub",
+      "name": "Oleksandr Romaniuk",
+      "avatar_url": "https://avatars.githubusercontent.com/u/47930925?v=4",
+      "profile": "https://oleksandrdev.com/",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
