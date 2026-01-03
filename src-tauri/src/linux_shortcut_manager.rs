@@ -887,12 +887,23 @@ impl CosmicHandler {
             .filter(|m| !m.is_empty())
             .map(|m| {
                 // Normalize modifier names to COSMIC's expected format
-                let normalized = match m.to_lowercase().as_str() {
-                    "ctrl" | "control" => "Ctrl",
-                    "alt" => "Alt",
-                    "super" | "meta" => "Super",
-                    "shift" => "Shift",
-                    _ => m,
+                let normalized: String = match m.to_lowercase().as_str() {
+                    "ctrl" | "control" => "Ctrl".to_string(),
+                    "alt" => "Alt".to_string(),
+                    "super" | "meta" => "Super".to_string(),
+                    "shift" => "Shift".to_string(),
+                    _ => {
+                        // Fallback: normalize capitalization (First letter uppercase + rest lowercase)
+                        let mut chars = m.chars();
+                        match chars.next() {
+                            Some(first) => {
+                                let mut result = first.to_uppercase().to_string();
+                                result.push_str(&chars.as_str().to_lowercase());
+                                result
+                            }
+                            None => String::new(),
+                        }
+                    }
                 };
                 format!("{}{},", COSMIC_MODIFIER_INDENT, normalized)
             })
@@ -958,8 +969,10 @@ impl ShortcutHandler for CosmicHandler {
 
             // File should be a RON map: { ... }
             if !trimmed.starts_with('{') {
-                // Wrap existing content if it doesn't have proper braces
-                return Ok(Some(format!("{{\n{}\n{}\n}}", entry, trimmed)));
+                // Reject unexpected formats instead of trying to wrap potentially malformed content
+                return Err(ShortcutError::ParseError(
+                    "Invalid COSMIC config format - expected RON map starting with '{'".into(),
+                ));
             }
 
             // Find the last '}' and insert before it
@@ -995,7 +1008,7 @@ impl ShortcutHandler for CosmicHandler {
 
             // Parse and remove the entry block containing our command
             // RON format: (key_tuple): Value, - we track depth to find entry boundaries
-            // depth 0 = outside map, depth 1 = inside map {}, depth 2+ = inside entry
+            // depth starts at 0 before the opening '{'; depth 1 = inside outer map {}, depth 2+ = inside an entry
             let mut result = String::new();
             let mut depth = 0;
             let mut in_entry = false;
