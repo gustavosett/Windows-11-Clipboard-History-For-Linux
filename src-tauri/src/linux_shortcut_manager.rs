@@ -862,6 +862,11 @@ impl ShortcutHandler for MateHandler {
 
 // --- COSMIC (Epoch 1.0+) ---
 
+// Indentation constants for COSMIC RON format
+const COSMIC_ENTRY_INDENT: &str = "    ";
+const COSMIC_FIELD_INDENT: &str = "        ";
+const COSMIC_MODIFIER_INDENT: &str = "            ";
+
 struct CosmicHandler;
 impl CosmicHandler {
     /// Format modifiers for COSMIC RON format - each on its own line
@@ -873,13 +878,14 @@ impl CosmicHandler {
             .filter(|m| !m.is_empty())
             .map(|m| {
                 // Normalize modifier names to COSMIC's expected format
-                match m.to_lowercase().as_str() {
-                    "ctrl" | "control" => "            Ctrl,".to_string(),
-                    "alt" => "            Alt,".to_string(),
-                    "super" | "meta" => "            Super,".to_string(),
-                    "shift" => "            Shift,".to_string(),
-                    _ => format!("            {},", m),
-                }
+                let normalized = match m.to_lowercase().as_str() {
+                    "ctrl" | "control" => "Ctrl",
+                    "alt" => "Alt",
+                    "super" | "meta" => "Super",
+                    "shift" => "Shift",
+                    _ => m,
+                };
+                format!("{}{},", COSMIC_MODIFIER_INDENT, normalized)
             })
             .collect();
         formatted.join("\n")
@@ -891,14 +897,23 @@ impl CosmicHandler {
         let full_cmd = s.full_command();
 
         format!(
-            r#"    (
-        modifiers: [
+            r#"{}(
+{}modifiers: [
 {}
-        ],
-        key: "{}",
-        description: Some("{}"),
-    ): Spawn("{}"),"#,
-            mods_formatted, s.cosmic_key, s.name, full_cmd
+{}],
+{}key: "{}",
+{}description: Some("{}"),
+{}): Spawn("{}"),"#,
+            COSMIC_ENTRY_INDENT,
+            COSMIC_FIELD_INDENT,
+            mods_formatted,
+            COSMIC_FIELD_INDENT,
+            COSMIC_FIELD_INDENT,
+            s.cosmic_key,
+            COSMIC_FIELD_INDENT,
+            s.name,
+            COSMIC_ENTRY_INDENT,
+            full_cmd
         )
     }
 }
@@ -968,29 +983,33 @@ impl ShortcutHandler for CosmicHandler {
             }
 
             // Parse and remove the entry block containing our command
-            // We need to remove from the opening '(' to the closing '),' of the entry
+            // RON format: (key_tuple): Value, - we track depth to find entry boundaries
+            // depth 0 = outside map, depth 1 = inside map {}, depth 2+ = inside entry
             let mut result = String::new();
-            let chars = content.chars().peekable();
             let mut depth = 0;
             let mut in_entry = false;
             let mut entry_start = 0;
+            let mut prev_depth: i32;
 
-            for c in chars {
-                if c == '(' && depth == 1 {
-                    // Potential start of an entry (we're inside the main map)
-                    entry_start = result.len();
-                    in_entry = true;
-                }
+            for c in content.chars() {
+                prev_depth = depth;
 
+                // Update depth first
                 if c == '{' || c == '(' {
                     depth += 1;
                 } else if c == '}' || c == ')' {
                     depth -= 1;
                 }
 
+                // Detect entry start: '(' that takes us from depth 1 to depth 2
+                if c == '(' && prev_depth == 1 && depth == 2 {
+                    entry_start = result.len();
+                    in_entry = true;
+                }
+
                 result.push(c);
 
-                // Check if we just closed an entry
+                // Detect entry end: ',' when we're at depth 1 (after the Spawn(...) closed)
                 if in_entry && depth == 1 && c == ',' {
                     // Check if this entry contains our command
                     let entry_content = &result[entry_start..];
@@ -1004,12 +1023,22 @@ impl ShortcutHandler for CosmicHandler {
                 }
             }
 
-            // Clean up any double newlines
-            while result.contains("\n\n\n") {
-                result = result.replace("\n\n\n", "\n\n");
+            // Clean up sequences of more than two consecutive newlines in a single pass
+            let mut cleaned = String::with_capacity(result.len());
+            let mut newline_count = 0;
+            for ch in result.chars() {
+                if ch == '\n' {
+                    if newline_count < 2 {
+                        cleaned.push('\n');
+                    }
+                    newline_count += 1;
+                } else {
+                    newline_count = 0;
+                    cleaned.push(ch);
+                }
             }
 
-            Ok(Some(result))
+            Ok(Some(cleaned))
         })?;
         Ok(())
     }
