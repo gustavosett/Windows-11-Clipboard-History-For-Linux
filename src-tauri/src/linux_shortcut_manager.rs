@@ -358,52 +358,11 @@ impl Utils {
         }
 
         let content = if path.exists() {
-            // Calculate timestamp for backup filename (with safe fallback)
-            let timestamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_else(|_| std::time::Duration::from_secs(0))
-                .as_secs();
-            let bak_extension = format!("bak.{}", timestamp);
-            let bak_path = path.with_extension(&bak_extension);
-            // Create timestamped backup to preserve history
-            fs::copy(path, &bak_path)?;
-            println!("[Utils] Created backup: {:?}", bak_path);
-
-            // Cleanup old backups - keep only the last 3
-            if let Some(parent) = path.parent() {
-                if let Some(file_stem) = path.file_stem() {
-                    let prefix = format!("{}.", file_stem.to_string_lossy());
-                    let mut backups: Vec<_> = fs::read_dir(parent)
-                        .ok()
-                        .into_iter()
-                        .flatten()
-                        .filter_map(|e| e.ok())
-                        .filter(|e| {
-                            let name = e.file_name().to_string_lossy().to_string();
-                            name.starts_with(&prefix) && name.contains(".bak.")
-                        })
-                        .collect();
-
-                    // Sort by timestamp extracted from filename (oldest first)
-                    // Filename format: name.bak.TIMESTAMP, so we parse the number after last '.'
-                    backups.sort_by_key(|e| {
-                        e.file_name()
-                            .to_string_lossy()
-                            .rsplit('.')
-                            .next()
-                            .and_then(|s| s.parse::<u64>().ok())
-                            .unwrap_or(0)
-                    });
-
-                    // Remove oldest backups, keep only 3
-                    while backups.len() > 3 {
-                        if let Some(oldest) = backups.first() {
-                            let _ = fs::remove_file(oldest.path());
-                            println!("[Utils] Removed old backup: {:?}", oldest.path());
-                        }
-                        backups.remove(0);
-                    }
-                }
+            // Create a single backup file (only if it doesn't exist yet)
+            let bak_path = path.with_extension("bak");
+            if !bak_path.exists() {
+                fs::copy(path, &bak_path)?;
+                println!("[Utils] Created backup: {:?}", bak_path);
             }
 
             fs::read_to_string(path)?
