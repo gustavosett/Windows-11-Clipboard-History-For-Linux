@@ -869,6 +869,15 @@ const COSMIC_MODIFIER_INDENT: &str = "            ";
 
 struct CosmicHandler;
 impl CosmicHandler {
+    /// Escape special characters for RON string format
+    fn escape_ron_string(s: &str) -> String {
+        s.replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n")
+            .replace('\r', "\\r")
+            .replace('\t', "\\t")
+    }
+
     /// Format modifiers for COSMIC RON format - each on its own line
     /// Input: "Super" or "Ctrl, Alt" -> properly formatted RON array entries
     fn format_modifiers(mods: &str) -> String {
@@ -894,7 +903,9 @@ impl CosmicHandler {
     /// Build a COSMIC shortcut entry in proper RON format
     fn build_entry(s: &ShortcutConfig) -> String {
         let mods_formatted = Self::format_modifiers(s.cosmic_mods);
-        let full_cmd = s.full_command();
+        let full_cmd = Self::escape_ron_string(&s.full_command());
+        let name = Self::escape_ron_string(s.name);
+        let key = Self::escape_ron_string(s.cosmic_key);
 
         format!(
             r#"{}(
@@ -909,9 +920,9 @@ impl CosmicHandler {
             mods_formatted,
             COSMIC_FIELD_INDENT,
             COSMIC_FIELD_INDENT,
-            s.cosmic_key,
+            key,
             COSMIC_FIELD_INDENT,
-            s.name,
+            name,
             COSMIC_ENTRY_INDENT,
             full_cmd
         )
