@@ -5,7 +5,7 @@
 ## 🔗 Related Issue
 
 <!-- Link to the issue this PR addresses (if any) -->
-Fixes #
+- #
 
 ## 🧪 Type of Change
 
