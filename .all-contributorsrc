@@ -57,6 +57,16 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "Predrag",
+      "name": "Predrag",
+      "avatar_url": "https://avatars.githubusercontent.com/u/460694?v=4",
+      "profile": "https://github.com/Predrag",
+      "contributions": [
+        "code",
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
