@@ -67,9 +67,12 @@
       "deb": {
         "depends": [
           "xclip",
+          "xdotool",
           "wl-clipboard",
           "acl",
+          "policykit-1",
           "libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37",
+          "libgtk-3-0",
           "libayatana-appindicator3-1 | libappindicator3-1"
         ],
         "files": {
@@ -86,9 +89,12 @@
       "rpm": {
         "depends": [
           "xclip",
+          "xdotool",
           "wl-clipboard",
           "acl",
+          "polkit",
           "webkit2gtk4.1",
+          "gtk3",
           "libayatana-appindicator-gtk3"
         ],
         "postInstallScript": "bundle/linux/postinst.sh",

@@ -11,8 +11,10 @@ depends=(
     'gtk3'
     'libayatana-appindicator'
     'xclip'
+    'xdotool'
     'wl-clipboard'
     'acl'
+    'polkit'
 )
 optdepends=(
     'libappindicator-gtk3: Legacy tray icon support'
