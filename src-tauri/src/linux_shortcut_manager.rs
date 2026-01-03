@@ -860,12 +860,52 @@ impl ShortcutHandler for MateHandler {
     }
 }
 
-// --- COSMIC ---
+// --- COSMIC (Epoch 1.0+) ---
 
 struct CosmicHandler;
+impl CosmicHandler {
+    /// Format modifiers for COSMIC RON format - each on its own line
+    /// Input: "Super" or "Ctrl, Alt" -> properly formatted RON array entries
+    fn format_modifiers(mods: &str) -> String {
+        let formatted: Vec<String> = mods
+            .split(',')
+            .map(|m| m.trim())
+            .filter(|m| !m.is_empty())
+            .map(|m| {
+                // Normalize modifier names to COSMIC's expected format
+                match m.to_lowercase().as_str() {
+                    "ctrl" | "control" => "            Ctrl,".to_string(),
+                    "alt" => "            Alt,".to_string(),
+                    "super" | "meta" => "            Super,".to_string(),
+                    "shift" => "            Shift,".to_string(),
+                    _ => format!("            {},", m),
+                }
+            })
+            .collect();
+        formatted.join("\n")
+    }
+
+    /// Build a COSMIC shortcut entry in proper RON format
+    fn build_entry(s: &ShortcutConfig) -> String {
+        let mods_formatted = Self::format_modifiers(s.cosmic_mods);
+        let full_cmd = s.full_command();
+
+        format!(
+            r#"    (
+        modifiers: [
+{}
+        ],
+        key: "{}",
+        description: Some("{}"),
+    ): Spawn("{}"),"#,
+            mods_formatted, s.cosmic_key, s.name, full_cmd
+        )
+    }
+}
+
 impl ShortcutHandler for CosmicHandler {
     fn name(&self) -> &str {
-        "COSMIC"
+        "COSMIC (Epoch)"
     }
 
     fn register(&self, s: &ShortcutConfig) -> Result<()> {
@@ -875,40 +915,102 @@ impl ShortcutHandler for CosmicHandler {
             .join(".config/cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom");
 
         let full_cmd = s.full_command();
-        // Naive but safer append
-        let entry = format!(
-            "(modifiers: [{}], key: \"{}\"): Spawn(\"{}\"),",
-            s.cosmic_mods, s.cosmic_key, full_cmd
-        );
+        let entry = Self::build_entry(s);
 
         Utils::modify_file_atomic(&path, |content| {
-            if content.contains(&entry) {
+            // Check if this command is already registered to avoid duplicates
+            if content.contains(&format!("Spawn(\"{}\")", full_cmd)) {
                 return Ok(None);
             }
 
-            let mut new_content = content.clone();
-            if new_content.trim().is_empty() {
-                new_content = format!("(shortcuts: {{\n    {}\n}})", entry);
-            } else {
-                // Find closing brace of 'shortcuts: { ... }'
-                match new_content.rfind('}') {
-                    Some(pos) => {
-                        new_content.insert_str(pos, &format!("\n    {}\n", entry));
-                    }
-                    None => {
-                        return Err(ShortcutError::ParseError(
-                            "Invalid COSMIC config format".into(),
-                        ))
-                    }
-                }
+            let trimmed = content.trim();
+
+            // If file is empty or doesn't start with '{', create new structure
+            if trimmed.is_empty() {
+                return Ok(Some(format!("{{\n{}\n}}", entry)));
             }
-            Ok(Some(new_content))
+
+            // File should be a RON map: { ... }
+            if !trimmed.starts_with('{') {
+                // Wrap existing content if it doesn't have proper braces
+                return Ok(Some(format!("{{\n{}\n{}\n}}", entry, trimmed)));
+            }
+
+            // Find the last '}' and insert before it
+            if let Some(pos) = content.rfind('}') {
+                let mut new_content = content.to_string();
+                new_content.insert_str(pos, &format!("{}\n", entry));
+                return Ok(Some(new_content));
+            }
+
+            Err(ShortcutError::ParseError(
+                "Invalid COSMIC config format - missing closing brace".into(),
+            ))
         })?;
         Ok(())
     }
 
-    fn unregister(&self, _s: &ShortcutConfig) -> Result<()> {
-        // Requires real RON parser
+    fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
+        let home = env::var("HOME").unwrap_or_default();
+        let path = PathBuf::from(home)
+            .join(".config/cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom");
+
+        if !path.exists() {
+            return Ok(());
+        }
+
+        let full_cmd = s.full_command();
+        let spawn_pattern = format!("Spawn(\"{}\")", full_cmd);
+
+        Utils::modify_file_atomic(&path, |content| {
+            if !content.contains(&spawn_pattern) {
+                return Ok(None);
+            }
+
+            // Parse and remove the entry block containing our command
+            // We need to remove from the opening '(' to the closing '),' of the entry
+            let mut result = String::new();
+            let chars = content.chars().peekable();
+            let mut depth = 0;
+            let mut in_entry = false;
+            let mut entry_start = 0;
+
+            for c in chars {
+                if c == '(' && depth == 1 {
+                    // Potential start of an entry (we're inside the main map)
+                    entry_start = result.len();
+                    in_entry = true;
+                }
+
+                if c == '{' || c == '(' {
+                    depth += 1;
+                } else if c == '}' || c == ')' {
+                    depth -= 1;
+                }
+
+                result.push(c);
+
+                // Check if we just closed an entry
+                if in_entry && depth == 1 && c == ',' {
+                    // Check if this entry contains our command
+                    let entry_content = &result[entry_start..];
+                    if entry_content.contains(&spawn_pattern) {
+                        // Remove this entry (including leading whitespace)
+                        let trim_start = result[..entry_start].trim_end().len();
+                        result.truncate(trim_start);
+                        result.push('\n');
+                    }
+                    in_entry = false;
+                }
+            }
+
+            // Clean up any double newlines
+            while result.contains("\n\n\n") {
+                result = result.replace("\n\n\n", "\n\n");
+            }
+
+            Ok(Some(result))
+        })?;
         Ok(())
     }
 }
