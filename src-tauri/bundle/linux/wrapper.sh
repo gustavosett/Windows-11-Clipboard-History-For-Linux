@@ -38,11 +38,13 @@ unset LD_LIBRARY_PATH
 unset LD_PRELOAD
 unset GTK_PATH
 unset GIO_MODULE_DIR
+unset WEBKIT_DISABLE_COMPOSITING_MODE
 
 export GDK_SCALE="${GDK_SCALE:-1}"
 export GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}"
 
 export GDK_BACKEND="x11"
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
 export TAURI_TRAY="${TAURI_TRAY:-libayatana-appindicator3}"
 
 # Disable AT-SPI to prevent accessibility bus warnings/delays

@@ -338,10 +338,12 @@ unset LD_LIBRARY_PATH
 unset LD_PRELOAD
 unset GTK_PATH
 unset GIO_MODULE_DIR
+unset WEBKIT_DISABLE_COMPOSITING_MODE
 
 export GDK_SCALE="${GDK_SCALE:-1}"
 export GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}"
 export GDK_BACKEND="x11"
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
 export NO_AT_BRIDGE=1
 
 exec "$HOME/.local/bin/win11-clipboard-history.AppImage" "$@"

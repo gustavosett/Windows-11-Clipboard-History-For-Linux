@@ -153,7 +153,7 @@ chmod +x ~/.local/bin/win11-clipboard-history.AppImage
 cat > ~/.local/bin/win11-clipboard-history << 'EOF'
 #!/bin/bash
 unset LD_LIBRARY_PATH LD_PRELOAD GTK_PATH GIO_MODULE_DIR
-export GDK_BACKEND="x11" NO_AT_BRIDGE=1
+export GDK_BACKEND="x11" NO_AT_BRIDGE=1 WEBKIT_DISABLE_COMPOSITING_MODE=1
 exec "$HOME/.local/bin/win11-clipboard-history.AppImage" "$@"
 EOF
 chmod +x ~/.local/bin/win11-clipboard-history
