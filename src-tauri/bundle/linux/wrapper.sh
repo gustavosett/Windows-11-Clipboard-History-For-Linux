@@ -42,7 +42,6 @@ unset GIO_MODULE_DIR
 export GDK_SCALE="${GDK_SCALE:-1}"
 export GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}"
 
-export GDK_BACKEND="x11"
 export TAURI_TRAY="${TAURI_TRAY:-libayatana-appindicator3}"
 
 # Disable AT-SPI to prevent accessibility bus warnings/delays

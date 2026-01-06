@@ -341,7 +341,6 @@ unset GIO_MODULE_DIR
 
 export GDK_SCALE="${GDK_SCALE:-1}"
 export GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}"
-export GDK_BACKEND="x11"
 export NO_AT_BRIDGE=1
 
 exec "$HOME/.local/bin/win11-clipboard-history.AppImage" "$@"

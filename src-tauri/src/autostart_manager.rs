@@ -1,7 +1,7 @@
 // Custom autostart manager for Linux that uses the wrapper script instead of the binary directly.
 // This is necessary because tauri-plugin-autostart uses current_exe() which points to the binary,
 // but we need to use the wrapper script that sets up the correct environment variables
-// (GDK_BACKEND, TAURI_TRAY, etc.) for proper tray icon functionality.
+// (TAURI_TRAY, etc.) for proper tray icon functionality.
 
 use std::fs;
 use std::io::Write;
