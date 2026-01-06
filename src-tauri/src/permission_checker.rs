@@ -77,7 +77,7 @@ pub fn fix_permissions_now() -> Result<String, String> {
         return Err("setfacl not found. Install acl package (e.g., 'sudo apt install acl') or add yourself to the input group: sudo usermod -aG input $USER".to_string());
     }
 
-    let username = whoami::username();
+    let username = whoami::username().map_err(|e| format!("Failed to get username: {}", e))?;
 
     // Use pkexec for graphical password prompt
     let status = Command::new("pkexec")
