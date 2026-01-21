@@ -308,6 +308,18 @@ impl ClipboardManager {
         clipboard.get().html().ok()
     }
 
+    /// Get text from primary selection (Linux only).
+    /// Primary selection is the text highlighted with the mouse.
+    #[cfg(target_os = "linux")]
+    pub fn get_primary_selection_text(&self) -> Result<String, arboard::Error> {
+        use arboard::{GetExtLinux, LinuxClipboardKind};
+        let mut clipboard = Clipboard::new()?;
+        clipboard
+            .get()
+            .clipboard(LinuxClipboardKind::Primary)
+            .text()
+    }
+
     pub fn get_current_image(
         &mut self,
     ) -> Result<Option<(ImageData<'static>, u64)>, arboard::Error> {

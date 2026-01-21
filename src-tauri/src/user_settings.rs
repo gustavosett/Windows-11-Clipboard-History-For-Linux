@@ -55,6 +55,11 @@ pub struct UserSettings {
     /// UI scale factor for the clipboard window (0.5 to 2.0, default 1.0)
     #[serde(default = "default_ui_scale")]
     pub ui_scale: f32,
+
+    // --- Primary Selection Sync ---
+    /// Sync primary selection (highlighted text) to clipboard history (Linux only)
+    #[serde(default)]
+    pub sync_primary_selection: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -99,6 +104,7 @@ impl Default for UserSettings {
             auto_delete_unit: "hours".to_string(),
             custom_kaomojis: Vec::new(),
             ui_scale: default_ui_scale(),
+            sync_primary_selection: false,
         }
     }
 }

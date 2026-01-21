@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   auto_delete_unit: 'hours',
   custom_kaomojis: [],
   ui_scale: 1,
+  sync_primary_selection: false,
 }
 
 /**

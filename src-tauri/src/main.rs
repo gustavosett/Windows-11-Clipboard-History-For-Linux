@@ -634,18 +634,21 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
     std::thread::spawn(move || {
         let mut last_text_hash: Option<u64> = None;
         let mut last_image_hash: Option<u64> = None;
+        let mut last_primary_hash: Option<u64> = None;
         let mut cleanup_counter = 0;
 
         loop {
             std::thread::sleep(Duration::from_millis(500));
             cleanup_counter += 1;
 
+            // Load settings for this iteration (needed for cleanup interval and primary selection sync)
+            let settings = UserSettingsManager::new().load();
+
             let mut manager = clipboard_manager.lock();
 
             // Background cleanup every ~30 seconds (60 * 500ms)
             if cleanup_counter >= 60 {
                 cleanup_counter = 0;
-                let settings = UserSettingsManager::new().load();
                 let interval_in_minutes = settings.auto_delete_interval_in_minutes();
 
                 if interval_in_minutes > 0 && manager.cleanup_old_items(interval_in_minutes) {
@@ -654,7 +657,7 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
                 }
             }
 
-            // Text
+            // Text (regular clipboard)
             if let Ok(text) = manager.get_current_text() {
                 if !text.is_empty() {
                     let text_hash =
@@ -681,6 +684,30 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
                     last_text_hash = None;
                     if let Some(item) = manager.add_image(image_data, hash) {
                         let _ = app.emit("clipboard-changed", &item);
+                    }
+                }
+            }
+
+            // Primary Selection (Linux only) - sync highlighted text to clipboard history
+            #[cfg(target_os = "linux")]
+            if settings.sync_primary_selection {
+                if let Ok(primary_text) = manager.get_primary_selection_text() {
+                    if !primary_text.is_empty() {
+                        let primary_hash =
+                            win11_clipboard_history_lib::clipboard_manager::calculate_hash(
+                                &primary_text,
+                            );
+
+                        // Only add if different from last primary AND different from current clipboard
+                        if Some(primary_hash) != last_primary_hash
+                            && Some(primary_hash) != last_text_hash
+                        {
+                            last_primary_hash = Some(primary_hash);
+
+                            if let Some(item) = manager.add_text(primary_text, None) {
+                                let _ = app.emit("clipboard-changed", &item);
+                            }
+                        }
                     }
                 }
             }

@@ -13,6 +13,11 @@ const FEATURES = [
     label: 'UI Polish',
     desc: 'Enable animations and compact mode support.',
   },
+  {
+    key: 'sync_primary_selection',
+    label: 'Sync Primary Selection',
+    desc: 'Copy highlighted text to clipboard history (Linux only).',
+  },
 ] as const
 
 export function FeaturesSection({

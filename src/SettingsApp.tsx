@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   ui_scale: 1,
   auto_delete_interval: 0,
   auto_delete_unit: 'hours',
+  sync_primary_selection: false,
 }
 
 type ThemeMode = 'system' | 'dark' | 'light'
