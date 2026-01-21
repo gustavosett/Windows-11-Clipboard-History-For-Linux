@@ -688,7 +688,8 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
                 }
             }
 
-            // Primary Selection (Linux only) - sync highlighted text to clipboard history
+            // Primary Selection - sync highlighted text to clipboard history
+            // Works on X11 fully, Wayland requires zwp_primary_selection v2+
             #[cfg(target_os = "linux")]
             if settings.sync_primary_selection {
                 if let Ok(primary_text) = manager.get_primary_selection_text() {

@@ -57,7 +57,8 @@ pub struct UserSettings {
     pub ui_scale: f32,
 
     // --- Primary Selection Sync ---
-    /// Sync primary selection (highlighted text) to clipboard history (Linux only)
+    /// Sync primary selection (highlighted text) to clipboard history.
+    /// Works on X11 fully, Wayland requires zwp_primary_selection v2+.
     #[serde(default)]
     pub sync_primary_selection: bool,
 }

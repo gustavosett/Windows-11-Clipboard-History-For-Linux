@@ -16,7 +16,7 @@ const FEATURES = [
   {
     key: 'sync_primary_selection',
     label: 'Sync Primary Selection',
-    desc: 'Copy highlighted text to clipboard history (Linux only).',
+    desc: 'Sync highlighted text to history (X11 fully, Wayland v2+).',
   },
 ] as const
 

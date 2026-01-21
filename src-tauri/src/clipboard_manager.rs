@@ -308,8 +308,8 @@ impl ClipboardManager {
         clipboard.get().html().ok()
     }
 
-    /// Get text from primary selection (Linux only).
-    /// Primary selection is the text highlighted with the mouse.
+    /// Get text from the primary selection (text highlighted with mouse).
+    /// Works on X11 fully, and on Wayland with compositors supporting zwp_primary_selection v2+.
     #[cfg(target_os = "linux")]
     pub fn get_primary_selection_text(&self) -> Result<String, arboard::Error> {
         use arboard::{GetExtLinux, LinuxClipboardKind};
