@@ -3,15 +3,15 @@
 //! This is essential for DEs like COSMIC that use the portal standard
 //! instead of GNOME settings.
 
+use crate::user_settings::UserSettingsManager;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     OnceLock,
 };
-use tokio::sync::RwLock;
 use tauri::image::Image;
 use tauri::tray::TrayIcon;
 use tauri::Manager;
-use crate::user_settings::UserSettingsManager;
+use tokio::sync::RwLock;
 
 /// Cached system theme preference
 static SYSTEM_THEME: OnceLock<RwLock<Option<ColorScheme>>> = OnceLock::new();
@@ -117,9 +117,6 @@ pub async fn get_system_color_scheme() -> ThemeInfo {
         }
     }
 }
-
-
-
 
 /// Refresh the tray icon manually (e.g. after settings change)
 #[cfg(target_os = "linux")]
@@ -243,30 +240,32 @@ fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
     // Check if dynamic icon feature is enabled
     let settings_manager = UserSettingsManager::new();
     let settings = settings_manager.load();
-    
+
     let icon_bytes: &[u8] = if settings.enable_dynamic_tray_icon {
         if is_dark {
-             // Dark Mode -> Use Light Icon
-             include_bytes!("../icons/icon-light.png")
+            // Dark Mode -> Use Light Icon
+            include_bytes!("../icons/icon-light.png")
         } else {
-             // Light Mode -> Use Dark Icon
-             include_bytes!("../icons/icon-dark.png")
+            // Light Mode -> Use Dark Icon
+            include_bytes!("../icons/icon-dark.png")
         }
     } else {
         // Disabled -> Use Standard Icon
         include_bytes!("../icons/icon.png")
     };
-        
+
     if let Some(tray) = app.tray_by_id("main-tray") {
         if let Ok(icon) = Image::from_bytes(icon_bytes) {
             let _ = tray.set_icon(Some(icon));
             // Ensure template mode is OFF so our custom colors are used
             let _ = tray.set_icon_as_template(false);
-            eprintln!("[ThemeManager] Updated tray icon. Dynamic: {}, Dark: {}", settings.enable_dynamic_tray_icon, is_dark);
+            eprintln!(
+                "[ThemeManager] Updated tray icon. Dynamic: {}, Dark: {}",
+                settings.enable_dynamic_tray_icon, is_dark
+            );
         }
     }
 }
-
 
 /// Listen for SettingChanged signals from the XDG Desktop Portal
 #[cfg(target_os = "linux")]
@@ -340,7 +339,7 @@ async fn listen_for_theme_changes(
                                     e
                                 );
                             }
-                            
+
                             // Also update the tray icon immediately
                             update_tray_icon(&app_handle, scheme.is_dark());
                         }

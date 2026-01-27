@@ -806,7 +806,7 @@ fn main() {
             // Initial Dynamic Icon Setup
             let settings_manager = UserSettingsManager::new();
             let settings = settings_manager.load();
-            
+
             let icon_bytes: &[u8] = if settings.enable_dynamic_tray_icon {
                 // We now rely on theme_manager to dynamically switch icons (Dark <-> Light)
                 // But we need to set the initial one correctly on startup.
@@ -815,7 +815,7 @@ fn main() {
                 });
                 let is_dark = initial_theme.prefers_dark;
                 println!("[Tray] Dynamic Icon Enabled. Initial Theme: Dark Mode = {}", is_dark);
-    
+
                 if is_dark {
                     include_bytes!("../icons/icon-light.png")
                 } else {
@@ -826,7 +826,6 @@ fn main() {
                  include_bytes!("../icons/icon.png")
             };
             let icon = Image::from_bytes(icon_bytes).unwrap();
-            
             // We use standard icon mode (not template) because we providing pre-colored icons
             let use_template_icon = false;
 

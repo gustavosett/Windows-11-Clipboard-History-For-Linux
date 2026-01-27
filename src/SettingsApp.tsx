@@ -426,7 +426,9 @@ function SettingsApp() {
             ))}
           </div>
 
-          <div className={clsx('mt-6 pt-6 border-t', isDark ? 'border-white/5' : 'border-gray-100')}>
+          <div
+            className={clsx('mt-6 pt-6 border-t', isDark ? 'border-white/5' : 'border-gray-100')}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium">Dynamic Tray Icon</div>
