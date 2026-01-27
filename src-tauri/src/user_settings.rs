@@ -20,6 +20,11 @@ pub struct UserSettings {
     pub light_background_opacity: f32,
 
     // --- Feature Flags ---
+    /// Enable Dynamic Tray Icon (changes color based on system theme)
+    /// Only relevant for GNOME/Pop!_OS or similar DEs
+    #[serde(default = "default_true")]
+    pub enable_dynamic_tray_icon: bool,
+
     /// Enable Smart Actions (URL, Color, Email detection)
     #[serde(default = "default_true")]
     pub enable_smart_actions: bool,
@@ -86,6 +91,7 @@ impl Default for UserSettings {
             theme_mode: "system".to_string(),
             dark_background_opacity: 0.70,
             light_background_opacity: 0.70,
+            enable_dynamic_tray_icon: true,
             enable_smart_actions: true,
             enable_ui_polish: true,
             max_history_size: default_max_history_size(),

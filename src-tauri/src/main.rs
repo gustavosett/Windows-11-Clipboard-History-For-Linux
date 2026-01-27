@@ -108,6 +108,13 @@ fn set_user_settings(
     app.emit("app-settings-changed", &new_settings)
         .map_err(|e| format!("Failed to emit settings changed event: {}", e))?;
 
+    // Refresh tray icon immediately to reflect possible dynamic setting change
+    let app_for_tray = app.clone();
+    tauri::async_runtime::spawn(async move {
+        #[cfg(target_os = "linux")]
+        theme_manager::refresh_tray_icon(&app_for_tray).await;
+    });
+
     Ok(())
 }
 
@@ -790,14 +797,42 @@ fn main() {
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &settings, &quit])?;
 
-            let icon = Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap();
+
 
             // Get temp directory for tray icon (avoids permission issues with XDG_RUNTIME_DIR)
             let temp_dir = std::env::temp_dir().join("win11-clipboard-history");
             std::fs::create_dir_all(&temp_dir).ok();
 
-            let _tray = TrayIconBuilder::new()
+            // Initial Dynamic Icon Setup
+            let settings_manager = UserSettingsManager::new();
+            let settings = settings_manager.load();
+            
+            let icon_bytes: &[u8] = if settings.enable_dynamic_tray_icon {
+                // We now rely on theme_manager to dynamically switch icons (Dark <-> Light)
+                // But we need to set the initial one correctly on startup.
+                let initial_theme = tauri::async_runtime::block_on(async {
+                    theme_manager::get_system_color_scheme().await
+                });
+                let is_dark = initial_theme.prefers_dark;
+                println!("[Tray] Dynamic Icon Enabled. Initial Theme: Dark Mode = {}", is_dark);
+    
+                if is_dark {
+                    include_bytes!("../icons/icon-light.png")
+                } else {
+                    include_bytes!("../icons/icon-dark.png")
+                }
+            } else {
+                 println!("[Tray] Dynamic Icon Disabled. Using standard icon.");
+                 include_bytes!("../icons/icon.png")
+            };
+            let icon = Image::from_bytes(icon_bytes).unwrap();
+            
+            // We use standard icon mode (not template) because we providing pre-colored icons
+            let use_template_icon = false;
+
+            let _tray = TrayIconBuilder::with_id("main-tray")
                 .icon(icon)
+                .icon_as_template(use_template_icon)
                 .tooltip("Clipboard History")
                 .temp_dir_path(temp_dir)
                 .menu(&menu)

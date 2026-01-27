@@ -69,6 +69,7 @@ export interface UserSettings {
   light_background_opacity: number
   enable_smart_actions: boolean
   enable_ui_polish: boolean
+  enable_dynamic_tray_icon: boolean
   max_history_size: number
   auto_delete_interval: number
   auto_delete_unit: 'minutes' | 'hours' | 'days' | 'weeks'
