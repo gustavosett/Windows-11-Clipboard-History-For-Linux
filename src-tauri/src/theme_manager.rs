@@ -234,34 +234,38 @@ pub async fn start_theme_listener(
     Ok(())
 }
 
-fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
-    // Check if dynamic icon feature is enabled
-    let settings_manager = UserSettingsManager::new();
-    let settings = settings_manager.load();
-
-    let icon_bytes: &[u8] = if settings.enable_dynamic_tray_icon {
+/// Helper to resolve the correct tray icon based on settings and theme
+pub fn resolve_tray_icon(enable_dynamic_tray_icon: bool, is_dark: bool) -> (Image<'static>, bool) {
+    let icon_bytes: &[u8] = if enable_dynamic_tray_icon {
         if is_dark {
-            // Dark Mode -> Use Light Icon
             include_bytes!("../icons/icon-light.png")
         } else {
-            // Light Mode -> Use Dark Icon
             include_bytes!("../icons/icon-dark.png")
         }
     } else {
-        // Disabled -> Use Standard Icon
         include_bytes!("../icons/icon.png")
     };
 
+    let icon = Image::from_bytes(icon_bytes).expect("Failed to load tray icon");
+    // Ensure template mode is OFF so our custom colors are used
+    (icon, false)
+}
+
+fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
+    // We load settings here for the D-Bus listener loop which doesn't maintain state
+    // But for manual refresh, we should use the optimized path if possible.
+    let settings_manager = UserSettingsManager::new();
+    let settings = settings_manager.load();
+    update_tray_icon_with_settings(app, is_dark, settings.enable_dynamic_tray_icon);
+}
+
+/// Optimized update that takes the flag directly (avoids disk I/O)
+pub fn update_tray_icon_with_settings(app: &tauri::AppHandle, is_dark: bool, enable_dynamic: bool) {
+    let (icon, is_template) = resolve_tray_icon(enable_dynamic, is_dark);
+
     if let Some(tray) = app.tray_by_id("main-tray") {
-        if let Ok(icon) = Image::from_bytes(icon_bytes) {
-            let _ = tray.set_icon(Some(icon));
-            // Ensure template mode is OFF so our custom colors are used
-            let _ = tray.set_icon_as_template(false);
-            eprintln!(
-                "[ThemeManager] Updated tray icon. Dynamic: {}, Dark: {}",
-                settings.enable_dynamic_tray_icon, is_dark
-            );
-        }
+        let _ = tray.set_icon(Some(icon));
+        let _ = tray.set_icon_as_template(is_template);
     }
 }
 

@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{
-    image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, Monitor, PhysicalPosition, PhysicalSize, State, WebviewWindow,
@@ -110,9 +109,10 @@ fn set_user_settings(
 
     // Refresh tray icon immediately to reflect possible dynamic setting change
     let app_for_tray = app.clone();
+    let settings_for_tray = new_settings.clone();
     tauri::async_runtime::spawn(async move {
         #[cfg(target_os = "linux")]
-        theme_manager::refresh_tray_icon(&app_for_tray).await;
+        theme_manager::refresh_tray_icon(&app_for_tray, &settings_for_tray).await;
     });
 
     Ok(())
@@ -807,27 +807,7 @@ fn main() {
             let settings_manager = UserSettingsManager::new();
             let settings = settings_manager.load();
 
-            let icon_bytes: &[u8] = if settings.enable_dynamic_tray_icon {
-                // We now rely on theme_manager to dynamically switch icons (Dark <-> Light)
-                // But we need to set the initial one correctly on startup.
-                let initial_theme = tauri::async_runtime::block_on(async {
-                    theme_manager::get_system_color_scheme().await
-                });
-                let is_dark = initial_theme.prefers_dark;
-                println!("[Tray] Dynamic Icon Enabled. Initial Theme: Dark Mode = {}", is_dark);
-
-                if is_dark {
-                    include_bytes!("../icons/icon-light.png")
-                } else {
-                    include_bytes!("../icons/icon-dark.png")
-                }
-            } else {
-                 println!("[Tray] Dynamic Icon Disabled. Using standard icon.");
-                 include_bytes!("../icons/icon.png")
-            };
-            let icon = Image::from_bytes(icon_bytes).unwrap();
-            // We use standard icon mode (not template) because we providing pre-colored icons
-            let use_template_icon = false;
+            let (icon, use_template_icon) = theme_manager::initial_tray_icon(&settings);
 
             let _tray = TrayIconBuilder::with_id("main-tray")
                 .icon(icon)
