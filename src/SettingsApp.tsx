@@ -433,7 +433,7 @@ function SettingsApp() {
               <div>
                 <div className="text-sm font-medium">Dynamic Tray Icon</div>
                 <div className={clsx('text-xs mt-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                  Adapt tray icon color to system theme (Requires restart)
+                  Adapt tray icon color to system theme.
                 </div>
               </div>
               <Switch
