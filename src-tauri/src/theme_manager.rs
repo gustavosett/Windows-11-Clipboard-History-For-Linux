@@ -9,8 +9,6 @@ use std::sync::{
     OnceLock,
 };
 use tauri::image::Image;
-use tauri::tray::TrayIcon;
-use tauri::Manager;
 use tokio::sync::RwLock;
 
 /// Cached system theme preference
