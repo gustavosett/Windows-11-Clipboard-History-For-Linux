@@ -118,9 +118,12 @@ pub async fn get_system_color_scheme() -> ThemeInfo {
 
 /// Refresh the tray icon manually (e.g. after settings change)
 #[cfg(target_os = "linux")]
-pub async fn refresh_tray_icon(app_handle: &tauri::AppHandle) {
+/// Refresh the tray icon manually (e.g. after settings change).
+/// Accepts settings to avoid reloading them.
+#[cfg(target_os = "linux")]
+pub async fn refresh_tray_icon(app_handle: &tauri::AppHandle, settings: &crate::user_settings::UserSettings) {
     let theme_info = get_system_color_scheme().await;
-    update_tray_icon(app_handle, theme_info.prefers_dark);
+    update_tray_icon_with_settings(app_handle, theme_info.prefers_dark, settings);
 }
 
 /// Query the XDG Desktop Portal via D-Bus
@@ -234,9 +237,45 @@ pub async fn start_theme_listener(
     Ok(())
 }
 
-/// Helper to resolve the correct tray icon based on settings and theme
-pub fn resolve_tray_icon(enable_dynamic_tray_icon: bool, is_dark: bool) -> (Image<'static>, bool) {
-    let icon_bytes: &[u8] = if enable_dynamic_tray_icon {
+use crate::user_settings::UserSettings;
+
+/// Helper to get the initial tray icon.
+/// This handles the initial theme detection logic centrally.
+pub fn initial_tray_icon(settings: &UserSettings) -> (Image<'static>, bool) {
+    let icon_bytes: &[u8] = if settings.enable_dynamic_tray_icon {
+        // Keep same behavior: block for initial theme detection
+        let initial_theme = tauri::async_runtime::block_on(async {
+            get_system_color_scheme().await
+        });
+        let is_dark = initial_theme.prefers_dark;
+        eprintln!("[Tray] Dynamic Icon Enabled. Initial Theme: Dark Mode = {}", is_dark);
+
+        if is_dark {
+            include_bytes!("../icons/icon-light.png")
+        } else {
+            include_bytes!("../icons/icon-dark.png")
+        }
+    } else {
+        eprintln!("[Tray] Dynamic Icon Disabled. Using standard icon.");
+        include_bytes!("../icons/icon.png")
+    };
+
+    let icon = Image::from_bytes(icon_bytes).expect("Failed to load tray icon");
+    let use_template_icon = false; // pre-colored icons
+
+    (icon, use_template_icon)
+}
+
+fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
+    // We load settings here for the D-Bus listener loop which doesn't maintain state
+    let settings_manager = UserSettingsManager::new();
+    let settings = settings_manager.load();
+    update_tray_icon_with_settings(app, is_dark, &settings);
+}
+
+/// Optimized update that takes the settings directly
+pub fn update_tray_icon_with_settings(app: &tauri::AppHandle, is_dark: bool, settings: &UserSettings) {
+    let icon_bytes: &[u8] = if settings.enable_dynamic_tray_icon {
         if is_dark {
             include_bytes!("../icons/icon-light.png")
         } else {
@@ -246,26 +285,11 @@ pub fn resolve_tray_icon(enable_dynamic_tray_icon: bool, is_dark: bool) -> (Imag
         include_bytes!("../icons/icon.png")
     };
 
-    let icon = Image::from_bytes(icon_bytes).expect("Failed to load tray icon");
-    // Ensure template mode is OFF so our custom colors are used
-    (icon, false)
-}
-
-fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
-    // We load settings here for the D-Bus listener loop which doesn't maintain state
-    // But for manual refresh, we should use the optimized path if possible.
-    let settings_manager = UserSettingsManager::new();
-    let settings = settings_manager.load();
-    update_tray_icon_with_settings(app, is_dark, settings.enable_dynamic_tray_icon);
-}
-
-/// Optimized update that takes the flag directly (avoids disk I/O)
-pub fn update_tray_icon_with_settings(app: &tauri::AppHandle, is_dark: bool, enable_dynamic: bool) {
-    let (icon, is_template) = resolve_tray_icon(enable_dynamic, is_dark);
-
     if let Some(tray) = app.tray_by_id("main-tray") {
-        let _ = tray.set_icon(Some(icon));
-        let _ = tray.set_icon_as_template(is_template);
+        if let Ok(icon) = Image::from_bytes(icon_bytes) {
+            let _ = tray.set_icon(Some(icon));
+            let _ = tray.set_icon_as_template(false);
+        }
     }
 }
 
