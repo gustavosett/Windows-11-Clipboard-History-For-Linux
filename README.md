@@ -497,6 +497,9 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Predrag"><img src="https://avatars.githubusercontent.com/u/460694?v=4?s=100" width="100px;" alt="Predrag"/><br /><sub><b>Predrag</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=Predrag" title="Code">💻</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3APredrag" title="Bug reports">🐛</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/henmalib"><img src="https://avatars.githubusercontent.com/u/68553709?v=4?s=100" width="100px;" alt="Hen"/><br /><sub><b>Hen</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Ahenmalib" title="Bug reports">🐛</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=henmalib" title="Code">💻</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/e6ad2020"><img src="https://avatars.githubusercontent.com/u/119390190?v=4?s=100" width="100px;" alt="Eyad"/><br /><sub><b>Eyad</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Ae6ad2020" title="Bug reports">🐛</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=e6ad2020" title="Code">💻</a></td>
+    </tr>
   </tbody>
   <tfoot>
     <tr>
