@@ -3,7 +3,7 @@
 //! This is essential for DEs like COSMIC that use the portal standard
 //! instead of GNOME settings.
 
-use crate::user_settings::UserSettingsManager;
+use crate::user_settings::{UserSettings, UserSettingsManager};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     OnceLock,
@@ -238,7 +238,7 @@ pub async fn start_theme_listener(
     Ok(())
 }
 
-use crate::user_settings::UserSettings;
+
 
 /// Helper to get the initial tray icon.
 /// This handles the initial theme detection logic centrally.
