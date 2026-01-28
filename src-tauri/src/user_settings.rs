@@ -73,7 +73,11 @@ fn default_dynamic_tray_icon() -> bool {
     // Only enable by default on GNOME or Pop!_OS
     if let Ok(desktop) = std::env::var("XDG_CURRENT_DESKTOP") {
         let desktop = desktop.to_uppercase();
-        return desktop.contains("GNOME") || desktop.contains("POP");
+        // XDG_CURRENT_DESKTOP may contain multiple entries separated by ':'
+        // Use exact entry matching to avoid substring false positives like "GNOMEFOO"
+        return desktop
+            .split(':')
+            .any(|entry| entry == "GNOME" || entry == "POP");
     }
     false
 }

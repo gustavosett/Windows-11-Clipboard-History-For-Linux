@@ -832,6 +832,16 @@ fn main() {
                 })
                 .build(app)?;
 
+            // Update icon asynchronously if dynamic is enabled (to fix the initial default icon)
+            if settings.enable_dynamic_tray_icon {
+                 let app_handle_bg = app.handle().clone();
+                 let settings_bg = settings.clone();
+                 tauri::async_runtime::spawn(async move {
+                    #[cfg(target_os = "linux")]
+                    theme_manager::refresh_tray_icon(&app_handle_bg, &settings_bg).await;
+                 });
+            }
+
             // Verify that settings window was created from config
             if app.get_webview_window("settings").is_none() {
                 eprintln!("[Setup] FATAL: Settings window missing from config");
