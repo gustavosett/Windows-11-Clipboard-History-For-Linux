@@ -245,42 +245,9 @@ pub async fn start_theme_listener(
 pub fn initial_tray_icon(settings: &UserSettings) -> (Image<'static>, bool) {
     if settings.enable_dynamic_tray_icon {
         // Non-blocking approach: Provide a default icon first (standard)
-        // casting dynamic check later is fine.
-        // Actually, if we want to be "correct" immediately without blocking, we can't.
-        // But we can spawn the check.
-        
-        let app_handle_for_update: Option<tauri::AppHandle> = None; // Wait, we don't have app handle here.
-        // We can't update it from here without an AppHandle.
-        // The function signature only returns the Image.
-        
-        // Copilot suggested: "caching the theme detection result or using a non-blocking approach... then updating the icon asynchronously"
-        
-        // Since we don't have the AppHandle here, we can't spawn an update on "this" tray.
-        // Main.rs has the app handle *after* building the tray.
-        
-        // Workaround: Return the standard icon, but main.rs should spawn the update.
-        // I will change the main.rs logic to spawn the update if dynamic is enabled.
-        
-        // For now, let's just make this return the standard icon if dynamic is on, 
-        // relying on the startup "refresh" to fix it? 
-        // No, current main.rs doesn't do a startup refresh.
-        
-        // Let's stick to blocking for now? 
-        // Copilot said "Consider...".
-        // If I change this, I must update main.rs to do the async update.
-        
-        // The safest simple change that respects the "don't block" advice:
-        // 1. Return strictly the default icon here (fast).
-        // 2. In main.rs, AFTER the tray is built, spawn a `refresh_tray_icon`.
-        
-        // Let's modify this function to JUST return the standard icon if we can't get theme instantly.
-        // But `get_system_color_scheme` is async.
-        
-        // So, I will revert this function to just return standard icon if dynamic is enabled (as a placeholder), 
-        // AND I will modify main.rs to call refresh_tray_icon immediately after startup.
-        
-         eprintln!("[Tray] Dynamic Icon Enabled. Initializing with default, updating async.");
-         include_bytes!("../icons/icon.png")
+        // Main.rs spawns a refresh_tray_icon task immediately after startup to correct it.
+        eprintln!("[Tray] Dynamic Icon Enabled. Initializing with default, updating async.");
+        include_bytes!("../icons/icon.png")
     } else {
         eprintln!("[Tray] Dynamic Icon Disabled. Using standard icon.");
         include_bytes!("../icons/icon.png")
