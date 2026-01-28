@@ -639,7 +639,8 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
         let mut cleanup_counter = 0;
 
         // Cache settings to avoid disk I/O on every 500ms iteration.
-        // Settings are reloaded every ~30 seconds (during cleanup check).
+        // Settings are loaded once at initialization and refreshed every ~30 seconds
+        // (during cleanup check) to pick up any user changes.
         let mut settings = UserSettingsManager::new().load();
 
         loop {
@@ -692,8 +693,8 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
                 }
             }
 
-            // Primary Selection - sync highlighted text to clipboard history
-            // Works on X11 fully, Wayland requires zwp_primary_selection v2+
+            // Primary Selection - sync highlighted text to clipboard history.
+            // Works on X11 and Wayland (requires zwp_primary_selection protocol v2+).
             #[cfg(target_os = "linux")]
             if settings.sync_primary_selection {
                 if let Ok(primary_text) = manager.get_primary_selection_text() {

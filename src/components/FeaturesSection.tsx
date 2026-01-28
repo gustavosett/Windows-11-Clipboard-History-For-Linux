@@ -16,7 +16,7 @@ const FEATURES = [
   {
     key: 'sync_primary_selection',
     label: 'Sync Primary Selection',
-    desc: 'Sync highlighted text to history (X11 fully, Wayland v2+).',
+    desc: 'X11 and Wayland (requires zwp_primary_selection protocol v2+).',
   },
 ] as const
 
