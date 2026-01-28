@@ -238,8 +238,6 @@ pub async fn start_theme_listener(
     Ok(())
 }
 
-
-
 /// Helper to get the initial tray icon.
 /// This handles the initial theme detection logic centrally.
 pub fn initial_tray_icon(settings: &UserSettings) -> (Image<'static>, bool) {
