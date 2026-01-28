@@ -634,21 +634,25 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
     std::thread::spawn(move || {
         let mut last_text_hash: Option<u64> = None;
         let mut last_image_hash: Option<u64> = None;
+        #[cfg(target_os = "linux")]
         let mut last_primary_hash: Option<u64> = None;
         let mut cleanup_counter = 0;
+
+        // Cache settings to avoid disk I/O on every 500ms iteration.
+        // Settings are reloaded every ~30 seconds (during cleanup check).
+        let mut settings = UserSettingsManager::new().load();
 
         loop {
             std::thread::sleep(Duration::from_millis(500));
             cleanup_counter += 1;
 
-            // Load settings for this iteration (needed for cleanup interval and primary selection sync)
-            let settings = UserSettingsManager::new().load();
-
             let mut manager = clipboard_manager.lock();
 
             // Background cleanup every ~30 seconds (60 * 500ms)
+            // Also refresh cached settings on this interval
             if cleanup_counter >= 60 {
                 cleanup_counter = 0;
+                settings = UserSettingsManager::new().load();
                 let interval_in_minutes = settings.auto_delete_interval_in_minutes();
 
                 if interval_in_minutes > 0 && manager.cleanup_old_items(interval_in_minutes) {
