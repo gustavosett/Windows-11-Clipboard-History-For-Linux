@@ -22,7 +22,7 @@ pub struct UserSettings {
     // --- Feature Flags ---
     /// Enable Dynamic Tray Icon (changes color based on system theme)
     /// Only relevant for GNOME/Pop!_OS where it defaults to true
-    #[serde(default = "default_dynamic_tray_icon")]
+    #[serde(default = "default_true")]
     pub enable_dynamic_tray_icon: bool,
 
     /// Enable Smart Actions (URL, Color, Email detection)
@@ -69,18 +69,7 @@ fn default_true() -> bool {
     true
 }
 
-fn default_dynamic_tray_icon() -> bool {
-    // Only enable by default on GNOME or Pop!_OS
-    if let Ok(desktop) = std::env::var("XDG_CURRENT_DESKTOP") {
-        let desktop = desktop.to_uppercase();
-        // XDG_CURRENT_DESKTOP may contain multiple entries separated by ':'
-        // Use exact entry matching to avoid substring false positives like "GNOMEFOO"
-        return desktop
-            .split(':')
-            .any(|entry| entry == "GNOME" || entry == "POP");
-    }
-    false
-}
+
 
 fn default_max_history_size() -> usize {
     crate::clipboard_manager::DEFAULT_MAX_HISTORY_SIZE
@@ -104,7 +93,7 @@ impl Default for UserSettings {
             theme_mode: "system".to_string(),
             dark_background_opacity: 0.70,
             light_background_opacity: 0.70,
-            enable_dynamic_tray_icon: default_dynamic_tray_icon(),
+            enable_dynamic_tray_icon: true,
             enable_smart_actions: true,
             enable_ui_polish: true,
             max_history_size: default_max_history_size(),

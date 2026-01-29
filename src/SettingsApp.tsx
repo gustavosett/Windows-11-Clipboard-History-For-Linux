@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   light_background_opacity: 0.7,
   enable_smart_actions: true,
   enable_ui_polish: true,
-  enable_dynamic_tray_icon: false,
+  enable_dynamic_tray_icon: true,
   max_history_size: 50,
   custom_kaomojis: [],
   ui_scale: 1,
