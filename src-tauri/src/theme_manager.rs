@@ -239,8 +239,6 @@ pub async fn start_theme_listener(
 }
 
 /// Helper to get the initial tray icon.
-/// This handles the initial theme detection logic centrally.
-/// Helper to get the initial tray icon.
 /// Uses a default icon initially to avoid blocking startup, then updates asynchronously.
 pub fn initial_tray_icon(settings: &UserSettings) -> (Image<'static>, bool) {
     if settings.enable_dynamic_tray_icon {
