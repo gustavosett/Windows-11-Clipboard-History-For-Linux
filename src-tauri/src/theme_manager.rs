@@ -249,8 +249,6 @@ pub fn update_dynamic_tray_flag(enabled: bool) {
 /// Helper to get the initial tray icon.
 /// Uses a default icon initially to avoid blocking startup, then updates asynchronously.
 pub fn initial_tray_icon(_settings: &UserSettings) -> (Image<'static>, bool) {
-    // Non-blocking approach: Always return default icon.
-    // Dynamic updates happen via async refresh shortly after startup.
     eprintln!("[Tray] Initializing with default icon (non-blocking).");
     
     let icon = Image::from_bytes(include_bytes!("../icons/icon.png")).expect("Failed to load tray icon");
