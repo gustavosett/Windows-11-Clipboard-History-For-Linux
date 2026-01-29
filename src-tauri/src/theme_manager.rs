@@ -256,11 +256,8 @@ pub fn initial_tray_icon(_settings: &UserSettings) -> (Image<'static>, bool) {
     (icon, false)
 }
 
-fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
-    // Determine target based on cached atomic setting (avoids disk I/O)
-    let enable_dynamic = DYNAMIC_ICON_ENABLED.load(Ordering::Relaxed);
-
-    let icon_bytes: &[u8] = if enable_dynamic {
+fn get_icon_bytes(enable_dynamic: bool, is_dark: bool) -> &'static [u8] {
+    if enable_dynamic {
         if is_dark {
             include_bytes!("../icons/icon-light.png")
         } else {
@@ -268,8 +265,10 @@ fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
         }
     } else {
         include_bytes!("../icons/icon.png")
-    };
+    }
+}
 
+fn apply_icon_to_tray(app: &tauri::AppHandle, icon_bytes: &[u8]) {
     if let Some(tray) = app.tray_by_id("main-tray") {
         if let Ok(icon) = Image::from_bytes(icon_bytes) {
             let _ = tray.set_icon(Some(icon));
@@ -278,28 +277,21 @@ fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
     }
 }
 
+fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
+    // Determine target based on cached atomic setting (avoids disk I/O)
+    let enable_dynamic = DYNAMIC_ICON_ENABLED.load(Ordering::Relaxed);
+    let icon_bytes = get_icon_bytes(enable_dynamic, is_dark);
+    apply_icon_to_tray(app, icon_bytes);
+}
+
 /// Optimized update that takes the settings directly
 pub fn update_tray_icon_with_settings(
     app: &tauri::AppHandle,
     is_dark: bool,
     settings: &UserSettings,
 ) {
-    let icon_bytes: &[u8] = if settings.enable_dynamic_tray_icon {
-        if is_dark {
-            include_bytes!("../icons/icon-light.png")
-        } else {
-            include_bytes!("../icons/icon-dark.png")
-        }
-    } else {
-        include_bytes!("../icons/icon.png")
-    };
-
-    if let Some(tray) = app.tray_by_id("main-tray") {
-        if let Ok(icon) = Image::from_bytes(icon_bytes) {
-            let _ = tray.set_icon(Some(icon));
-            let _ = tray.set_icon_as_template(false);
-        }
-    }
+    let icon_bytes = get_icon_bytes(settings.enable_dynamic_tray_icon, is_dark);
+    apply_icon_to_tray(app, icon_bytes);
 }
 
 /// Listen for SettingChanged signals from the XDG Desktop Portal
