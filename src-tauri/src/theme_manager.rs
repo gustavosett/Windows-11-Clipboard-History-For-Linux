@@ -242,14 +242,10 @@ pub async fn start_theme_listener(
 /// Uses a default icon initially to avoid blocking startup, then updates asynchronously.
 pub fn initial_tray_icon(settings: &UserSettings) -> (Image<'static>, bool) {
     if settings.enable_dynamic_tray_icon {
-        // Non-blocking approach: Provide a default icon first (standard)
-        // Main.rs spawns a refresh_tray_icon task immediately after startup to correct it.
         eprintln!("[Tray] Dynamic Icon Enabled. Initializing with default, updating async.");
-        include_bytes!("../icons/icon.png")
     } else {
         eprintln!("[Tray] Dynamic Icon Disabled. Using standard icon.");
-        include_bytes!("../icons/icon.png")
-    };
+    }
 
     let icon = Image::from_bytes(include_bytes!("../icons/icon.png")).expect("Failed to load tray icon");
     (icon, false)
