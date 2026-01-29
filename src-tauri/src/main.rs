@@ -809,7 +809,7 @@ fn main() {
             // Initial Dynamic Icon Setup
             let settings_manager = UserSettingsManager::new();
             let settings = settings_manager.load();
-            
+
             // Initialize atomic flag for the listener loop
             #[cfg(target_os = "linux")]
             theme_manager::update_dynamic_tray_flag(settings.enable_dynamic_tray_icon);

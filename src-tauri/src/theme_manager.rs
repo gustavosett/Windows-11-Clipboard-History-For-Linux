@@ -250,15 +250,16 @@ pub fn update_dynamic_tray_flag(enabled: bool) {
 /// Uses a default icon initially to avoid blocking startup, then updates asynchronously.
 pub fn initial_tray_icon(_settings: &UserSettings) -> (Image<'static>, bool) {
     eprintln!("[Tray] Initializing with default icon (non-blocking).");
-    
-    let icon = Image::from_bytes(include_bytes!("../icons/icon.png")).expect("Failed to load tray icon");
+
+    let icon =
+        Image::from_bytes(include_bytes!("../icons/icon.png")).expect("Failed to load tray icon");
     (icon, false)
 }
 
 fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
     // Determine target based on cached atomic setting (avoids disk I/O)
     let enable_dynamic = DYNAMIC_ICON_ENABLED.load(Ordering::Relaxed);
-    
+
     let icon_bytes: &[u8] = if enable_dynamic {
         if is_dark {
             include_bytes!("../icons/icon-light.png")
