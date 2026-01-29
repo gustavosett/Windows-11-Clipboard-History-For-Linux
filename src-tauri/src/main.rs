@@ -108,6 +108,9 @@ fn set_user_settings(
         .map_err(|e| format!("Failed to emit settings changed event: {}", e))?;
 
     // Refresh tray icon immediately to reflect possible dynamic setting change
+    #[cfg(target_os = "linux")]
+    theme_manager::update_dynamic_tray_flag(new_settings.enable_dynamic_tray_icon);
+
     let app_for_tray = app.clone();
     let settings_for_tray = new_settings.clone();
     tauri::async_runtime::spawn(async move {
@@ -806,6 +809,10 @@ fn main() {
             // Initial Dynamic Icon Setup
             let settings_manager = UserSettingsManager::new();
             let settings = settings_manager.load();
+            
+            // Initialize atomic flag for the listener loop
+            #[cfg(target_os = "linux")]
+            theme_manager::update_dynamic_tray_flag(settings.enable_dynamic_tray_icon);
 
             let (icon, use_template_icon) = theme_manager::initial_tray_icon(&settings);
 

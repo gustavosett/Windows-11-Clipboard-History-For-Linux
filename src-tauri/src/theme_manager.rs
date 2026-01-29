@@ -3,7 +3,7 @@
 //! This is essential for DEs like COSMIC that use the portal standard
 //! instead of GNOME settings.
 
-use crate::user_settings::{UserSettings, UserSettingsManager};
+use crate::user_settings::UserSettings;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     OnceLock,
@@ -16,6 +16,9 @@ static SYSTEM_THEME: OnceLock<RwLock<Option<ColorScheme>>> = OnceLock::new();
 
 /// Flag to track if the event listener is running
 static EVENT_LISTENER_RUNNING: AtomicBool = AtomicBool::new(false);
+
+/// Cached setting for dynamic tray icon (avoids disk I/O in listener loop)
+static DYNAMIC_ICON_ENABLED: AtomicBool = AtomicBool::new(false);
 
 /// Color scheme values from the XDG Desktop Portal
 /// See: https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Settings.html
@@ -238,24 +241,42 @@ pub async fn start_theme_listener(
     Ok(())
 }
 
+/// Update the cached dynamic tray icon setting
+pub fn update_dynamic_tray_flag(enabled: bool) {
+    DYNAMIC_ICON_ENABLED.store(enabled, Ordering::Relaxed);
+}
+
 /// Helper to get the initial tray icon.
 /// Uses a default icon initially to avoid blocking startup, then updates asynchronously.
-pub fn initial_tray_icon(settings: &UserSettings) -> (Image<'static>, bool) {
-    if settings.enable_dynamic_tray_icon {
-        eprintln!("[Tray] Dynamic Icon Enabled. Initializing with default, updating async.");
-    } else {
-        eprintln!("[Tray] Dynamic Icon Disabled. Using standard icon.");
-    }
-
+pub fn initial_tray_icon(_settings: &UserSettings) -> (Image<'static>, bool) {
+    // Non-blocking approach: Always return default icon.
+    // Dynamic updates happen via async refresh shortly after startup.
+    eprintln!("[Tray] Initializing with default icon (non-blocking).");
+    
     let icon = Image::from_bytes(include_bytes!("../icons/icon.png")).expect("Failed to load tray icon");
     (icon, false)
 }
 
 fn update_tray_icon(app: &tauri::AppHandle, is_dark: bool) {
-    // We load settings here for the D-Bus listener loop which doesn't maintain state
-    let settings_manager = UserSettingsManager::new();
-    let settings = settings_manager.load();
-    update_tray_icon_with_settings(app, is_dark, &settings);
+    // Determine target based on cached atomic setting (avoids disk I/O)
+    let enable_dynamic = DYNAMIC_ICON_ENABLED.load(Ordering::Relaxed);
+    
+    let icon_bytes: &[u8] = if enable_dynamic {
+        if is_dark {
+            include_bytes!("../icons/icon-light.png")
+        } else {
+            include_bytes!("../icons/icon-dark.png")
+        }
+    } else {
+        include_bytes!("../icons/icon.png")
+    };
+
+    if let Some(tray) = app.tray_by_id("main-tray") {
+        if let Ok(icon) = Image::from_bytes(icon_bytes) {
+            let _ = tray.set_icon(Some(icon));
+            let _ = tray.set_icon_as_template(false);
+        }
+    }
 }
 
 /// Optimized update that takes the settings directly
