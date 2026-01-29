@@ -90,11 +90,12 @@ impl ConfigManager {
 
 /// Determines where the window should be placed based on saved state and available monitors.
 pub fn resolve_window_position(
-    state: &WindowState,
+    _state: &WindowState,
     available_monitors: &[Monitor],
     window_size: PhysicalSize<u32>,
 ) -> PhysicalPosition<i32> {
     // 1. Try to restore saved position if monitor exists and position is valid
+    /*
     if let Some(saved_monitor_name) = &state.monitor_name {
         if let Some(monitor) = available_monitors.iter().find(|m| {
             m.name()
@@ -105,6 +106,7 @@ pub fn resolve_window_position(
             }
         }
     }
+    */
 
     // 2. Fallback: Default to Bottom-Center of Primary (or first available)
     let target_monitor = available_monitors
@@ -116,12 +118,14 @@ pub fn resolve_window_position(
 }
 
 /// Checks if a coordinate is "valid" based on bounds and visibility heuristics.
+#[allow(dead_code)]
 fn is_position_valid(x: i32, y: i32, monitor: &Monitor, window_size: PhysicalSize<u32>) -> bool {
     is_top_left_within_monitor(x, y, monitor)
         && has_min_vertical_visibility(y, monitor, window_size)
 }
 
 /// Ensures the window's top-left corner is strictly inside the monitor bounds.
+#[allow(dead_code)]
 fn is_top_left_within_monitor(x: i32, y: i32, monitor: &Monitor) -> bool {
     let m_pos = monitor.position();
     let m_size = monitor.size();
@@ -133,6 +137,7 @@ fn is_top_left_within_monitor(x: i32, y: i32, monitor: &Monitor) -> bool {
 }
 
 /// Ensures at least the top half of the window remains visible on the monitor.
+#[allow(dead_code)]
 fn has_min_vertical_visibility(y: i32, monitor: &Monitor, window_size: PhysicalSize<u32>) -> bool {
     let m_pos = monitor.position();
     let m_size = monitor.size();

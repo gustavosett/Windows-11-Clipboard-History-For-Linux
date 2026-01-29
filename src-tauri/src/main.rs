@@ -593,21 +593,21 @@ impl SettingsController {
 fn handle_window_moved_for_wayland(
     window: &WebviewWindow,
     state: &State<AppState>,
-    pos: &PhysicalPosition<i32>,
+    _pos: &PhysicalPosition<i32>,
 ) {
     if !is_wayland() || !window.is_visible().unwrap_or(false) {
         return;
     }
 
-    let monitor_name = window
+    let _monitor_name = window
         .current_monitor()
         .ok()
         .flatten()
         .and_then(|m| m.name().map(|n| n.to_string()));
 
-    let mut config = state.config_manager.lock();
+    let _config = state.config_manager.lock();
     // UPDATE MEMORY ONLY (No Disk I/O here)
-    config.update_state(monitor_name, pos.x, pos.y);
+    // config.update_state(monitor_name, pos.x, pos.y);
 }
 
 // --- Background Listeners ---
