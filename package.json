@@ -36,14 +36,14 @@
     "emojilib": "^4.0.2",
     "fuse.js": "^7.0.0",
     "lucide-react": "^0.563.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "react-window": "^2.2.5"
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-window": "^2.2.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
     "@tauri-apps/cli": "^2.0.0",
-    "@types/react": "^19.2.9",
+    "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "@types/react-window": "^2.0.0",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
