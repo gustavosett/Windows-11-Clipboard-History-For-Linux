@@ -42,8 +42,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
-    "@tauri-apps/cli": "^2.0.0",
-    "@types/react": "^19.2.10",
+    "@tauri-apps/cli": "^2.10.0",
+    "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "@types/react-window": "^2.0.0",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
