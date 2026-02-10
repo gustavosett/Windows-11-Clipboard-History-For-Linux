@@ -231,20 +231,27 @@ install_rpm() {
     fi
     
     # For Fedora Asahi Remix, we need to tell the setup script to use standard Fedora repos
-    local setup_env=""
+    local env_args=()
     if [[ "$DISTRO_ID" == "fedora-asahi-remix" ]]; then
         log "Detected Fedora Asahi Remix - using standard Fedora repository..."
-        # Get version from os-release
+        # Get version from os-release without sourcing to avoid clobbering environment variables
         local fedora_version=""
         if [ -f /etc/os-release ]; then
-            . /etc/os-release
-            fedora_version="$VERSION_ID"
+            fedora_version="$(awk -F= '$1=="VERSION_ID"{gsub(/"/,"",$2);print $2}' /etc/os-release)"
         fi
-        setup_env="distro=fedora version=$fedora_version codename="
+        env_args=("distro=fedora" "version=$fedora_version" "codename=")
     fi
     
     # Try Cloudsmith repository first (enables auto-updates)
-    if env $setup_env bash -c "curl -1sLf 'https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh' | sudo -E bash" 2>/dev/null; then
+    local setup_cmd="curl -1sLf 'https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh' | sudo -E bash"
+    local repo_setup_success=false
+    if [[ ${#env_args[@]} -gt 0 ]]; then
+        env "${env_args[@]}" bash -c "$setup_cmd" 2>/dev/null && repo_setup_success=true
+    else
+        bash -c "$setup_cmd" 2>/dev/null && repo_setup_success=true
+    fi
+    
+    if [ "$repo_setup_success" = true ]; then
         log "Installing win11-clipboard-history from repository..."
         if sudo dnf install -y win11-clipboard-history; then
             success "Installed via DNF repository! (auto-updates enabled)"
@@ -278,6 +285,8 @@ install_rpm() {
             warn "Falling back to AppImage (if available) or you can build from source."
             warn ""
             warn "Check the README for instructions to build from source"
+            # Clean up temp directory before returning
+            rm -rf "$TEMP_DIR"
             return 1
         else
             error "Failed to download $FILE"
