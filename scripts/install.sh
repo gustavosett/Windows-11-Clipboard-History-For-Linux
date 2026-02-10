@@ -277,10 +277,7 @@ install_rpm() {
             warn "Currently, only x86_64 packages are built."
             warn "Falling back to AppImage (if available) or you can build from source."
             warn ""
-            warn "To build from source:"
-            warn "  git clone https://github.com/$REPO_OWNER/$REPO_NAME.git"
-            warn "  cd $REPO_NAME && npm install && npm run tauri:build"
-            warn ""
+            warn "Check the README for instructions to build from source"
             return 1
         else
             error "Failed to download $FILE"
