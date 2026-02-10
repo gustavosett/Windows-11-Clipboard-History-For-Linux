@@ -224,13 +224,6 @@ install_deb() {
 install_rpm() {
     log "Setting up RPM repository (Cloudsmith)..."
     
-    # Check architecture availability
-    if [[ "$RPM_ARCH" == "aarch64" ]]; then
-        warn "Note: aarch64/ARM64 packages may not be available in the repository yet."
-        warn "See: https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/issues/140"
-    fi
-    
-    # For Fedora Asahi Remix, we need to tell the setup script to use standard Fedora repos
     local env_args=()
     if [[ "$DISTRO_ID" == "fedora-asahi-remix" ]]; then
         log "Detected Fedora Asahi Remix - using standard Fedora repository..."
@@ -278,19 +271,7 @@ install_rpm() {
     
     log "Downloading $FILE..."
     if ! curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar --fail; then
-        # Check if this is an architecture issue
-        if [[ "$RPM_ARCH" == "aarch64" ]]; then
-            warn "No aarch64 package available for version $RELEASE_TAG."
-            warn "Currently, only x86_64 packages are built."
-            warn "Falling back to AppImage (if available) or you can build from source."
-            warn ""
-            warn "Check the README for instructions to build from source"
-            # Clean up temp directory before returning
-            rm -rf "$TEMP_DIR"
-            return 1
-        else
-            error "Failed to download $FILE"
-        fi
+        error "Failed to download $FILE"
     fi
     chmod 644 "$FILE"
     
