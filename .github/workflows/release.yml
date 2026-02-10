@@ -208,16 +208,26 @@ jobs:
           echo "Uploading STABLE release v$VERSION to Cloudsmith..."
           
           # Upload all .deb files (x86_64 and arm64)
-          for deb in artifacts/**/*.deb; do
-            cloudsmith push deb gustavosett/clipboard-manager/any-distro/any-version \
-              "$deb" --api-key $CLOUDSMITH_API_KEY || echo "Cloudsmith .deb upload failed for $deb (may already exist)"
-          done
+          deb_files=$(find artifacts -name '*.deb' 2>/dev/null)
+          if [ -n "$deb_files" ]; then
+            echo "$deb_files" | while read -r deb; do
+              cloudsmith push deb gustavosett/clipboard-manager/any-distro/any-version \
+                "$deb" --api-key $CLOUDSMITH_API_KEY || echo "Cloudsmith .deb upload failed for $deb (may already exist)"
+            done
+          else
+            echo "No .deb files found to upload"
+          fi
           
           # Upload all .rpm files (x86_64 and aarch64)
-          for rpm in artifacts/**/*.rpm; do
-            cloudsmith push rpm gustavosett/clipboard-manager/any-distro/any-version \
-              "$rpm" --api-key $CLOUDSMITH_API_KEY || echo "Cloudsmith .rpm upload failed for $rpm (may already exist)"
-          done
+          rpm_files=$(find artifacts -name '*.rpm' 2>/dev/null)
+          if [ -n "$rpm_files" ]; then
+            echo "$rpm_files" | while read -r rpm; do
+              cloudsmith push rpm gustavosett/clipboard-manager/any-distro/any-version \
+                "$rpm" --api-key $CLOUDSMITH_API_KEY || echo "Cloudsmith .rpm upload failed for $rpm (may already exist)"
+            done
+          else
+            echo "No .rpm files found to upload"
+          fi
 
       - name: Update AUR Package
         if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'dev') }}
