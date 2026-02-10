@@ -232,7 +232,11 @@ install_rpm() {
         if [ -f /etc/os-release ]; then
             fedora_version="$(awk -F= '$1=="VERSION_ID"{gsub(/"/,"",$2);print $2}' /etc/os-release)"
         fi
-        env_args=("distro=fedora" "version=$fedora_version" "codename=")
+        # Always set distro; only set version if non-empty to allow Cloudsmith auto-detection otherwise
+        env_args=("distro=fedora" "codename=")
+        if [[ -n "$fedora_version" ]]; then
+            env_args+=("version=$fedora_version")
+        fi
     fi
     
     # Try Cloudsmith repository first (enables auto-updates)
