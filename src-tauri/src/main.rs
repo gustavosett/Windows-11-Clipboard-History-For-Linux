@@ -166,6 +166,11 @@ async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> R
             // 3. Perform Paste
             let mut manager = state.clipboard_manager.lock();
             manager.paste_item(&item).map_err(|e| e.to_string())?;
+
+            // 4. Notify frontend of history change (item moved to top)
+            let history = manager.get_history();
+            drop(manager); // Release lock before emitting
+            let _ = app.emit("history-sync", &history);
         }
         None => {
             eprintln!(

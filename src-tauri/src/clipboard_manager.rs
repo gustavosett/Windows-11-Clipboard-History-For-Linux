@@ -532,6 +532,35 @@ impl ClipboardManager {
         Some(item_clone)
     }
 
+    /// Move an item to the top of the history (respecting pinned items)
+    /// If the item is pinned, it moves to the top of pinned items
+    /// If not pinned, it moves to the first non-pinned position
+    pub fn move_item_to_top(&mut self, id: &str) -> bool {
+        // Find the item's current position
+        let current_pos = match self.history.iter().position(|i| i.id == id) {
+            Some(pos) => pos,
+            None => return false, // Item not found
+        };
+
+        let item = self.history.remove(current_pos);
+
+        // Determine where to insert based on pinned status
+        let insert_pos = if item.pinned {
+            // Move to top of pinned items (position 0)
+            0
+        } else {
+            // Move to first non-pinned position (right after all pinned items)
+            self.history
+                .iter()
+                .position(|i| !i.pinned)
+                .unwrap_or(self.history.len())
+        };
+
+        self.history.insert(insert_pos, item);
+        self.save_history();
+        true
+    }
+
     pub fn cleanup_old_items(&mut self, interval_minutes: u64) -> bool {
         if interval_minutes == 0 {
             return false;
@@ -623,6 +652,9 @@ impl ClipboardManager {
 
         // 3. Simulate User Input
         self.simulate_paste_action()?;
+
+        // 4. Move item to top of history so it's easily accessible for repeated use
+        self.move_item_to_top(&item.id);
 
         Ok(())
     }
