@@ -338,6 +338,12 @@ unset LD_LIBRARY_PATH
 unset LD_PRELOAD
 unset GTK_PATH
 unset GIO_MODULE_DIR
+unset GTK_IM_MODULE_FILE
+unset GTK_EXE_PREFIX
+unset LOCPATH
+unset GSETTINGS_SCHEMA_DIR
+
+export XDG_DATA_DIRS="/usr/local/share:/usr/share:/var/lib/snapd/desktop"
 
 export GDK_SCALE="${GDK_SCALE:-1}"
 export GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}"
