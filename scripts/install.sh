@@ -391,21 +391,54 @@ install_appimage() {
     curl -fsSL -o "$HOME/.local/share/icons/hicolor/128x128/apps/win11-clipboard-history.png" \
         "https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/master/src-tauri/icons/128x128.png" 2>/dev/null || true
     
-    # Wrapper script
-    cat > "$HOME/.local/bin/win11-clipboard-history" << 'EOF'
+    # Wrapper script — mirrors src-tauri/bundle/linux/wrapper.sh sanitization
+    cat > "$HOME/.local/bin/win11-clipboard-history" << 'WRAPPER_EOF'
 #!/bin/bash
-# Clean up environment to avoid Snap/Flatpak library conflicts
+# AppImage wrapper for win11-clipboard-history
+# Sanitizes Snap/Flatpak environment leaks, then launches the AppImage.
+
+# Always clear library/runtime overrides from sandbox parents
 unset LD_LIBRARY_PATH
 unset LD_PRELOAD
 unset GTK_PATH
 unset GIO_MODULE_DIR
+unset GTK_IM_MODULE_FILE
+unset GTK_EXE_PREFIX
+unset LOCPATH
+unset GSETTINGS_SCHEMA_DIR
+
+# Fix XDG_DATA_DIRS only when contaminated by sandbox paths
+sanitize_xdg_data_dirs() {
+    local xdg="${XDG_DATA_DIRS:-}"
+    local system_dirs="/usr/local/share:/usr/share:/var/lib/snapd/desktop"
+
+    if [[ -z "${SNAP:-}" && -z "${FLATPAK_ID:-}" && "$xdg" != *"/snap/"* && "$xdg" != *"/flatpak/"* ]]; then
+        return
+    fi
+
+    local cleaned=""
+    local entry
+    IFS=':' read -ra entries <<< "$xdg"
+    for entry in "${entries[@]}"; do
+        case "$entry" in
+            */snap/*|*/flatpak/*) continue ;;
+        esac
+        case ":$system_dirs:" in
+            *":$entry:"*) continue ;;
+        esac
+        cleaned="${cleaned:+$cleaned:}$entry"
+    done
+
+    export XDG_DATA_DIRS="${system_dirs}${cleaned:+:$cleaned}"
+}
+sanitize_xdg_data_dirs
 
 export GDK_SCALE="${GDK_SCALE:-1}"
 export GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}"
 export NO_AT_BRIDGE=1
 
 exec "$HOME/.local/bin/win11-clipboard-history.AppImage" "$@"
-EOF
+WRAPPER_EOF
     chmod +x "$HOME/.local/bin/win11-clipboard-history"
     
     # .desktop file with proper icon
