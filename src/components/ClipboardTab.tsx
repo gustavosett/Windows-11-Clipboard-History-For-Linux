@@ -111,13 +111,9 @@ export function ClipboardTab(props: {
   // Toggle search visibility with Ctrl+F or start typing to filter
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      // Skip if focus is already on an input element
       const activeElement = document.activeElement
-      if (activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA') return
 
-      // Skip if focus is on a tab button (let tab navigation handle it)
-      if (activeElement?.getAttribute('role') === 'tab') return
-
+      // Global shortcuts that should work regardless of focus
       if (e.ctrlKey && e.key === 'f') {
         e.preventDefault()
         setIsSearchVisible((prev) => {
@@ -131,13 +127,19 @@ export function ClipboardTab(props: {
         return
       }
 
-      // Close search with Escape
+      // Close search with Escape - should work even when search input is focused
       if (e.key === 'Escape' && isSearchVisible) {
         e.preventDefault()
         setIsSearchVisible(false)
         setSearchQuery('')
         return
       }
+
+      // Skip instant filtering if focus is on an input element (user is already typing in search)
+      if (activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA') return
+
+      // Skip if focus is on a tab button (let tab navigation handle it)
+      if (activeElement?.getAttribute('role') === 'tab') return
 
       // Instant filtering: start typing to activate search
       if (isPrintableKey(e)) {
