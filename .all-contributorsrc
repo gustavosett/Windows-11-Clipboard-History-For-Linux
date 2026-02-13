@@ -87,6 +87,16 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "kinou-p",
+      "name": "Kinou",
+      "avatar_url": "https://avatars.githubusercontent.com/u/69145792?v=4",
+      "profile": "https://alexandre-pommier.com",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
