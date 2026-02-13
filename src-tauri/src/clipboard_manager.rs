@@ -541,11 +541,9 @@ impl ClipboardManager {
             Some(pos) => pos,
             None => return false, // Item not found
         };
-
-        let item = self.history.remove(current_pos);
-
-        // Determine where to insert based on pinned status
-        let insert_pos = if item.pinned {
+        // Determine where we *would* insert based on pinned status, without mutating yet
+        let item_pinned = self.history[current_pos].pinned;
+        let insert_pos = if item_pinned {
             // Move to top of pinned items (position 0)
             0
         } else {
@@ -555,7 +553,12 @@ impl ClipboardManager {
                 .position(|i| !i.pinned)
                 .unwrap_or(self.history.len())
         };
-
+        // If the item is already at the correct position, avoid unnecessary mutation and I/O
+        if insert_pos == current_pos {
+            return true;
+        }
+        // Now actually move the item
+        let item = self.history.remove(current_pos);
         self.history.insert(insert_pos, item);
         self.save_history();
         true
