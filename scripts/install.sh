@@ -333,7 +333,8 @@ install_appimage() {
     # Wrapper script
     cat > "$HOME/.local/bin/win11-clipboard-history" << 'EOF'
 #!/bin/bash
-# Clean up environment to avoid Snap/Flatpak library conflicts
+# Keep this function aligned with src-tauri/bundle/linux/wrapper.sh
+sanitize_runtime_env() {
 unset LD_LIBRARY_PATH
 unset LD_PRELOAD
 unset GTK_PATH
@@ -343,7 +344,25 @@ unset GTK_EXE_PREFIX
 unset LOCPATH
 unset GSETTINGS_SCHEMA_DIR
 
-export XDG_DATA_DIRS="/usr/local/share:/usr/share:/var/lib/snapd/desktop"
+local xdg_data_dirs="${XDG_DATA_DIRS:-}"
+local system_dirs=("/usr/local/share" "/usr/share" "/var/lib/snapd/desktop")
+
+if [ -z "$xdg_data_dirs" ]; then
+    xdg_data_dirs="${system_dirs[0]}:${system_dirs[1]}:${system_dirs[2]}"
+elif [[ "$xdg_data_dirs" == *"/snap/"* || "$xdg_data_dirs" == *"snap/code"* || -n "${SNAP:-}" ]]; then
+    local dir
+    for dir in "${system_dirs[@]}"; do
+        case ":$xdg_data_dirs:" in
+            *":$dir:"*) ;;
+            *) xdg_data_dirs="$xdg_data_dirs:$dir" ;;
+        esac
+    done
+fi
+
+export XDG_DATA_DIRS="$xdg_data_dirs"
+}
+
+sanitize_runtime_env
 
 export GDK_SCALE="${GDK_SCALE:-1}"
 export GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}"

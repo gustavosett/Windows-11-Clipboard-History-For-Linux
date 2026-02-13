@@ -33,18 +33,39 @@ if [ -z "$BINARY" ]; then
     exit 1
 fi
 
-# Clean up environment to avoid Snap/Flatpak library conflicts
-unset LD_LIBRARY_PATH
-unset LD_PRELOAD
-unset GTK_PATH
-unset GIO_MODULE_DIR
-unset GTK_IM_MODULE_FILE
-unset GTK_EXE_PREFIX
-unset LOCPATH
-unset GSETTINGS_SCHEMA_DIR
+sanitize_runtime_env() {
+    # Snap/Flatpak sandboxes may inject GTK/GIO/runtime paths from confined runtimes.
+    # Clear them so the app uses host system libraries consistently.
+    unset LD_LIBRARY_PATH
+    unset LD_PRELOAD
+    unset GTK_PATH
+    unset GIO_MODULE_DIR
+    unset GTK_IM_MODULE_FILE
+    unset GTK_EXE_PREFIX
+    unset LOCPATH
+    unset GSETTINGS_SCHEMA_DIR
 
-# Ensure system data dirs are preferred over snap-injected ones
-export XDG_DATA_DIRS="/usr/local/share:/usr/share:/var/lib/snapd/desktop"
+    # Keep user/system XDG_DATA_DIRS when valid.
+    # Only merge in defaults if empty or clearly snap-injected.
+    local xdg_data_dirs="${XDG_DATA_DIRS:-}"
+    local system_dirs=("/usr/local/share" "/usr/share" "/var/lib/snapd/desktop")
+
+    if [ -z "$xdg_data_dirs" ]; then
+        xdg_data_dirs="${system_dirs[0]}:${system_dirs[1]}:${system_dirs[2]}"
+    elif [[ "$xdg_data_dirs" == *"/snap/"* || "$xdg_data_dirs" == *"snap/code"* || -n "${SNAP:-}" ]]; then
+        local dir
+        for dir in "${system_dirs[@]}"; do
+            case ":$xdg_data_dirs:" in
+                *":$dir:"*) ;;
+                *) xdg_data_dirs="$xdg_data_dirs:$dir" ;;
+            esac
+        done
+    fi
+
+    export XDG_DATA_DIRS="$xdg_data_dirs"
+}
+
+sanitize_runtime_env
 
 export GDK_SCALE="${GDK_SCALE:-1}"
 export GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}"
