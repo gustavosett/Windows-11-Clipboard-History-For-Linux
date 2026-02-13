@@ -525,9 +525,30 @@ impl ClipboardManager {
     }
 
     pub fn toggle_pin(&mut self, id: &str) -> Option<ClipboardItem> {
-        let item = self.history.iter_mut().find(|i| i.id == id)?;
-        item.pinned = !item.pinned;
-        let item_clone = item.clone();
+        // Find the item and toggle its pin status
+        let pos = self.history.iter().position(|i| i.id == id)?;
+        self.history[pos].pinned = !self.history[pos].pinned;
+
+        let now_pinned = self.history[pos].pinned;
+
+        // Reposition the item so the invariant
+        let item = self.history.remove(pos);
+        let insert_pos = if now_pinned {
+            // Newly pinned place at the end of the pinned section
+            self.history
+                .iter()
+                .position(|i| !i.pinned)
+                .unwrap_or(self.history.len())
+        } else {
+            // Newly unpinned place at the start of the unpinned section
+            self.history
+                .iter()
+                .position(|i| !i.pinned)
+                .unwrap_or(self.history.len())
+        };
+        self.history.insert(insert_pos, item);
+
+        let item_clone = self.history[insert_pos].clone();
         self.save_history();
         Some(item_clone)
     }
