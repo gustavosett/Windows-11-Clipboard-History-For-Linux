@@ -128,24 +128,45 @@ install_via_package_manager() {
     # Clean up any previous AppImage installation to prevent PATH conflicts
     cleanup_appimage_installation
     
-    # 1. Check for Arch Family (Arch, Manjaro, CachyOS, Endeavour, etc)
-    if [[ "$SYSTEM_FAMILY_INFO" =~ "arch" ]] || command -v pacman &>/dev/null; then
-        install_aur
+    # IMPORTANT: Check distro ID/family FIRST before falling back to command detection.
+    # This prevents misdetection when tools like pacman are installed on non-Arch systems.
+    
+    # 1. Check for Fedora/RHEL Family
+    # Note: fedora-asahi-remix is a Fedora-based distro for Apple Silicon Macs
+    if [[ "$DISTRO_ID" == "fedora-asahi-remix" || "$SYSTEM_FAMILY_INFO" =~ "fedora" || "$SYSTEM_FAMILY_INFO" =~ "rhel" || "$SYSTEM_FAMILY_INFO" =~ "centos" ]]; then
+        install_rpm
         return 0
     
     # 2. Check for Debian/Ubuntu Family
-    elif [[ "$SYSTEM_FAMILY_INFO" =~ "debian" || "$SYSTEM_FAMILY_INFO" =~ "ubuntu" ]] || command -v apt-get &>/dev/null; then
+    elif [[ "$SYSTEM_FAMILY_INFO" =~ "debian" || "$SYSTEM_FAMILY_INFO" =~ "ubuntu" ]]; then
         install_deb
         return 0
-        
-    # 3. Check for Fedora/RHEL Family
-    elif [[ "$SYSTEM_FAMILY_INFO" =~ "fedora" || "$SYSTEM_FAMILY_INFO" =~ "rhel" || "$SYSTEM_FAMILY_INFO" =~ "centos" ]] || command -v dnf &>/dev/null; then
+    
+    # 3. Check for OpenSUSE Family
+    elif [[ "$SYSTEM_FAMILY_INFO" =~ "suse" ]]; then
+        install_rpm_suse
+        return 0
+    
+    # 4. Check for Arch Family (Arch, Manjaro, CachyOS, Endeavour, etc)
+    # Check this AFTER other distros to avoid false positives from pacman being installed
+    elif [[ "$SYSTEM_FAMILY_INFO" =~ "arch" ]]; then
+        install_aur
+        return 0
+    fi
+    
+    # Fallback: Check for package managers if distro detection failed
+    # This handles edge cases where /etc/os-release is incomplete
+    if command -v dnf &>/dev/null; then
         install_rpm
         return 0
-        
-    # 4. Check for OpenSUSE Family
-    elif [[ "$SYSTEM_FAMILY_INFO" =~ "suse" ]] || command -v zypper &>/dev/null; then
+    elif command -v apt-get &>/dev/null; then
+        install_deb
+        return 0
+    elif command -v zypper &>/dev/null; then
         install_rpm_suse
+        return 0
+    elif command -v pacman &>/dev/null; then
+        install_aur
         return 0
     fi
 
@@ -187,7 +208,9 @@ install_deb() {
     BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
     
     log "Downloading $FILE..."
-    curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar
+    if ! curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar --fail; then
+        error "Failed to download $FILE"
+    fi
     chmod 644 "$FILE"
     
     log "Installing dependencies..."
@@ -203,8 +226,29 @@ install_deb() {
 install_rpm() {
     log "Setting up RPM repository (Cloudsmith)..."
     
+    local env_args=()
+    if [[ "$DISTRO_ID" == "fedora-asahi-remix" ]]; then
+        log "Detected Fedora Asahi Remix - using standard Fedora repository..."
+        local fedora_version=""
+        if [ -f /etc/os-release ]; then
+            fedora_version="$(awk -F= '$1=="VERSION_ID"{gsub(/"/,"",$2);print $2}' /etc/os-release)"
+        fi
+        env_args=("distro=fedora" "codename=")
+        if [[ -n "$fedora_version" ]]; then
+            env_args+=("version=$fedora_version")
+        fi
+    fi
+    
     # Try Cloudsmith repository first (enables auto-updates)
-    if curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh" | sudo -E bash 2>/dev/null; then
+    local setup_cmd="curl -1sLf 'https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh' | sudo -E bash"
+    local repo_setup_success=false
+    if [[ ${#env_args[@]} -gt 0 ]]; then
+        env "${env_args[@]}" bash -c "$setup_cmd" 2>/dev/null && repo_setup_success=true
+    else
+        bash -c "$setup_cmd" 2>/dev/null && repo_setup_success=true
+    fi
+    
+    if [ "$repo_setup_success" = true ]; then
         log "Installing win11-clipboard-history from repository..."
         if sudo dnf install -y win11-clipboard-history; then
             success "Installed via DNF repository! (auto-updates enabled)"
@@ -230,7 +274,9 @@ install_rpm() {
     BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
     
     log "Downloading $FILE..."
-    curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar
+    if ! curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar --fail; then
+        error "Failed to download $FILE"
+    fi
     chmod 644 "$FILE"
     
     log "Installing dependencies..."
@@ -272,7 +318,9 @@ install_rpm_suse() {
     BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
     
     log "Downloading $FILE..."
-    curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar
+    if ! curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar --fail; then
+        error "Failed to download $FILE"
+    fi
     chmod 644 "$FILE"
     
     log "Installing dependencies..."
@@ -306,10 +354,23 @@ install_aur() {
 install_appimage() {
     log "Installing AppImage (universal fallback)..."
     
-    # Fetch latest version
+    local arch_name
+    arch_name=$(uname -m)
+    
+    # Fetch latest version, filtering by architecture
     LATEST_URL=$(curl -s https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest \
         | grep "browser_download_url.*AppImage" \
+        | grep -i "${DEB_ARCH}\|${arch_name}" \
+        | head -1 \
         | cut -d '"' -f 4)
+    
+    # Fallback: try any AppImage if no arch-specific match found
+    if [ -z "$LATEST_URL" ]; then
+        LATEST_URL=$(curl -s https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest \
+            | grep "browser_download_url.*AppImage" \
+            | head -1 \
+            | cut -d '"' -f 4)
+    fi
     
     if [ -z "$LATEST_URL" ]; then
         error "Could not find AppImage download URL"

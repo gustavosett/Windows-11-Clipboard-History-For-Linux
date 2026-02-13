@@ -72,8 +72,9 @@ sudo setfacl -m u:$USER:rw /dev/uinput
 **Option 2: Direct Download**
 
 ```bash
-# Download and install (replace VERSION with actual version)
-sudo apt install ./win11-clipboard-history_VERSION_amd64.deb
+# Download and install (replace VERSION and ARCH with actual values)
+# ARCH: amd64 for x86_64, arm64 for ARM64/aarch64
+sudo apt install ./win11-clipboard-history_VERSION_ARCH.deb
 
 # The package sets up udev rules automatically.
 # For immediate paste access (without logout):
@@ -101,8 +102,9 @@ sudo setfacl -m u:$USER:rw /dev/uinput
 **Option 2: Direct Download**
 
 ```bash
-# Download and install (replace VERSION with actual version)
-sudo dnf install ./win11-clipboard-history-VERSION-1.x86_64.rpm
+# Download and install (replace VERSION and ARCH with actual values)
+# ARCH: x86_64 for Intel/AMD, aarch64 for ARM64
+sudo dnf install ./win11-clipboard-history-VERSION-1.ARCH.rpm
 
 # For immediate paste access (without logout):
 sudo setfacl -m u:$USER:rw /dev/uinput
