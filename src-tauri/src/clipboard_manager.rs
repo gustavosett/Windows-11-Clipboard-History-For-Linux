@@ -529,23 +529,13 @@ impl ClipboardManager {
         let pos = self.history.iter().position(|i| i.id == id)?;
         self.history[pos].pinned = !self.history[pos].pinned;
 
-        let now_pinned = self.history[pos].pinned;
-
         // Reposition the item so the invariant
         let item = self.history.remove(pos);
-        let insert_pos = if now_pinned {
-            // Newly pinned place at the end of the pinned section
-            self.history
-                .iter()
-                .position(|i| !i.pinned)
-                .unwrap_or(self.history.len())
-        } else {
-            // Newly unpinned place at the start of the unpinned section
-            self.history
-                .iter()
-                .position(|i| !i.pinned)
-                .unwrap_or(self.history.len())
-        };
+        let insert_pos = self
+            .history
+            .iter()
+            .position(|i| !i.pinned)
+            .unwrap_or(self.history.len());
         self.history.insert(insert_pos, item);
 
         let item_clone = self.history[insert_pos].clone();
