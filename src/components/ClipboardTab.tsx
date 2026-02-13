@@ -114,7 +114,7 @@ export function ClipboardTab(props: {
       const activeElement = document.activeElement
 
       // Global shortcuts that should work regardless of focus
-      if (e.ctrlKey && e.key === 'f') {
+      if (e.ctrlKey && e.key.toLowerCase() === 'f') {
         e.preventDefault()
         setIsSearchVisible((prev) => {
           const newValue = !prev
@@ -128,7 +128,7 @@ export function ClipboardTab(props: {
       }
 
       // Close search with Escape - should work even when search input is focused
-      if (e.key === 'Escape' && isSearchVisible) {
+      if (e.key.toLowerCase() === 'escape' && isSearchVisible) {
         e.preventDefault()
         setIsSearchVisible(false)
         setSearchQuery('')
