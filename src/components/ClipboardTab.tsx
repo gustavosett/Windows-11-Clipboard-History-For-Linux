@@ -58,9 +58,66 @@ export function ClipboardTab(props: {
   // Refs
   const historyItemRefs = useRef<(HTMLDivElement | null)[]>([])
 
-  // Toggle search visibility with Ctrl+F
+  // Check if a key is a printable character that should trigger search
+  const isPrintableKey = useCallback((e: KeyboardEvent): boolean => {
+    // Skip if any modifier key is pressed (except Shift for uppercase/symbols)
+    if (e.ctrlKey || e.altKey || e.metaKey) return false
+
+    // Skip special keys that are handled elsewhere
+    const specialKeys = [
+      'Tab',
+      'Enter',
+      'Escape',
+      'ArrowUp',
+      'ArrowDown',
+      'ArrowLeft',
+      'ArrowRight',
+      'Home',
+      'End',
+      'PageUp',
+      'PageDown',
+      'Delete',
+      'Backspace',
+      'F1',
+      'F2',
+      'F3',
+      'F4',
+      'F5',
+      'F6',
+      'F7',
+      'F8',
+      'F9',
+      'F10',
+      'F11',
+      'F12',
+      'CapsLock',
+      'NumLock',
+      'ScrollLock',
+      'Pause',
+      'Insert',
+      'PrintScreen',
+      'ContextMenu',
+      'Shift',
+      'Control',
+      'Alt',
+      'Meta',
+    ]
+    if (specialKeys.includes(e.key)) return false
+
+    // Accept single printable characters (letters, numbers, symbols)
+    return e.key.length === 1
+  }, [])
+
+  // Toggle search visibility with Ctrl+F or start typing to filter
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      // Skip if focus is already on an input element
+      const activeElement = document.activeElement
+      if (activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA') return
+
+      // Skip if focus is on a tab button (let tab navigation handle it)
+      if (activeElement?.getAttribute('role') === 'tab') return
+
       if (e.ctrlKey && e.key === 'f') {
         e.preventDefault()
         setIsSearchVisible((prev) => {
@@ -71,15 +128,31 @@ export function ClipboardTab(props: {
           }
           return newValue
         })
+        return
       }
+
       // Close search with Escape
       if (e.key === 'Escape' && isSearchVisible) {
         e.preventDefault()
         setIsSearchVisible(false)
         setSearchQuery('')
+        return
+      }
+
+      // Instant filtering: start typing to activate search
+      if (isPrintableKey(e)) {
+        e.preventDefault()
+        // Show search bar and append the typed character
+        if (!isSearchVisible) {
+          setIsSearchVisible(true)
+          setSearchQuery(e.key)
+        } else {
+          setSearchQuery((prev) => prev + e.key)
+        }
+        // Focus will be set by the useEffect that watches isSearchVisible
       }
     },
-    [isSearchVisible]
+    [isSearchVisible, isPrintableKey]
   )
 
   // Listen for Ctrl+F
