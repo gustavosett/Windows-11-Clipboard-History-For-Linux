@@ -168,11 +168,7 @@ function ClipboardApp() {
     } else {
       applyBackgroundOpacity(settings)
     }
-  }, [
-    renderingEnv.transparency_disabled,
-    settings.dark_background_opacity,
-    settings.light_background_opacity,
-  ])
+  }, [renderingEnv.transparency_disabled, settings])
 
   // Apply theme class when isDark changes
   useEffect(() => {
