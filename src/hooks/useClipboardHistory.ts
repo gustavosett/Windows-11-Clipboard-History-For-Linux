@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, UnlistenFn } from '@tauri-apps/api/event'
 import type { ClipboardItem } from '../types/clipboard'
+import { forceRepaint } from '../utils/repaint'
 
 /**
  * Hook for managing clipboard history
@@ -31,9 +32,7 @@ export function useClipboardHistory() {
       await invoke('clear_history')
       setHistory((prev) => prev.filter((item) => item.pinned))
       // Force repaint to prevent ghosting on NVIDIA
-      invoke('force_repaint').catch((e) => {
-        console.error('Failed to force repaint:', e)
-      })
+      forceRepaint()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clear history')
     }

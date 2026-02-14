@@ -289,16 +289,42 @@ async fn force_repaint(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
         if let Ok(size) = window.outer_size() {
             // Resize +1 (vertical resize is less noticeable on some WMs)
-            let _ = window.set_size(tauri::PhysicalSize::new(size.width, size.height + 1));
-            
+            let new_size = tauri::PhysicalSize::new(size.width, size.height + 1);
+            let first_resize = window.set_size(new_size);
+            if let Err(ref e) = first_resize {
+                eprintln!(
+                    "[force_repaint] initial resize to {:?} failed: {:?}",
+                    new_size, e
+                );
+            }
+
             // Tiny sleep to ensure the WM processes the resize event
             tokio::time::sleep(Duration::from_millis(10)).await;
-            
+
             // Resize back
-            let _ = window.set_size(size);
+            let second_resize = window.set_size(size);
+            if let Err(ref e) = second_resize {
+                eprintln!("[force_repaint] resize back to {:?} failed: {:?}", size, e);
+            }
+
+            // If both resize attempts failed, surface an error
+            if first_resize.is_err() && second_resize.is_err() {
+                return Err("force_repaint: both resize attempts failed".to_string());
+            }
+        } else {
+            eprintln!("[force_repaint] failed to read outer_size for main window");
         }
+    } else {
+        eprintln!("[force_repaint] main webview window not found");
     }
     Ok(())
+}
+
+/// Returns whether the current system has an NVIDIA GPU.
+/// Used by the frontend to skip unnecessary IPC calls on non-NVIDIA systems.
+#[tauri::command]
+fn is_nvidia() -> bool {
+    IS_NVIDIA.load(Ordering::Relaxed)
 }
 
 // --- Helper for Paste Logic ---
@@ -697,10 +723,27 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     // Check for NVIDIA GPU once at startup
-    // We check for the kernel module presence
-    let is_nvidia_check = std::path::Path::new("/sys/module/nvidia").exists();
+    // We check for common NVIDIA kernel module paths (nvidia, nvidia_drm, nvidia_modeset)
+    let is_nvidia_check = [
+        "/sys/module/nvidia",
+        "/sys/module/nvidia_drm",
+        "/sys/module/nvidia_modeset",
+    ]
+    .iter()
+    .any(|path| std::path::Path::new(path).exists())
+        || {
+            // Fallback: check lspci output for NVIDIA
+            std::process::Command::new("lspci")
+                .output()
+                .map(|output| {
+                    String::from_utf8_lossy(&output.stdout)
+                        .to_lowercase()
+                        .contains("nvidia")
+                })
+                .unwrap_or(false)
+        };
     IS_NVIDIA.store(is_nvidia_check, Ordering::Relaxed);
-    
+
     let args: Vec<String> = std::env::args().collect();
 
     // Handle --version / -v
@@ -1015,6 +1058,7 @@ fn main() {
             finish_paste,
             set_mouse_state,
             force_repaint,
+            is_nvidia,
             get_user_settings,
             set_user_settings,
             is_settings_window_visible,

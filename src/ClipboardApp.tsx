@@ -4,6 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
+import { forceRepaint } from './utils/repaint'
 import { useClipboardHistory } from './hooks/useClipboardHistory'
 import { TabBar, TabBarRef } from './components/TabBar'
 import { DragHandle } from './components/DragHandle'
@@ -203,9 +204,7 @@ function ClipboardApp() {
     setActiveTab(tab)
 
     // Force a repaint via Rust command (NVIDIA ghosting fix)
-    invoke('force_repaint').catch((e) => {
-      console.error('Failed to force repaint:', e)
-    })
+    forceRepaint()
   }, [])
 
   const handleMouseEnter = () => {
