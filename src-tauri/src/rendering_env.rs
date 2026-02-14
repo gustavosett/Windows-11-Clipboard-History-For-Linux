@@ -56,9 +56,11 @@ fn detect_nvidia() -> bool {
     // 2. Check loaded kernel modules (fast, no subprocess)
     if let Ok(modules) = std::fs::read_to_string("/proc/modules") {
         // Each line starts with the module name followed by a space.
+        // The NVIDIA driver suite loads multiple modules: nvidia, nvidia_drm,
+        // nvidia_modeset, nvidia_uvm — match any of them.
         for line in modules.lines() {
             if let Some(name) = line.split_whitespace().next() {
-                if name.eq_ignore_ascii_case("nvidia") {
+                if name.to_ascii_lowercase().starts_with("nvidia") {
                     return true;
                 }
             }
