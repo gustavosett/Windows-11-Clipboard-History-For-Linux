@@ -90,6 +90,53 @@ sanitize_xdg_data_dirs() {
 sanitize_xdg_data_dirs
 
 # ---------------------------------------------------------------------------
+# NVIDIA GPU detection
+# ---------------------------------------------------------------------------
+# NVIDIA GPUs with proprietary drivers have known issues with WebKit's
+# DMA-BUF renderer causing opacity/transparency rendering artifacts.
+# Detect via lspci or the nvidia kernel module presence.
+detect_nvidia() {
+    # Check if user has already forced the flag
+    if [[ -n "${IS_NVIDIA:-}" ]]; then
+        return 0
+    fi
+
+    # Method 1: Check for loaded nvidia kernel module
+    if lsmod 2>/dev/null | grep -qi '^nvidia'; then
+        export IS_NVIDIA=1
+        return 0
+    fi
+
+    # Method 2: Check lspci for NVIDIA VGA controller
+    if command -v lspci &>/dev/null && lspci 2>/dev/null | grep -qi 'vga.*nvidia'; then
+        export IS_NVIDIA=1
+        return 0
+    fi
+
+    return 1
+}
+detect_nvidia
+
+# ---------------------------------------------------------------------------
+# AppImage detection
+# ---------------------------------------------------------------------------
+# AppImage bundles may ship incompatible Mesa/GL libraries that conflict
+# with the host GPU driver, causing similar opacity rendering issues.
+if [[ -n "${APPIMAGE:-}" ]]; then
+    export IS_APPIMAGE=1
+fi
+
+# ---------------------------------------------------------------------------
+# WebKit DMA-BUF workaround for NVIDIA / AppImage
+# ---------------------------------------------------------------------------
+# When running on NVIDIA or inside an AppImage, disable the DMA-BUF
+# renderer in WebKitGTK to prevent opacity/transparency glitches.
+if [[ "${IS_NVIDIA:-}" == "1" || "${IS_APPIMAGE:-}" == "1" ]]; then
+    echo "Info: Disabling WebKit DMA-BUF renderer due to NVIDIA GPU or AppImage environment."
+    export WEBKIT_DISABLE_DMABUF_RENDERER=1
+fi
+
+# ---------------------------------------------------------------------------
 # Display & rendering defaults
 # ---------------------------------------------------------------------------
 export GDK_SCALE="${GDK_SCALE:-1}"

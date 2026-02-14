@@ -9,6 +9,7 @@ import type { UserSettings, CustomKaomoji, BooleanSettingKey } from './types/cli
 import { FeaturesSection } from './components/FeaturesSection'
 import { Switch } from './components/Switch'
 import { useSystemThemePreference } from './utils/systemTheme'
+import { useRenderingEnv } from './hooks/useRenderingEnv'
 
 const MIN_HISTORY_SIZE = 1
 const MAX_HISTORY_SIZE = 100_000
@@ -124,6 +125,9 @@ function SettingsApp() {
 
   // Custom Kaomoji State
   const [newKaomoji, setNewKaomoji] = useState('')
+
+  // Rendering environment (NVIDIA / AppImage detection)
+  const renderingEnv = useRenderingEnv()
 
   // Apply theme to settings window itself
   const isDark = useThemeMode(settings.theme_mode)
@@ -543,7 +547,8 @@ function SettingsApp() {
         <section
           className={clsx(
             'rounded-xl border shadow-sm overflow-hidden',
-            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
+            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60',
+            renderingEnv.transparency_disabled && 'opacity-60'
           )}
         >
           <div className="p-6 border-b border-inherit">
@@ -552,6 +557,43 @@ function SettingsApp() {
               Control the backdrop opacity intensity
             </p>
           </div>
+
+          {renderingEnv.transparency_disabled && (
+            <div
+              className={clsx(
+                'mx-6 mt-6 p-3 rounded-lg flex items-start gap-3 text-sm',
+                isDark ? 'bg-yellow-500/10 text-yellow-300' : 'bg-yellow-50 text-yellow-800'
+              )}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="flex-shrink-0 mt-0.5"
+              >
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+                <path d="M12 9v4" />
+                <path d="M12 17h.01" />
+              </svg>
+              <div>
+                <p className="font-medium text-xs">{renderingEnv.reason}</p>
+                <p
+                  className={clsx(
+                    'text-[11px] mt-1',
+                    isDark ? 'text-yellow-400/70' : 'text-yellow-700'
+                  )}
+                >
+                  Transparency and rounded window corners have been automatically disabled to
+                  prevent rendering artefacts.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="p-6 space-y-8">
             {/* Dark Mode Slider */}
@@ -566,7 +608,9 @@ function SettingsApp() {
                     isDark ? 'bg-black/20' : 'bg-gray-100'
                   )}
                 >
-                  {Math.round(settings.dark_background_opacity * 100)}%
+                  {renderingEnv.transparency_disabled
+                    ? '100%'
+                    : `${Math.round(settings.dark_background_opacity * 100)}%`}
                 </div>
               </div>
               <input
@@ -575,11 +619,15 @@ function SettingsApp() {
                 min="0"
                 max="1"
                 step="0.01"
-                value={settings.dark_background_opacity}
+                value={renderingEnv.transparency_disabled ? 1 : settings.dark_background_opacity}
                 onChange={(e) => handleDarkOpacityChange(Number.parseFloat(e.target.value))}
                 onMouseUp={commitOpacityChange}
                 onTouchEnd={commitOpacityChange}
-                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-win11-bg-accent"
+                disabled={renderingEnv.transparency_disabled}
+                className={clsx(
+                  'w-full h-1.5 bg-gray-200 rounded-lg appearance-none dark:bg-gray-700 accent-win11-bg-accent',
+                  renderingEnv.transparency_disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+                )}
               />
             </div>
 
@@ -595,7 +643,9 @@ function SettingsApp() {
                     isDark ? 'bg-black/20' : 'bg-gray-100'
                   )}
                 >
-                  {Math.round(settings.light_background_opacity * 100)}%
+                  {renderingEnv.transparency_disabled
+                    ? '100%'
+                    : `${Math.round(settings.light_background_opacity * 100)}%`}
                 </div>
               </div>
               <input
@@ -604,11 +654,15 @@ function SettingsApp() {
                 min="0"
                 max="1"
                 step="0.01"
-                value={settings.light_background_opacity}
+                value={renderingEnv.transparency_disabled ? 1 : settings.light_background_opacity}
                 onChange={(e) => handleLightOpacityChange(Number.parseFloat(e.target.value))}
                 onMouseUp={commitOpacityChange}
                 onTouchEnd={commitOpacityChange}
-                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-win11-bg-accent"
+                disabled={renderingEnv.transparency_disabled}
+                className={clsx(
+                  'w-full h-1.5 bg-gray-200 rounded-lg appearance-none dark:bg-gray-700 accent-win11-bg-accent',
+                  renderingEnv.transparency_disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+                )}
               />
             </div>
           </div>

@@ -19,6 +19,7 @@ use win11_clipboard_history_lib::focus_manager::x11_robust_activate;
 use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
 use win11_clipboard_history_lib::input_simulator::simulate_paste_keystroke;
 use win11_clipboard_history_lib::permission_checker;
+use win11_clipboard_history_lib::rendering_env;
 use win11_clipboard_history_lib::session::is_wayland;
 use win11_clipboard_history_lib::shortcut_setup;
 use win11_clipboard_history_lib::theme_manager::{self, ThemeInfo};
@@ -697,6 +698,10 @@ fn main() {
         return;
     }
 
+    // MUST run before Tauri / WebKit init – detects NVIDIA & AppImage and
+    // sets WEBKIT_DISABLE_DMABUF_RENDERER=1 when needed.
+    rendering_env::init();
+
     // Check if --background flag is present (start minimized to tray)
     let start_in_background = args.iter().any(|arg| arg == "--background");
     if start_in_background {
@@ -1002,6 +1007,7 @@ fn main() {
             autostart_manager::autostart_disable,
             autostart_manager::autostart_is_enabled,
             autostart_manager::autostart_migrate,
+            rendering_env::get_rendering_environment,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

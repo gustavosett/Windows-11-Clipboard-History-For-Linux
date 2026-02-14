@@ -81,3 +81,15 @@ export interface UserSettings {
 export type BooleanSettingKey = {
   [K in keyof UserSettings]: UserSettings[K] extends boolean ? K : never
 }[keyof UserSettings]
+
+/** Rendering environment flags from the backend (NVIDIA / AppImage detection) */
+export interface RenderingEnv {
+  /** true when an NVIDIA GPU is detected */
+  is_nvidia: boolean
+  /** true when running from an AppImage */
+  is_appimage: boolean
+  /** true when transparency & rounded corners must be disabled */
+  transparency_disabled: boolean
+  /** Human-readable reason shown in Settings UI */
+  reason: string
+}

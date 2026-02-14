@@ -133,6 +133,23 @@ body {
       0 8px 32px rgba(0, 0, 0, 0.15),
       inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   }
+
+  /*
+   * Solid-background fallback for NVIDIA / AppImage environments where
+   * transparency causes rendering artefacts.  Applied automatically when
+   * the rendering-env hook forces opacity CSS vars to 1.0.
+   */
+  .rounded-none .glass-effect,
+  .glass-effect.no-transparency {
+    background: rgb(40, 40, 40);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  }
+
+  .rounded-none .glass-effect-light,
+  .glass-effect-light.no-transparency {
+    background: rgb(255, 255, 255);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  }
 }
 
 /* Animations */

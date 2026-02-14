@@ -13,6 +13,7 @@ import { KaomojiPicker } from './components/KaomojiPicker'
 import { SymbolPicker } from './components/SymbolPicker'
 import { calculateSecondaryOpacity, calculateTertiaryOpacity } from './utils/themeUtils'
 import { useSystemThemePreference } from './utils/systemTheme'
+import { useRenderingEnv } from './hooks/useRenderingEnv'
 import type { ActiveTab, UserSettings } from './types/clipboard'
 import { ClipboardTab } from './components/ClipboardTab'
 
@@ -93,8 +94,18 @@ function ClipboardApp() {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
 
+  const renderingEnv = useRenderingEnv()
   const isDark = useThemeMode(settings.theme_mode)
-  const opacity = isDark ? settings.dark_background_opacity : settings.light_background_opacity
+
+  // When transparency is disabled (NVIDIA / AppImage) force opacity to fully opaque
+  const effectiveDarkOpacity = renderingEnv.transparency_disabled
+    ? 1
+    : settings.dark_background_opacity
+  const effectiveLightOpacity = renderingEnv.transparency_disabled
+    ? 1
+    : settings.light_background_opacity
+
+  const opacity = isDark ? effectiveDarkOpacity : effectiveLightOpacity
   const secondaryOpacity = calculateSecondaryOpacity(opacity)
   const tertiaryOpacity = calculateTertiaryOpacity(opacity)
 
@@ -143,6 +154,25 @@ function ClipboardApp() {
       unlistenSwitchTab.then((unlisten) => unlisten())
     }
   }, [])
+
+  // Re-apply CSS opacity variables whenever renderingEnv or settings change
+  useEffect(() => {
+    if (renderingEnv.transparency_disabled) {
+      // Force fully opaque CSS variables
+      const opaque: UserSettings = {
+        ...settings,
+        dark_background_opacity: 1,
+        light_background_opacity: 1,
+      }
+      applyBackgroundOpacity(opaque)
+    } else {
+      applyBackgroundOpacity(settings)
+    }
+  }, [
+    renderingEnv.transparency_disabled,
+    settings.dark_background_opacity,
+    settings.light_background_opacity,
+  ])
 
   // Apply theme class when isDark changes
   useEffect(() => {
@@ -261,7 +291,8 @@ function ClipboardApp() {
   return (
     <div
       className={clsx(
-        'h-screen w-screen overflow-hidden flex flex-col rounded-win11-lg select-none',
+        'h-screen w-screen overflow-hidden flex flex-col select-none',
+        renderingEnv.transparency_disabled ? 'rounded-none' : 'rounded-win11-lg',
         isDark ? 'glass-effect' : 'glass-effect-light',
         isDark ? 'bg-win11-acrylic-bg' : 'bg-win11Light-acrylic-bg',
         isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'

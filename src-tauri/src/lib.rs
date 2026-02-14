@@ -9,6 +9,7 @@ pub mod focus_manager;
 pub mod gif_manager;
 pub mod input_simulator;
 pub mod permission_checker;
+pub mod rendering_env;
 pub mod session;
 pub mod shortcut_conflict_detector;
 pub mod shortcut_setup;
@@ -28,6 +29,7 @@ pub use permission_checker::{
     check_permissions, fix_permissions_now, is_first_run, mark_first_run_complete, reset_first_run,
     PermissionStatus,
 };
+pub use rendering_env::{get_rendering_env, get_rendering_environment, RenderingEnv};
 pub use session::{get_session_type, is_wayland, is_x11, SessionType};
 pub use shortcut_conflict_detector::{
     auto_resolve_conflicts, detect_shortcut_conflicts, ConflictDetectionResult, ShortcutConflict,
