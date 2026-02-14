@@ -201,6 +201,8 @@ sudo setfacl -m u:$USER:rw /dev/uinput
 
 > **Note:** You may need to log out and back in for the permanent udev rules to take full effect.
 
+> **Note:** Window transparency is automatically disabled when running as an AppImage to prevent rendering artefacts. The app will use a solid opaque background instead. See [Troubleshooting → Transparency](#transparency--opacity-rendering-issues-nvidia-or-appimage) for details.
+
 </details>
 
 <details>
@@ -410,6 +412,27 @@ Config auto-reloads.
 3. **Wayland:** Ensure `wl-clipboard` is installed
 4. **X11:** Ensure `xclip` is installed
 5. The app simulates `Ctrl+V` — ensure the target app accepts this shortcut
+
+### Transparency / opacity rendering issues (NVIDIA or AppImage)
+
+Users running **NVIDIA proprietary drivers** or launching the app via **AppImage** may experience visual glitches with window transparency (black background, flickering, or garbled content). The app detects these environments automatically and:
+
+1. Sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` to work around WebKit DMA-BUF bugs.
+2. Forces window opacity to **100 %** (fully opaque) and removes rounded window corners.
+3. Disables the transparency sliders in **Settings → Window Transparency** with an explanatory message.
+
+If detection fails or you want to force this behaviour manually, set the environment variable before launching:
+
+```bash
+# Force NVIDIA workaround
+IS_NVIDIA=1 win11-clipboard-history
+
+# Force AppImage workaround
+IS_APPIMAGE=1 win11-clipboard-history
+
+# Or disable the DMA-BUF renderer directly
+WEBKIT_DISABLE_DMABUF_RENDERER=1 win11-clipboard-history
+```
 
 ### Window appears on the wrong monitor
 The app uses smart cursor tracking. If it appears incorrectly, try moving your mouse to the center of the desired screen and pressing the hotkey again.
