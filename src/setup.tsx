@@ -19,9 +19,8 @@ export function SetupApp() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-transparent">
-      {/* Pass a dummy onComplete that just closes the window, 
-            or modify SetupWizard to handle it internally if needed.
-            For now, we wrap it to ensure window closure. */}
+      {/* Pass handleComplete which invokes the backend finish_setup command 
+            to mark setup as done, close this window, and show the main app. */}
       <SetupWizard onComplete={handleComplete} />
     </div>
   )

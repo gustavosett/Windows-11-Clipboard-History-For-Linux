@@ -34,7 +34,7 @@ function ClipboardAppWithSetup() {
 
     // Check if this is first run
     invoke<boolean>('is_first_run')
-      .then(async (isFirst) => {
+      .then(async (isFirst: boolean) => {
         if (isFirst) {
           setWaitingForSetup(true)
           // Launch the setup window
@@ -44,10 +44,13 @@ function ClipboardAppWithSetup() {
             setupWin.show()
             setupWin.setFocus()
           })
-          setupWin.once('tauri://error', (e) => {
-            console.log('Setup window error (might already exist):', e)
-            setupWin.show()
-            setupWin.setFocus()
+          setupWin.once('tauri://error', (e: any) => {
+            console.error('Setup window error:', e)
+            // If it already exists, just show and focus
+            if (typeof e === 'string' && e.includes('already exists')) {
+              setupWin.show()
+              setupWin.setFocus()
+            }
           })
 
           // Fallback show
@@ -56,7 +59,7 @@ function ClipboardAppWithSetup() {
         }
         setLoading(false)
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error('Failed to check first run:', err)
         setLoading(false)
       })
