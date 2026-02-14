@@ -33,6 +33,9 @@ static STARTED_IN_BACKGROUND: AtomicBool = AtomicBool::new(false);
 /// After the first user toggle, this is set to true to allow normal show/hide behavior
 static INITIAL_SHOW_ALLOWED: AtomicBool = AtomicBool::new(false);
 
+/// Global flag to cache NVIDIA detection result
+static IS_NVIDIA: AtomicBool = AtomicBool::new(false);
+
 /// Application state shared across all handlers
 pub struct AppState {
     clipboard_manager: Arc<Mutex<ClipboardManager>>,
@@ -278,6 +281,11 @@ async fn copy_text_to_clipboard(_state: State<'_, AppState>, text: String) -> Re
 /// It works by briefly resizing the window by 1 pixel, forcing a new buffer allocation.
 #[tauri::command]
 async fn force_repaint(app: AppHandle) -> Result<(), String> {
+    // Optimization: Only apply this hack on NVIDIA GPUs (cached check)
+    if !IS_NVIDIA.load(Ordering::Relaxed) {
+        return Ok(());
+    }
+
     if let Some(window) = app.get_webview_window("main") {
         if let Ok(size) = window.outer_size() {
             // Resize +1 (vertical resize is less noticeable on some WMs)
@@ -688,6 +696,11 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
+    // Check for NVIDIA GPU once at startup
+    // We check for the kernel module presence
+    let is_nvidia_check = std::path::Path::new("/sys/module/nvidia").exists();
+    IS_NVIDIA.store(is_nvidia_check, Ordering::Relaxed);
+    
     let args: Vec<String> = std::env::args().collect();
 
     // Handle --version / -v
