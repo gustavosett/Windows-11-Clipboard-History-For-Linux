@@ -78,7 +78,7 @@ export function useSystemThemePreference(): boolean {
 
       if (!hasEventListener) {
         // Event listener not available, use polling fallback
-        checkInterval = setInterval(async () => {
+        checkInterval = window.setInterval(async () => {
           const portalPrefersDark = await getSystemThemeFromPortal()
           if (portalPrefersDark !== null) {
             setSystemPrefersDark(portalPrefersDark)

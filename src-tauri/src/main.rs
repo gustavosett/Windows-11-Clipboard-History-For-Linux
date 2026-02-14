@@ -797,6 +797,19 @@ fn main() {
             config_manager: config_manager.clone(),
             is_mouse_inside: is_mouse_inside.clone(),
         })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                if window.label() == "setup" {
+                    // Check if setup was effectively finished.
+                    // If the user clicked "Start Using", `finish_setup` would have been called.
+                    // `finish_setup` calls `mark_first_run_complete`.
+                    if win11_clipboard_history_lib::permission_checker::is_first_run() {
+                         println!("[Setup] Setup window closed without completion. Exiting app.");
+                         std::process::exit(0);
+                    }
+                }
+            }
+        })
         .setup(move |app| {
             let app_handle = app.handle().clone();
 

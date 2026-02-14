@@ -433,8 +433,6 @@ sanitize_xdg_data_dirs() {
 }
 sanitize_xdg_data_dirs
 
-export GDK_SCALE="${GDK_SCALE:-1}"
-export GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}"
 export NO_AT_BRIDGE=1
 
 exec "$HOME/.local/bin/win11-clipboard-history.AppImage" "$@"

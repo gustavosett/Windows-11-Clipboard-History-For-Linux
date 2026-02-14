@@ -139,8 +139,6 @@ fi
 # ---------------------------------------------------------------------------
 # Display & rendering defaults
 # ---------------------------------------------------------------------------
-export GDK_SCALE="${GDK_SCALE:-1}"
-export GDK_DPI_SCALE="${GDK_DPI_SCALE:-1}"
 
 export TAURI_TRAY="${TAURI_TRAY:-libayatana-appindicator3}"
 
