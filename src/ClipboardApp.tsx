@@ -197,9 +197,15 @@ function ClipboardApp() {
     }
   }, []) // Empty dependency array - listener is registered once
 
-  // Handle tab change
+  // Handle tab change with clearing cycle to prevent ghosting
   const handleTabChange = useCallback((tab: ActiveTab) => {
+    // Change tab immediately
     setActiveTab(tab)
+
+    // Force a repaint via Rust command (NVIDIA ghosting fix)
+    invoke('force_repaint').catch((e) => {
+      console.error('Failed to force repaint:', e)
+    })
   }, [])
 
   const handleMouseEnter = () => {

@@ -273,6 +273,26 @@ async fn copy_text_to_clipboard(_state: State<'_, AppState>, text: String) -> Re
     Ok(())
 }
 
+/// Hack to force the window manager/compositor to repaint the window.
+/// This fixes the "ghosting" issue on NVIDIA where the previous buffer is not cleared.
+/// It works by briefly resizing the window by 1 pixel, forcing a new buffer allocation.
+#[tauri::command]
+async fn force_repaint(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        if let Ok(size) = window.outer_size() {
+            // Resize +1 (vertical resize is less noticeable on some WMs)
+            let _ = window.set_size(tauri::PhysicalSize::new(size.width, size.height + 1));
+            
+            // Tiny sleep to ensure the WM processes the resize event
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            
+            // Resize back
+            let _ = window.set_size(size);
+        }
+    }
+    Ok(())
+}
+
 // --- Helper for Paste Logic ---
 
 struct PasteHelper;
@@ -981,6 +1001,7 @@ fn main() {
             paste_gif_from_url,
             finish_paste,
             set_mouse_state,
+            force_repaint,
             get_user_settings,
             set_user_settings,
             is_settings_window_visible,

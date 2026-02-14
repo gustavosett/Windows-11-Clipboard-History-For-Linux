@@ -30,6 +30,10 @@ export function useClipboardHistory() {
     try {
       await invoke('clear_history')
       setHistory((prev) => prev.filter((item) => item.pinned))
+      // Force repaint to prevent ghosting on NVIDIA
+      invoke('force_repaint').catch((e) => {
+        console.error('Failed to force repaint:', e)
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clear history')
     }
