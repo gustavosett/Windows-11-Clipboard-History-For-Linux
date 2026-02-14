@@ -44,7 +44,7 @@ function ClipboardAppWithSetup() {
             setupWin.show()
             setupWin.setFocus()
           })
-          setupWin.once('tauri://error', (e: any) => {
+          setupWin.once('tauri://error', (e: unknown) => {
             console.error('Setup window error:', e)
             // If it already exists, just show and focus
             if (typeof e === 'string' && e.includes('already exists')) {
@@ -59,7 +59,7 @@ function ClipboardAppWithSetup() {
         }
         setLoading(false)
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         console.error('Failed to check first run:', err)
         setLoading(false)
       })

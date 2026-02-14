@@ -805,7 +805,7 @@ fn main() {
                     // `finish_setup` calls `mark_first_run_complete`.
                     if win11_clipboard_history_lib::permission_checker::is_first_run() {
                          println!("[Setup] Setup window closed without completion. Exiting app.");
-                         let _ = window.app_handle().exit(0);
+                         window.app_handle().exit(0);
                     }
                 }
             }
