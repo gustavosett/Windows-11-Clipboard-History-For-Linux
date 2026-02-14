@@ -32,6 +32,21 @@
         "focus": true
       },
       {
+        "title": "Setup - Clipboard History",
+        "label": "setup",
+        "url": "setup.html",
+        "width": 550,
+        "height": 650,
+        "resizable": true,
+        "decorations": true,
+        "transparent": false,
+        "visible": false,
+        "skipTaskbar": false,
+        "alwaysOnTop": false,
+        "center": true,
+        "focus": true
+      },
+      {
         "title": "Settings - Clipboard History",
         "label": "settings",
         "width": 480,
@@ -52,7 +67,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "rpm", "appimage"],
+    "targets": [
+      "deb",
+      "rpm",
+      "appimage"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/64x64.png",
@@ -104,6 +123,8 @@
         "preRemoveScript": "bundle/linux/postrm.sh"
       }
     },
-    "resources": ["bundle/linux/99-win11-clipboard-input.rules"]
+    "resources": [
+      "bundle/linux/99-win11-clipboard-input.rules"
+    ]
   }
 }

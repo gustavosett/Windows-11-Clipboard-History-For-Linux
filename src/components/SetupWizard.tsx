@@ -253,17 +253,17 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     clsx(
       'p-4 rounded-win11 flex items-start gap-3 text-sm',
       type === 'success' &&
-        (isDark
-          ? 'bg-win11-success/15 text-win11-success border border-win11-success/20'
-          : 'bg-green-50 text-green-700 border border-green-200'),
+      (isDark
+        ? 'bg-win11-success/15 text-win11-success border border-win11-success/20'
+        : 'bg-green-50 text-green-700 border border-green-200'),
       type === 'warning' &&
-        (isDark
-          ? 'bg-win11-warning/15 text-win11-warning border border-win11-warning/20'
-          : 'bg-amber-50 text-amber-700 border border-amber-200'),
+      (isDark
+        ? 'bg-win11-warning/15 text-win11-warning border border-win11-warning/20'
+        : 'bg-amber-50 text-amber-700 border border-amber-200'),
       type === 'error' &&
-        (isDark
-          ? 'bg-win11-error/15 text-win11-error border border-win11-error/20'
-          : 'bg-red-50 text-red-700 border border-red-200')
+      (isDark
+        ? 'bg-win11-error/15 text-win11-error border border-win11-error/20'
+        : 'bg-red-50 text-red-700 border border-red-200')
     )
 
   const infoCardClass = clsx(
@@ -666,22 +666,20 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-
-      {/* Modal */}
+    <div className={clsx(
+      'h-full w-full flex flex-col items-center justify-center p-6',
+      isDark ? 'bg-win11-bg-primary text-win11-text-primary' : 'bg-win11Light-bg-primary text-win11Light-text-primary'
+    )}>
       <div
         className={clsx(
-          'relative w-full max-w-sm rounded-win11-lg p-6 shadow-win11-elevated animate-scale-in',
-          isDark ? 'glass-effect' : 'glass-effect-light',
-          isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
+          'w-full max-w-sm',
+          'animate-scale-in'
         )}
       >
         {steps[step]}
 
         {/* Progress dots */}
-        <div className="flex justify-center gap-2 mt-6">
+        <div className="flex justify-center gap-2 mt-8">
           {steps.map((_, i) => (
             <button
               key={`dot-${i}`}
