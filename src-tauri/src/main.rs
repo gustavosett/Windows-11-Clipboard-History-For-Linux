@@ -3,6 +3,7 @@
 
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::OnceLock;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{
@@ -34,7 +35,25 @@ static STARTED_IN_BACKGROUND: AtomicBool = AtomicBool::new(false);
 static INITIAL_SHOW_ALLOWED: AtomicBool = AtomicBool::new(false);
 
 /// Global flag to cache NVIDIA detection result
-static IS_NVIDIA: AtomicBool = AtomicBool::new(false);
+static IS_NVIDIA: OnceLock<bool> = OnceLock::new();
+
+fn detect_nvidia() -> bool {
+    ["/sys/module/nvidia", "/sys/module/nvidia_drm", "/sys/module/nvidia_modeset"]
+        .iter()
+        .any(|path| std::path::Path::new(path).exists())
+        || std::process::Command::new("lspci")
+            .output()
+            .map(|output| {
+                String::from_utf8_lossy(&output.stdout)
+                    .to_lowercase()
+                    .contains("nvidia")
+            })
+            .unwrap_or(false)
+}
+
+fn is_nvidia_backend() -> bool {
+    *IS_NVIDIA.get_or_init(detect_nvidia)
+}
 
 /// Application state shared across all handlers
 pub struct AppState {
@@ -276,55 +295,56 @@ async fn copy_text_to_clipboard(_state: State<'_, AppState>, text: String) -> Re
     Ok(())
 }
 
+async fn do_force_repaint(window: &WebviewWindow) -> Result<(), String> {
+    let size = match window.outer_size() {
+        Ok(size) => size,
+        Err(e) => {
+            eprintln!("[force_repaint] failed to read outer_size for main window: {:?}", e);
+            return Ok(());
+        }
+    };
+
+    let new_size = tauri::PhysicalSize::new(size.width, size.height + 1);
+    let first = window.set_size(new_size);
+    if let Err(ref e) = first {
+        eprintln!("[force_repaint] initial resize to {:?} failed: {:?}", new_size, e);
+    }
+
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    let second = window.set_size(size);
+    if let Err(ref e) = second {
+        eprintln!("[force_repaint] resize back to {:?} failed: {:?}", size, e);
+    }
+
+    if first.is_err() && second.is_err() {
+        return Err("force_repaint: both resize attempts failed".to_string());
+    }
+    Ok(())
+}
+
 /// Hack to force the window manager/compositor to repaint the window.
 /// This fixes the "ghosting" issue on NVIDIA where the previous buffer is not cleared.
 /// It works by briefly resizing the window by 1 pixel, forcing a new buffer allocation.
 #[tauri::command]
 async fn force_repaint(app: AppHandle) -> Result<(), String> {
-    // Optimization: Only apply this hack on NVIDIA GPUs (cached check)
-    if !IS_NVIDIA.load(Ordering::Relaxed) {
+    if !is_nvidia_backend() {
         return Ok(());
     }
 
-    if let Some(window) = app.get_webview_window("main") {
-        if let Ok(size) = window.outer_size() {
-            // Resize +1 (vertical resize is less noticeable on some WMs)
-            let new_size = tauri::PhysicalSize::new(size.width, size.height + 1);
-            let first_resize = window.set_size(new_size);
-            if let Err(ref e) = first_resize {
-                eprintln!(
-                    "[force_repaint] initial resize to {:?} failed: {:?}",
-                    new_size, e
-                );
-            }
-
-            // Tiny sleep to ensure the WM processes the resize event
-            tokio::time::sleep(Duration::from_millis(10)).await;
-
-            // Resize back
-            let second_resize = window.set_size(size);
-            if let Err(ref e) = second_resize {
-                eprintln!("[force_repaint] resize back to {:?} failed: {:?}", size, e);
-            }
-
-            // If both resize attempts failed, surface an error
-            if first_resize.is_err() && second_resize.is_err() {
-                return Err("force_repaint: both resize attempts failed".to_string());
-            }
-        } else {
-            eprintln!("[force_repaint] failed to read outer_size for main window");
-        }
-    } else {
+    let Some(window) = app.get_webview_window("main") else {
         eprintln!("[force_repaint] main webview window not found");
-    }
-    Ok(())
+        return Ok(());
+    };
+
+    do_force_repaint(&window).await
 }
 
 /// Returns whether the current system has an NVIDIA GPU.
 /// Used by the frontend to skip unnecessary IPC calls on non-NVIDIA systems.
 #[tauri::command]
 fn is_nvidia() -> bool {
-    IS_NVIDIA.load(Ordering::Relaxed)
+    is_nvidia_backend()
 }
 
 // --- Helper for Paste Logic ---
@@ -722,27 +742,8 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
-    // Check for NVIDIA GPU once at startup
-    // We check for common NVIDIA kernel module paths (nvidia, nvidia_drm, nvidia_modeset)
-    let is_nvidia_check = [
-        "/sys/module/nvidia",
-        "/sys/module/nvidia_drm",
-        "/sys/module/nvidia_modeset",
-    ]
-    .iter()
-    .any(|path| std::path::Path::new(path).exists())
-        || {
-            // Fallback: check lspci output for NVIDIA
-            std::process::Command::new("lspci")
-                .output()
-                .map(|output| {
-                    String::from_utf8_lossy(&output.stdout)
-                        .to_lowercase()
-                        .contains("nvidia")
-                })
-                .unwrap_or(false)
-        };
-    IS_NVIDIA.store(is_nvidia_check, Ordering::Relaxed);
+    // Optional: warm up detection at startup, but not required
+    let _ = is_nvidia_backend();
 
     let args: Vec<String> = std::env::args().collect();
 
