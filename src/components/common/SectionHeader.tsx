@@ -20,7 +20,7 @@ export function SectionHeader({ icon, label, rightContent, className }: SectionH
     <div
       className={clsx(
         'flex items-center gap-1.5 text-xs',
-        'dark:text-win11-text-secondary text-win11Light-text-secondary',
+        'dark:text-win11-text-tertiary text-win11Light-text-tertiary',
         className
       )}
     >
