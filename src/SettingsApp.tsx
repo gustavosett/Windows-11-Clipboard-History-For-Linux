@@ -326,7 +326,7 @@ function SettingsApp() {
           {(isSaving || saveMessage) && (
             <div
               className={clsx(
-                'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium duration-300',
+                'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium',
                 saveMessage?.includes('Error')
                   ? 'bg-red-500/10 text-red-500'
                   : isDark

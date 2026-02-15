@@ -4,6 +4,7 @@ import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
 import { useSymbolPicker } from '../hooks/useSymbolPicker'
 import { SearchBar } from './common/SearchBar'
+import { SectionHeader } from './common/SectionHeader'
 import type { SymbolItem } from '../services/symbolService'
 
 import { PickerLayout } from './common/PickerLayout'
@@ -229,11 +230,8 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
           {/* Recent symbols */}
           {!searchQuery && !selectedCategory && recentSymbols.length > 0 && (
             <div className="px-3 pb-2 flex-shrink-0">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Clock className="w-3 h-3 dark:text-win11-text-tertiary text-win11Light-text-secondary" />
-                <span className="text-xs dark:text-win11-text-tertiary text-win11Light-text-secondary">
-                  Recently used
-                </span>
+              <div className="mb-1.5">
+                <SectionHeader icon={<Clock size={12} />} label="Recently used" />
               </div>
               <div ref={recentGridRef} className="flex flex-wrap gap-1">
                 {recentSymbols.slice(0, 16).map((symbol, index) => (

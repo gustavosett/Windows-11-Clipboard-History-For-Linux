@@ -4,6 +4,7 @@ import { clsx } from 'clsx'
 import { Search, RefreshCw, TrendingUp } from 'lucide-react'
 import { useGifPicker } from '../hooks/useGifPicker'
 import { SearchBar } from './common/SearchBar'
+import { SectionHeader } from './common/SectionHeader'
 import type { Gif } from '../types/gif'
 import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
 
@@ -320,19 +321,20 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
         />
       }
       subHeader={
-        <div className="flex items-center gap-2 text-xs dark:text-win11-text-secondary text-win11Light-text-secondary">
+        <div className="px-3 pb-2 flex-shrink-0">
           {searchQuery ? (
-            <>
-              <Search size={12} />
-              <span>Results for "{searchQuery}"</span>
-            </>
+            <SectionHeader
+              icon={<Search size={12} />}
+              label={`Results for "${searchQuery}"`}
+              rightContent={isLoading && <RefreshCw size={12} className="animate-spin" />}
+            />
           ) : (
-            <>
-              <TrendingUp size={12} />
-              <span>Trending GIFs</span>
-            </>
+            <SectionHeader
+              icon={<TrendingUp size={12} />}
+              label="Trending GIFs"
+              rightContent={isLoading && <RefreshCw size={12} className="animate-spin" />}
+            />
           )}
-          {isLoading && <RefreshCw size={12} className="animate-spin ml-auto" />}
         </div>
       }
       footer={

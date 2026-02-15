@@ -4,6 +4,7 @@ import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
 import { useEmojiPicker } from '../hooks/useEmojiPicker'
 import { SearchBar } from './common/SearchBar'
+import { SectionHeader } from './common/SectionHeader'
 import type { Emoji } from '../services/emojiService'
 
 import { PickerLayout } from './common/PickerLayout'
@@ -239,11 +240,8 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
           {/* Recent emojis (only show when not searching) */}
           {!searchQuery && recentEmojis.length > 0 && (
             <div className="px-3 pb-2 flex-shrink-0">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Clock className="w-3 h-3 dark:text-win11-text-tertiary text-win11Light-text-secondary" />
-                <span className="text-xs dark:text-win11-text-tertiary text-win11Light-text-secondary">
-                  Recently used
-                </span>
+              <div className="mb-1.5">
+                <SectionHeader icon={<Clock size={12} />} label="Recently used" />
               </div>
               <div
                 ref={recentGridRef}
