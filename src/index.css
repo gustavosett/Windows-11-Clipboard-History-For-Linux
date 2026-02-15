@@ -152,24 +152,6 @@ body {
   }
 }
 
-/* Animations */
-@layer utilities {
-  .animate-in {
-    animation: fadeSlideIn 0.2s ease-out forwards;
-  }
-
-  @keyframes fadeSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-}
-
 /* Focus styles for accessibility */
 @layer components {
   .focus-ring {

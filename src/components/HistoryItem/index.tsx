@@ -120,8 +120,6 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
         'group relative rounded-win11 cursor-pointer',
         effectiveCompact ? 'p-2' : 'p-3',
         'transition-all duration-150 ease-out',
-        // Animation delay based on index
-        'animate-in',
         // Blue ring has priority
         pinnedAndFocused,
         // Otherwise default focused ring

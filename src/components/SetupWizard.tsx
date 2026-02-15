@@ -275,7 +275,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
 
   const steps = [
     // Step 0: Welcome
-    <div key="welcome" className="text-center animate-fade-in">
+    <div key="welcome" className="text-center">
       <div className="mb-6">
         <div
           className={clsx(
@@ -315,7 +315,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     </div>,
 
     // Step 1: Permissions
-    <div key="permissions" className="animate-fade-in">
+    <div key="permissions">
       <div className="text-center mb-6">
         <div
           className={clsx(
@@ -379,7 +379,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     </div>,
 
     // Step 2: Shortcut Configuration
-    <div key="shortcut" className="animate-fade-in">
+    <div key="shortcut">
       <div className="text-center mb-6">
         <div
           className={clsx(
@@ -558,7 +558,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     </div>,
 
     // Step 3: Autostart
-    <div key="autostart" className="animate-fade-in">
+    <div key="autostart">
       <div className="text-center mb-6">
         <div
           className={clsx(
@@ -602,7 +602,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     </div>,
 
     // Step 4: Done
-    <div key="done" className="text-center animate-fade-in">
+    <div key="done" className="text-center">
       <div className="mb-6">
         <div
           className={clsx(
@@ -674,7 +674,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
           : 'bg-win11Light-bg-primary text-win11Light-text-primary'
       )}
     >
-      <div className={clsx('w-full max-w-sm', 'animate-scale-in')}>
+      <div className="w-full max-w-sm">
         {steps[step]}
 
         {/* Progress dots */}

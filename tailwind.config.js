@@ -61,25 +61,6 @@ export default {
         'win11-card': '0 2px 8px rgba(0, 0, 0, 0.15)',
         'win11-elevated': '0 16px 48px rgba(0, 0, 0, 0.35)',
       },
-      animation: {
-        'fade-in': 'fadeIn 0.15s ease-out',
-        'slide-up': 'slideUp 0.2s ease-out',
-        'scale-in': 'scaleIn 0.15s ease-out',
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideUp: {
-          '0%': { opacity: '0', transform: 'translateY(8px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        scaleIn: {
-          '0%': { opacity: '0', transform: 'scale(0.95)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
-        },
-      },
       fontFamily: {
         'segoe': ['"Segoe UI Variable"', '"Segoe UI"', 'system-ui', 'sans-serif'],
       },
