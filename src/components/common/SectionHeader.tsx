@@ -4,7 +4,7 @@ import { clsx } from 'clsx'
 export interface SectionHeaderProps {
   /** Icon to display (e.g., <TrendingUp size={12} /> or <Clock size={12} />) */
   icon?: ReactNode
-  /** Label content to display
+  /** Label content to display (supports text, styled elements, or localization components) */
   label: ReactNode
   /** Additional content to display on the right (e.g., loading spinner) */
   rightContent?: ReactNode
