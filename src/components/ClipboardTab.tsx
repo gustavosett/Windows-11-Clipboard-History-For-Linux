@@ -91,12 +91,6 @@ export function ClipboardTab(props: {
     })
   }, [history, searchQuery, isRegexMode])
 
-  // Ref for stable access to filtered history in event listener
-  const filteredHistoryRef = useRef(filteredHistory)
-  useEffect(() => {
-    filteredHistoryRef.current = filteredHistory
-  }, [filteredHistory])
-
   // Keyboard navigation
   useHistoryKeyboardNavigation({
     activeTab: 'clipboard', // Always 'clipboard' when this component is mounted
@@ -185,9 +179,16 @@ export function ClipboardTab(props: {
       }
 
       // Handle Enter on search bar to paste focused item
-      if (e.key === 'Enter' && isSearchVisible && activeElement?.tagName === 'INPUT') {
+      if (
+        e.key === 'Enter' &&
+        isSearchVisible &&
+        activeElement === searchInputRef.current &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey
+      ) {
         e.preventDefault()
-        const targetItem = filteredHistoryRef.current[focusedIndex]
+        const targetItem = filteredHistory[focusedIndex]
         if (targetItem) {
           onPaste(targetItem.id)
         }
@@ -195,11 +196,20 @@ export function ClipboardTab(props: {
       }
 
       // Handle numeric shortcuts (Option 2: numbers directly if search is empty)
-      if (!searchQuery && /^[1-9]$/.test(e.key)) {
+      if (
+        !searchQuery &&
+        /^[1-9]$/.test(e.key) &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        // Ignore if focus is on an input or textarea (should be handled by browser/native)
+        activeElement?.tagName !== 'INPUT' &&
+        activeElement?.tagName !== 'TEXTAREA'
+      ) {
         const index = parseInt(e.key) - 1
-        if (filteredHistoryRef.current[index]) {
+        if (filteredHistory[index]) {
           e.preventDefault()
-          onPaste(filteredHistoryRef.current[index].id)
+          onPaste(filteredHistory[index].id)
         }
         return
       }
@@ -223,7 +233,7 @@ export function ClipboardTab(props: {
         // Focus will be set by the useEffect that watches isSearchVisible
       }
     },
-    [isSearchVisible, isPrintableKey, onPaste, searchQuery, focusedIndex]
+    [isSearchVisible, isPrintableKey, onPaste, searchQuery, focusedIndex, filteredHistory]
   )
 
   // Listen for global key events
@@ -254,7 +264,7 @@ export function ClipboardTab(props: {
   useEffect(() => {
     const focusFirstItem = () => {
       setTimeout(() => {
-        if (filteredHistoryRef.current.length > 0) {
+        if (filteredHistory.length > 0) {
           setFocusedIndex(0)
           historyItemRefs.current[0]?.focus()
         }
@@ -264,7 +274,7 @@ export function ClipboardTab(props: {
     return () => {
       unlistenWindowShown.then((u) => u())
     }
-  }, [])
+  }, [filteredHistory]) // Re-run when history changes to reset focus
 
   if (isLoading) {
     return (

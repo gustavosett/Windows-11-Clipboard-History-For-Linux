@@ -29,6 +29,9 @@ export function useHistoryKeyboardNavigation(params: {
         activeElement?.tagName === 'INPUT'
       if (!isOnHistoryItem) return
 
+      // Don't intercept Home/End if focus is on an input element (let browser handle text cursor)
+      if (activeElement?.tagName === 'INPUT' && (e.key === 'Home' || e.key === 'End')) return
+
       if (e.key === 'ArrowDown') {
         e.preventDefault()
         const newIndex = Math.min(focusedIndex + 1, itemsLength - 1)
