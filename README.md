@@ -202,40 +202,36 @@ make dev
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
-
 <!-- prettier-ignore-start -->
-
 <!-- markdownlint-disable -->
-
 <table>
-<tbody>
-<tr>
-<td align="center" valign="top" width="14.28%"><a href="https://github.com/freshCoder21313"><img src="https://avatars.githubusercontent.com/u/151538542?v=4?s=100" width="100px;" alt="freshCoder21313"/><br /><sub><b>freshCoder21313</b></sub></a><br /><a href="#data-freshCoder21313" title="Data">🔣</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=freshCoder21313" title="Code">💻</a> <a href="#design-freshCoder21313" title="Design">🎨</a></td>
-<td align="center" valign="top" width="14.28%"><a href="https://github.com/Tallin-Boston-Technology"><img src="https://avatars.githubusercontent.com/u/247321893?v=4?s=100" width="100px;" alt="Tallin-Boston-Technology"/><br /><sub><b>Tallin-Boston-Technology</b></sub></a><br /><a href="#ideas-Tallin-Boston-Technology" title="Ideas, Planning, & Feedback">🤔</a></td>
-<td align="center" valign="top" width="14.28%"><a href="https://github.com/rorar"><img src="https://avatars.githubusercontent.com/u/44790144?v=4?s=100" width="100px;" alt="rorar"/><br /><sub><b>rorar</b></sub></a><br /><a href="#ideas-rorar" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Arorar" title="Bug reports">🐛</a></td>
-<td align="center" valign="top" width="14.28%"><a href="https://github.com/sosadsonar"><img src="https://avatars.githubusercontent.com/u/120033042?v=4?s=100" width="100px;" alt="sonarx"/><br /><sub><b>sonarx</b></sub></a><br /><a href="#ideas-sosadsonar" title="Ideas, Planning, & Feedback">🤔</a></td>
-<td align="center" valign="top" width="14.28%"><a href="https://oleksandrdev.com/"><img src="https://avatars.githubusercontent.com/u/47930925?v=4?s=100" width="100px;" alt="Oleksandr Romaniuk"/><br /><sub><b>Oleksandr Romaniuk</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Aolksndrdevhub" title="Bug reports">🐛</a></td>
-<td align="center" valign="top" width="14.28%"><a href="https://github.com/Predrag"><img src="https://avatars.githubusercontent.com/u/460694?v=4?s=100" width="100px;" alt="Predrag"/><br /><sub><b>Predrag</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=Predrag" title="Code">💻</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3APredrag" title="Bug reports">🐛</a></td>
-<td align="center" valign="top" width="14.28%"><a href="https://github.com/henmalib"><img src="https://avatars.githubusercontent.com/u/68553709?v=4?s=100" width="100px;" alt="Hen"/><br /><sub><b>Hen</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Ahenmalib" title="Bug reports">🐛</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=henmalib" title="Code">💻</a></td>
-</tr>
-<tr>
-<td align="center" valign="top" width="14.28%"><a href="https://github.com/e6ad2020"><img src="https://avatars.githubusercontent.com/u/119390190?v=4?s=100" width="100px;" alt="Eyad"/><br /><sub><b>Eyad</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Ae6ad2020" title="Bug reports">🐛</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=e6ad2020" title="Code">💻</a></td>
-<td align="center" valign="top" width="14.28%"><a href="https://alexandre-pommier.com"><img src="https://avatars.githubusercontent.com/u/69145792?v=4?s=100" width="100px;" alt="Kinou"/><br /><sub><b>Kinou</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Akinou-p" title="Bug reports">🐛</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=kinou-p" title="Code">💻</a></td>
-</tr>
-</tbody>
-<tfoot>
-<tr>
-<td align="center" size="13px" colspan="7">
-<img src="https://raw.githubusercontent.com/all-contributors/all-contributors-cli/1b8533af435da9854653492b1327a23a4dbd0a10/assets/logo-small.svg">
-<a href="https://all-contributors.js.org/docs/en/bot/usage">Add your contributions</a>
-</img>
-</td>
-</tr>
-</tfoot>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/freshCoder21313"><img src="https://avatars.githubusercontent.com/u/151538542?v=4?s=100" width="100px;" alt="freshCoder21313"/><br /><sub><b>freshCoder21313</b></sub></a><br /><a href="#data-freshCoder21313" title="Data">🔣</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=freshCoder21313" title="Code">💻</a> <a href="#design-freshCoder21313" title="Design">🎨</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Tallin-Boston-Technology"><img src="https://avatars.githubusercontent.com/u/247321893?v=4?s=100" width="100px;" alt="Tallin-Boston-Technology"/><br /><sub><b>Tallin-Boston-Technology</b></sub></a><br /><a href="#ideas-Tallin-Boston-Technology" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/rorar"><img src="https://avatars.githubusercontent.com/u/44790144?v=4?s=100" width="100px;" alt="rorar"/><br /><sub><b>rorar</b></sub></a><br /><a href="#ideas-rorar" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Arorar" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/sosadsonar"><img src="https://avatars.githubusercontent.com/u/120033042?v=4?s=100" width="100px;" alt="sonarx"/><br /><sub><b>sonarx</b></sub></a><br /><a href="#ideas-sosadsonar" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://oleksandrdev.com/"><img src="https://avatars.githubusercontent.com/u/47930925?v=4?s=100" width="100px;" alt="Oleksandr Romaniuk"/><br /><sub><b>Oleksandr Romaniuk</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Aolksndrdevhub" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Predrag"><img src="https://avatars.githubusercontent.com/u/460694?v=4?s=100" width="100px;" alt="Predrag"/><br /><sub><b>Predrag</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=Predrag" title="Code">💻</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3APredrag" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/henmalib"><img src="https://avatars.githubusercontent.com/u/68553709?v=4?s=100" width="100px;" alt="Hen"/><br /><sub><b>Hen</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Ahenmalib" title="Bug reports">🐛</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=henmalib" title="Code">💻</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/e6ad2020"><img src="https://avatars.githubusercontent.com/u/119390190?v=4?s=100" width="100px;" alt="Eyad"/><br /><sub><b>Eyad</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Ae6ad2020" title="Bug reports">🐛</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=e6ad2020" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://alexandre-pommier.com"><img src="https://avatars.githubusercontent.com/u/69145792?v=4?s=100" width="100px;" alt="Kinou"/><br /><sub><b>Kinou</b></sub></a><br /><a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/issues?q=author%3Akinou-p" title="Bug reports">🐛</a> <a href="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux/gustavosett/Windows-11-Clipboard-History-For-Linux/commits?author=kinou-p" title="Code">💻</a> <a href="#question-kinou-p" title="Answering Questions">💬</a> <a href="#design-kinou-p" title="Design">🎨</a></td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td align="center" size="13px" colspan="7">
+        <img src="https://raw.githubusercontent.com/all-contributors/all-contributors-cli/1b8533af435da9854653492b1327a23a4dbd0a10/assets/logo-small.svg">
+          <a href="https://all-contributors.js.org/docs/en/bot/usage">Add your contributions</a>
+        </img>
+      </td>
+    </tr>
+  </tfoot>
 </table>
 
 <!-- markdownlint-restore -->
-
 <!-- prettier-ignore-end -->
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
