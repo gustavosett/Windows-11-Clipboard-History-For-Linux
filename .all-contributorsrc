@@ -95,7 +95,9 @@
       "profile": "https://alexandre-pommier.com",
       "contributions": [
         "bug",
-        "code"
+        "code",
+        "question",
+        "design"
       ]
     }
   ],
