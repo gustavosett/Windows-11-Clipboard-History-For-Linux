@@ -21,13 +21,12 @@ export function useHistoryKeyboardNavigation(params: {
       // Check if a tab button is focused - if so, don't intercept arrows
       const activeElement = document.activeElement
       if (activeElement?.getAttribute('role') === 'tab') return
-      // Check if search bar is focused
-      if (activeElement?.tagName === 'INPUT') return
 
-      // Check if focus is on a history item or body
+      // Check if focus is on a history item, body, or search input
       const isOnHistoryItem =
         historyItemRefs.current.some((ref) => ref === activeElement) ||
-        activeElement === document.body
+        activeElement === document.body ||
+        activeElement?.tagName === 'INPUT'
       if (!isOnHistoryItem) return
 
       if (e.key === 'ArrowDown') {

@@ -58,6 +58,55 @@ export function ClipboardTab(props: {
   // Refs
   const historyItemRefs = useRef<(HTMLDivElement | null)[]>([])
 
+  // Filter history
+  const filteredHistory = useMemo(() => {
+    if (!searchQuery) return history
+
+    let regex: RegExp | null = null
+    if (isRegexMode) {
+      try {
+        regex = new RegExp(searchQuery, 'i')
+      } catch (err) {
+        console.error('Invalid regex pattern in clipboard search query:', searchQuery, err)
+        return []
+      }
+    }
+
+    return history.filter((item) => {
+      let searchableText = ''
+      if (item.content.type === 'Text') {
+        searchableText = item.content.data
+      } else if (item.content.type === 'RichText') {
+        searchableText = item.content.data.plain
+      } else {
+        return false
+      }
+
+      if (isRegexMode && regex) {
+        return regex.test(searchableText)
+      } else if (!isRegexMode) {
+        return searchableText.toLowerCase().includes(searchQuery.toLowerCase())
+      }
+      return false
+    })
+  }, [history, searchQuery, isRegexMode])
+
+  // Ref for stable access to filtered history in event listener
+  const filteredHistoryRef = useRef(filteredHistory)
+  useEffect(() => {
+    filteredHistoryRef.current = filteredHistory
+  }, [filteredHistory])
+
+  // Keyboard navigation
+  useHistoryKeyboardNavigation({
+    activeTab: 'clipboard', // Always 'clipboard' when this component is mounted
+    itemsLength: filteredHistory.length,
+    focusedIndex,
+    setFocusedIndex,
+    historyItemRefs,
+    tabBarRef,
+  })
+
   // Check if a key is a printable character that should trigger search
   const isPrintableKey = useCallback((e: KeyboardEvent): boolean => {
     // Skip if any modifier key is pressed (except Shift for uppercase/symbols)
@@ -135,6 +184,26 @@ export function ClipboardTab(props: {
         return
       }
 
+      // Handle Enter on search bar to paste focused item
+      if (e.key === 'Enter' && isSearchVisible && activeElement?.tagName === 'INPUT') {
+        e.preventDefault()
+        const targetItem = filteredHistoryRef.current[focusedIndex]
+        if (targetItem) {
+          onPaste(targetItem.id)
+        }
+        return
+      }
+
+      // Handle numeric shortcuts (Option 2: numbers directly if search is empty)
+      if (!searchQuery && /^[1-9]$/.test(e.key)) {
+        const index = parseInt(e.key) - 1
+        if (filteredHistoryRef.current[index]) {
+          e.preventDefault()
+          onPaste(filteredHistoryRef.current[index].id)
+        }
+        return
+      }
+
       // Skip instant filtering if focus is on an input element (user is already typing in search)
       if (activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA') return
 
@@ -154,10 +223,10 @@ export function ClipboardTab(props: {
         // Focus will be set by the useEffect that watches isSearchVisible
       }
     },
-    [isSearchVisible, isPrintableKey]
+    [isSearchVisible, isPrintableKey, onPaste, searchQuery, focusedIndex]
   )
 
-  // Listen for Ctrl+F
+  // Listen for global key events
   useEffect(() => {
     globalThis.addEventListener('keydown', handleKeyDown)
     return () => globalThis.removeEventListener('keydown', handleKeyDown)
@@ -181,55 +250,6 @@ export function ClipboardTab(props: {
       unlistenWindowShown.then((u) => u())
     }
   }, [])
-
-  // Filter history
-  const filteredHistory = useMemo(() => {
-    if (!searchQuery) return history
-
-    let regex: RegExp | null = null
-    if (isRegexMode) {
-      try {
-        regex = new RegExp(searchQuery, 'i')
-      } catch (err) {
-        console.error('Invalid regex pattern in clipboard search query:', searchQuery, err)
-        return []
-      }
-    }
-
-    return history.filter((item) => {
-      let searchableText = ''
-      if (item.content.type === 'Text') {
-        searchableText = item.content.data
-      } else if (item.content.type === 'RichText') {
-        searchableText = item.content.data.plain
-      } else {
-        return false
-      }
-
-      if (isRegexMode && regex) {
-        return regex.test(searchableText)
-      } else if (!isRegexMode) {
-        return searchableText.toLowerCase().includes(searchQuery.toLowerCase())
-      }
-      return false
-    })
-  }, [history, searchQuery, isRegexMode])
-
-  // Keyboard navigation
-  useHistoryKeyboardNavigation({
-    activeTab: 'clipboard', // Always 'clipboard' when this component is mounted
-    itemsLength: filteredHistory.length,
-    focusedIndex,
-    setFocusedIndex,
-    historyItemRefs,
-    tabBarRef,
-  })
-
-  // Ref for stable access to filtered history in event listener
-  const filteredHistoryRef = useRef(filteredHistory)
-  useEffect(() => {
-    filteredHistoryRef.current = filteredHistory
-  }, [filteredHistory])
 
   useEffect(() => {
     const focusFirstItem = () => {
