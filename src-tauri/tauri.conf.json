@@ -34,10 +34,11 @@
       {
         "title": "Setup - Clipboard History",
         "label": "setup",
-        "url": "setup.html",
         "width": 550,
         "height": 650,
         "resizable": true,
+        "minWidth": 400,
+        "minHeight": 500,
         "decorations": true,
         "transparent": false,
         "visible": false,

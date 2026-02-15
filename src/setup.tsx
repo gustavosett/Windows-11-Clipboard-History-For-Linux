@@ -1,8 +1,5 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
 import { SetupWizard } from './components/SetupWizard'
 import './index.css'
-import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 
 export function SetupApp() {
@@ -12,8 +9,11 @@ export function SetupApp() {
       await invoke('finish_setup')
     } catch (err) {
       console.error('Failed to finish setup:', err)
-      // Fallback: try to close window manually
-      await getCurrentWindow().close()
+      // Do not close the window on failure; keep it open so the user can retry.
+      // If we close it while first_run is still true, the backend will exit the app.
+      if (typeof window !== 'undefined') {
+        alert('Failed to finish setup. Please try again or check the logs for details.')
+      }
     }
   }
 
@@ -25,9 +25,3 @@ export function SetupApp() {
     </div>
   )
 }
-
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <SetupApp />
-  </React.StrictMode>
-)

@@ -253,17 +253,17 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     clsx(
       'p-4 rounded-win11 flex items-start gap-3 text-sm',
       type === 'success' &&
-      (isDark
-        ? 'bg-win11-success/15 text-win11-success border border-win11-success/20'
-        : 'bg-green-50 text-green-700 border border-green-200'),
+        (isDark
+          ? 'bg-win11-success/15 text-win11-success border border-win11-success/20'
+          : 'bg-green-50 text-green-700 border border-green-200'),
       type === 'warning' &&
-      (isDark
-        ? 'bg-win11-warning/15 text-win11-warning border border-win11-warning/20'
-        : 'bg-amber-50 text-amber-700 border border-amber-200'),
+        (isDark
+          ? 'bg-win11-warning/15 text-win11-warning border border-win11-warning/20'
+          : 'bg-amber-50 text-amber-700 border border-amber-200'),
       type === 'error' &&
-      (isDark
-        ? 'bg-win11-error/15 text-win11-error border border-win11-error/20'
-        : 'bg-red-50 text-red-700 border border-red-200')
+        (isDark
+          ? 'bg-win11-error/15 text-win11-error border border-win11-error/20'
+          : 'bg-red-50 text-red-700 border border-red-200')
     )
 
   const infoCardClass = clsx(
@@ -666,16 +666,15 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   }
 
   return (
-    <div className={clsx(
-      'h-full w-full flex flex-col items-center justify-center p-6',
-      isDark ? 'bg-win11-bg-primary text-win11-text-primary' : 'bg-win11Light-bg-primary text-win11Light-text-primary'
-    )}>
-      <div
-        className={clsx(
-          'w-full max-w-sm',
-          'animate-scale-in'
-        )}
-      >
+    <div
+      className={clsx(
+        'h-full w-full flex flex-col items-center justify-center p-6',
+        isDark
+          ? 'bg-win11-bg-primary text-win11-text-primary'
+          : 'bg-win11Light-bg-primary text-win11Light-text-primary'
+      )}
+    >
+      <div className={clsx('w-full max-w-sm', 'animate-scale-in')}>
         {steps[step]}
 
         {/* Progress dots */}
