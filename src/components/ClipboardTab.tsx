@@ -195,12 +195,11 @@ export function ClipboardTab(props: {
         return
       }
 
-      // Handle numeric shortcuts (Option 2: numbers directly if search is empty)
+      // Handle numeric shortcuts (Alt + [1-9])
       if (
-        !searchQuery &&
         /^[1-9]$/.test(e.key) &&
+        e.altKey &&
         !e.ctrlKey &&
-        !e.altKey &&
         !e.metaKey &&
         // Ignore if focus is on an input or textarea (should be handled by browser/native)
         activeElement?.tagName !== 'INPUT' &&
@@ -233,7 +232,7 @@ export function ClipboardTab(props: {
         // Focus will be set by the useEffect that watches isSearchVisible
       }
     },
-    [isSearchVisible, isPrintableKey, onPaste, searchQuery, focusedIndex, filteredHistory]
+    [isSearchVisible, isPrintableKey, onPaste, focusedIndex, filteredHistory]
   )
 
   // Listen for global key events
