@@ -101,6 +101,12 @@ export function ClipboardTab(props: {
     tabBarRef,
   })
 
+  // Ref for stable access to filtered history in event listener
+  const filteredHistoryRef = useRef(filteredHistory)
+  useEffect(() => {
+    filteredHistoryRef.current = filteredHistory
+  }, [filteredHistory])
+
   // Check if a key is a printable character that should trigger search
   const isPrintableKey = useCallback((e: KeyboardEvent): boolean => {
     // Skip if any modifier key is pressed (except Shift for uppercase/symbols)
@@ -196,15 +202,7 @@ export function ClipboardTab(props: {
       }
 
       // Handle numeric shortcuts (Alt + [1-9])
-      if (
-        /^[1-9]$/.test(e.key) &&
-        e.altKey &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        // Ignore if focus is on an input or textarea (should be handled by browser/native)
-        activeElement?.tagName !== 'INPUT' &&
-        activeElement?.tagName !== 'TEXTAREA'
-      ) {
+      if (/^[1-9]$/.test(e.key) && e.altKey && !e.ctrlKey && !e.metaKey) {
         const index = parseInt(e.key) - 1
         if (filteredHistory[index]) {
           e.preventDefault()
@@ -248,32 +246,26 @@ export function ClipboardTab(props: {
     }
   }, [isSearchVisible])
 
-  // Reset search when window is shown (app reopened)
+  // Reset search and focus when window is shown (app reopened)
   useEffect(() => {
-    const resetSearch = () => {
+    const onWindowShown = () => {
+      // Reset search
       setIsSearchVisible(false)
       setSearchQuery('')
-    }
-    const unlistenWindowShown = listen('window-shown', resetSearch)
-    return () => {
-      unlistenWindowShown.then((u) => u())
-    }
-  }, [])
 
-  useEffect(() => {
-    const focusFirstItem = () => {
+      // Focus first item
       setTimeout(() => {
-        if (filteredHistory.length > 0) {
+        if (filteredHistoryRef.current.length > 0) {
           setFocusedIndex(0)
           historyItemRefs.current[0]?.focus()
         }
       }, 100)
     }
-    const unlistenWindowShown = listen('window-shown', focusFirstItem)
+    const unlistenWindowShown = listen('window-shown', onWindowShown)
     return () => {
       unlistenWindowShown.then((u) => u())
     }
-  }, [filteredHistory]) // Re-run when history changes to reset focus
+  }, []) // Register once, use ref for latest history
 
   if (isLoading) {
     return (
