@@ -103,9 +103,22 @@ export function ClipboardTab(props: {
 
   // Ref for stable access to filtered history in event listener
   const filteredHistoryRef = useRef(filteredHistory)
+  filteredHistoryRef.current = filteredHistory
+
+  // Ref for focusedIndex
+  const focusedIndexRef = useRef(focusedIndex)
+  focusedIndexRef.current = focusedIndex
+
+  // Clamp focusedIndex when the filtered list shrinks
   useEffect(() => {
-    filteredHistoryRef.current = filteredHistory
-  }, [filteredHistory])
+    if (filteredHistory.length === 0) return
+    setFocusedIndex((i) => Math.min(i, filteredHistory.length - 1))
+  }, [filteredHistory.length])
+
+  // Keep historyItemRefs in sync with the current list length
+  useEffect(() => {
+    historyItemRefs.current = historyItemRefs.current.slice(0, filteredHistory.length)
+  }, [filteredHistory.length])
 
   // Check if a key is a printable character that should trigger search
   const isPrintableKey = useCallback((e: KeyboardEvent): boolean => {
@@ -193,8 +206,9 @@ export function ClipboardTab(props: {
         !e.altKey &&
         !e.metaKey
       ) {
+        if (e.repeat) return
         e.preventDefault()
-        const targetItem = filteredHistory[focusedIndex]
+        const targetItem = filteredHistoryRef.current[focusedIndexRef.current]
         if (targetItem) {
           onPaste(targetItem.id)
         }
@@ -203,10 +217,11 @@ export function ClipboardTab(props: {
 
       // Handle numeric shortcuts (Alt + [1-9])
       if (/^[1-9]$/.test(e.key) && e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (e.repeat) return
         const index = parseInt(e.key) - 1
-        if (filteredHistory[index]) {
+        if (filteredHistoryRef.current[index]) {
           e.preventDefault()
-          onPaste(filteredHistory[index].id)
+          onPaste(filteredHistoryRef.current[index].id)
         }
         return
       }
@@ -216,6 +231,13 @@ export function ClipboardTab(props: {
 
       // Skip if focus is on a tab button (let tab navigation handle it)
       if (activeElement?.getAttribute('role') === 'tab') return
+
+      // Backspace: remove last character from search when focus is on a history item
+      if (e.key === 'Backspace' && isSearchVisible) {
+        e.preventDefault()
+        setSearchQuery((prev) => prev.slice(0, -1))
+        return
+      }
 
       // Instant filtering: start typing to activate search
       if (isPrintableKey(e)) {
@@ -230,7 +252,7 @@ export function ClipboardTab(props: {
         // Focus will be set by the useEffect that watches isSearchVisible
       }
     },
-    [isSearchVisible, isPrintableKey, onPaste, focusedIndex, filteredHistory]
+    [isSearchVisible, isPrintableKey, onPaste] // Fix 4: focusedIndex read via ref
   )
 
   // Listen for global key events
@@ -261,11 +283,20 @@ export function ClipboardTab(props: {
         }
       }, 100)
     }
-    const unlistenWindowShown = listen('window-shown', onWindowShown)
+
+    // use a cancelled flag so a fast unmount before the Promise resolves
+    // never leaves a dangling subscription.
+    let unlisten: (() => void) | undefined
+    let cancelled = false
+    listen('window-shown', onWindowShown).then((u) => {
+      if (cancelled) u() // already unmounted — unlisten immediately
+      else unlisten = u
+    })
     return () => {
-      unlistenWindowShown.then((u) => u())
+      cancelled = true
+      unlisten?.()
     }
-  }, []) // Register once, use ref for latest history
+  }, []) // Register once, use refs for latest history
 
   if (isLoading) {
     return (
