@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useMemo, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { clsx } from 'clsx'
 
@@ -103,17 +103,19 @@ export function ClipboardTab(props: {
 
   // Ref for stable access to filtered history in event listener
   const filteredHistoryRef = useRef(filteredHistory)
-  filteredHistoryRef.current = filteredHistory
 
   // Ref for focusedIndex
   const focusedIndexRef = useRef(focusedIndex)
-  focusedIndexRef.current = focusedIndex
+
+  useLayoutEffect(() => {
+    filteredHistoryRef.current = filteredHistory
+    focusedIndexRef.current = focusedIndex
+  })
 
   // Clamp focusedIndex when the filtered list shrinks
-  useEffect(() => {
-    if (filteredHistory.length === 0) return
-    setFocusedIndex((i) => Math.min(i, filteredHistory.length - 1))
-  }, [filteredHistory.length])
+  if (filteredHistory.length > 0 && focusedIndex >= filteredHistory.length) {
+    setFocusedIndex(filteredHistory.length - 1)
+  }
 
   // Keep historyItemRefs in sync with the current list length
   useEffect(() => {
@@ -289,7 +291,8 @@ export function ClipboardTab(props: {
     let unlisten: (() => void) | undefined
     let cancelled = false
     listen('window-shown', onWindowShown).then((u) => {
-      if (cancelled) u() // already unmounted — unlisten immediately
+      if (cancelled)
+        u() // already unmounted — unlisten immediately
       else unlisten = u
     })
     return () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { MutableRefObject, RefObject } from 'react'
 import type { ActiveTab } from '../types/clipboard'
 import type { TabBarRef } from '../components/TabBar'
@@ -17,10 +17,12 @@ export function useHistoryKeyboardNavigation(params: {
   // Sync mutable refs so the stable listener can always read the latest values
   // without being re-registered on every navigation step or filter change.
   const focusedIndexRef = useRef(focusedIndex)
-  focusedIndexRef.current = focusedIndex
-
   const itemsLengthRef = useRef(itemsLength)
-  itemsLengthRef.current = itemsLength
+
+  useLayoutEffect(() => {
+    focusedIndexRef.current = focusedIndex
+    itemsLengthRef.current = itemsLength
+  })
 
   useEffect(() => {
     const handleArrowKeys = (e: KeyboardEvent) => {
@@ -81,5 +83,5 @@ export function useHistoryKeyboardNavigation(params: {
 
     globalThis.addEventListener('keydown', handleArrowKeys)
     return () => globalThis.removeEventListener('keydown', handleArrowKeys)
-  }, [activeTab, setFocusedIndex])
+  }, [activeTab, setFocusedIndex, historyItemRefs, tabBarRef])
 }
