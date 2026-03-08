@@ -114,6 +114,172 @@ const ResetIcon = () => (
   </svg>
 )
 
+// --- Keyboard Shortcuts Section ---
+
+interface KeyboardShortcutsSectionProps {
+  isDark: boolean
+}
+
+function KeyboardShortcutsSection({ isDark }: KeyboardShortcutsSectionProps) {
+  const [registering, setRegistering] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const handleRegister = async () => {
+    setRegistering(true)
+    setStatus('idle')
+    setErrorMessage(null)
+    try {
+      await invoke<string>('register_de_shortcut')
+      setStatus('success')
+    } catch (e) {
+      console.error('Failed to register shortcuts:', e)
+      setStatus('error')
+      setErrorMessage(String(e))
+    } finally {
+      setRegistering(false)
+    }
+  }
+
+  return (
+    <section
+      className={clsx(
+        'rounded-xl border shadow-sm overflow-hidden',
+        isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
+      )}
+    >
+      <div className="p-6 border-b border-inherit">
+        <div className="flex items-center gap-3 mb-1">
+          <div className={clsx('p-2 rounded-lg', isDark ? 'bg-white/5' : 'bg-gray-100')}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" />
+            </svg>
+          </div>
+          <h2 className="text-base font-semibold">Keyboard Shortcuts</h2>
+        </div>
+        <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+          Register the application shortcuts in your desktop environment
+        </p>
+      </div>
+
+      <div className="p-6 space-y-4">
+        {/* Shortcut list */}
+        <div
+          className={clsx(
+            'rounded-lg border divide-y text-sm font-mono',
+            isDark
+              ? 'border-white/10 divide-white/10 bg-black/20'
+              : 'border-gray-200 divide-gray-100 bg-gray-50'
+          )}
+        >
+          {[
+            { keys: 'Super + V', desc: 'Open Clipboard History' },
+            { keys: 'Ctrl + Alt + V', desc: 'Alternative shortcut' },
+            { keys: 'Super + .', desc: 'Open Emoji Picker' },
+          ].map(({ keys, desc }) => (
+            <div key={keys} className="flex items-center justify-between px-4 py-2.5">
+              <span
+                className={clsx(
+                  'px-2 py-0.5 rounded text-xs font-semibold',
+                  isDark ? 'bg-white/10 text-gray-200' : 'bg-gray-200 text-gray-700'
+                )}
+              >
+                {keys}
+              </span>
+              <span
+                className={clsx('text-xs font-sans', isDark ? 'text-gray-400' : 'text-gray-500')}
+              >
+                {desc}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <p className={clsx('text-xs leading-relaxed', isDark ? 'text-gray-500' : 'text-gray-400')}>
+          Shortcuts are only registered when you explicitly request it. If you removed a shortcut
+          from your system settings and it was re-added, use this button to re-register only the
+          ones you want.
+        </p>
+
+        {/* Status feedback */}
+        {status === 'success' && (
+          <div className="flex items-center gap-2 text-sm text-green-500">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            Shortcuts registered successfully!
+          </div>
+        )}
+        {status === 'error' && (
+          <div
+            className={clsx(
+              'text-xs rounded-lg p-3',
+              isDark ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-600'
+            )}
+          >
+            <p className="font-medium">Registration failed</p>
+            {errorMessage && <p className="mt-1 opacity-80">{errorMessage}</p>}
+          </div>
+        )}
+
+        {/* Action button */}
+        <button
+          id="register-shortkeys-btn"
+          onClick={handleRegister}
+          disabled={registering}
+          className={clsx(
+            'flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all',
+            'bg-win11-bg-accent text-white hover:opacity-90 active:scale-95',
+            'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100'
+          )}
+        >
+          {registering ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Registering...
+            </>
+          ) : (
+            <>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Register Shortkeys in System
+            </>
+          )}
+        </button>
+      </div>
+    </section>
+  )
+}
+
 /**
  * Settings App Component - Configuration UI for Win11 Clipboard History
  */
@@ -864,6 +1030,9 @@ function SettingsApp() {
 
         {/* Features Section */}
         <FeaturesSection settings={settings} isDark={isDark} onToggle={handleToggle} />
+
+        {/* Keyboard Shortcuts Section */}
+        <KeyboardShortcutsSection isDark={isDark} />
 
         {/* Reset Section */}
         <div className="flex justify-end pt-2">
