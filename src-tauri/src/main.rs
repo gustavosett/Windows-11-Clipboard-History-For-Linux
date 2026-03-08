@@ -952,14 +952,6 @@ fn main() {
                 });
             }
 
-            // Register global shortcut (Super+V) with the desktop environment
-            // This runs in a background thread to avoid blocking startup
-            std::thread::spawn(|| {
-                // Give the desktop environment a moment to settle
-                std::thread::sleep(std::time::Duration::from_secs(2));
-                win11_clipboard_history_lib::linux_shortcut_manager::register_global_shortcut();
-            });
-
             // If --settings flag was passed on first startup, open the settings window
             if open_settings_on_start {
                 SettingsController::show(&app_handle);
