@@ -402,11 +402,12 @@ impl ClipboardManager {
 
         // Skip self-pasted content
         if let Some(ref pasted) = self.last_pasted_text {
-            if pasted == text || text.contains(pasted) {
-                // Clear the lock so future copies allow this text
+            if pasted == text {
                 self.last_pasted_text = None;
                 return true;
             }
+            // Clipboard has changed to something else; the paste echo window has passed.
+            self.last_pasted_text = None;
         }
 
         false
