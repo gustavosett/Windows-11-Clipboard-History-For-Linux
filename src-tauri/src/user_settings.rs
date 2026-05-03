@@ -13,10 +13,8 @@ pub struct UserSettings {
     /// Theme mode: "system", "dark", or "light"
     pub theme_mode: String,
     /// Background opacity for dark mode (0.0 to 1.0)
-    /// Default matches the original glass-effect alpha of 0.05
     pub dark_background_opacity: f32,
     /// Background opacity for light mode (0.0 to 1.0)
-    /// Default matches the original glass-effect-light alpha of 0.85
     pub light_background_opacity: f32,
 
     // --- Feature Flags ---
@@ -233,8 +231,8 @@ mod tests {
     fn test_default_settings() {
         let settings = UserSettings::default();
         assert_eq!(settings.theme_mode, "system");
-        assert!((settings.dark_background_opacity - 0.05).abs() < f32::EPSILON);
-        assert!((settings.light_background_opacity - 0.85).abs() < f32::EPSILON);
+        assert!((settings.dark_background_opacity - 0.70).abs() < f32::EPSILON);
+        assert!((settings.light_background_opacity - 0.70).abs() < f32::EPSILON);
     }
 
     #[test]
