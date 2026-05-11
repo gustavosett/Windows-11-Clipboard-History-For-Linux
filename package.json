@@ -36,8 +36,8 @@
     "emojilib": "^4.0.3",
     "fuse.js": "^7.3.0",
     "lucide-react": "^1.14.0",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "react-window": "^2.2.7"
   },
   "devDependencies": {
