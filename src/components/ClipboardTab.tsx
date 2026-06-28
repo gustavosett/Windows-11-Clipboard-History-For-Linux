@@ -153,7 +153,7 @@ export function ClipboardTab(props: {
         }
       }
     },
-    [isSearchVisible, isPrintableKey]
+    [isSearchVisible, isPrintableKey, searchInputRef]
   )
 
   // Listen for Ctrl+F
@@ -229,7 +229,7 @@ export function ClipboardTab(props: {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setFocusedIndex(0)
-  }, [filteredHistory.length])
+  }, [filteredHistory])
 
   // Ref for stable access to filtered history in event listener
   const filteredHistoryRef = useRef(filteredHistory)

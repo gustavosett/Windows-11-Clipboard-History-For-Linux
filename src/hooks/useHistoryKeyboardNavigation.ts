@@ -34,7 +34,7 @@ export function useHistoryKeyboardNavigation(params: {
       const isOnHistoryItem =
         historyItemRefs.current.some((ref) => ref === activeElement) ||
         activeElement === document.body
-      const isOnSearchInput = activeElement?.tagName === 'INPUT'
+      const isOnSearchInput = activeElement === searchInputRef.current
       if (!isOnHistoryItem && !isOnSearchInput) return
 
       if (e.key === 'ArrowDown') {
@@ -50,7 +50,7 @@ export function useHistoryKeyboardNavigation(params: {
           searchInputRef.current?.focus()
           return
         }
-        const newIndex = focusedIndex - 1
+        const newIndex = Math.max(focusedIndex - 1, 0)
         setFocusedIndex(newIndex)
         historyItemRefs.current[newIndex]?.focus()
         historyItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest' })
