@@ -4,6 +4,7 @@ import { LayoutList } from 'lucide-react'
 import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
 
 interface HeaderProps {
+  title?: string
   onClearHistory: () => void
   itemCount: number
   isDark: boolean
@@ -17,6 +18,7 @@ interface HeaderProps {
  * Header component with title and action buttons
  */
 export function Header({
+  title = 'Clipboard',
   onClearHistory,
   itemCount,
   isDark,
@@ -38,7 +40,7 @@ export function Header({
             isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
           )}
         >
-          Clipboard
+          {title}
         </h1>
         {itemCount > 0 && (
           <span
