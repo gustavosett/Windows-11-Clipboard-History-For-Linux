@@ -10,7 +10,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;3 3m'
+YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
@@ -268,14 +268,14 @@ remove_acl_permissions() {
 # ---------------------------------------------------------------------------
 # Step 6: Remove the application's config file
 # ---------------------------------------------------------------------------
-remove_config_file() {
+remove_application_folder() {
     log "Removing configuration file (if present)..."
 
-    local config_file="$HOME/.config/win11-clipboard-history/setup.json"
+    local config_folder="$HOME/.config/win11-clipboard-history"
 
-    if [ -f "$config_file" ]; then
-        rm -f "$config_file"
-        success "Configuration file removed ($config_file)"
+    if [ -f "$config_folder" ]; then
+        rm -rf "$config_folder"
+        success "Configuration file removed ($config_folder)"
     else
         log "No configuration file found."
     fi
@@ -300,7 +300,7 @@ main() {
     remove_appimage_installation
     remove_udev_config
     remove_acl_permissions
-    remove_config_file
+    remove_application_folder
 
     echo ""
     success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
