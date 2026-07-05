@@ -167,6 +167,18 @@ IS_APPIMAGE=1 win11-clipboard-history
 
 </details>
 
+<details>
+<summary><b>Uninstalling the package</b></summary>
+
+We provide a one-line uninstall script that removes the app completely, including configs and udev rules.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gustavosett/Windows-11-Clipboard-History-For-Linux/master/scripts/uninstall.sh | bash
+
+```
+
+</details>
+
 ---
 
 ## 🛠️ For Developers
@@ -199,7 +211,7 @@ make dev
 
 ## ✨ Contributors
 
-Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/en/reference/emoji-key)):
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
