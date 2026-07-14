@@ -288,7 +288,10 @@ async fn finish_setup(app: AppHandle) -> Result<(), String> {
         let _ = setup_window.close();
     }
 
-    // 3. Show main window
+    // 3. Allow window to be shown (user explicitly chose "Start Using")
+    INITIAL_SHOW_ALLOWED.store(true, Ordering::Relaxed);
+
+    // 4. Show main window
     if let Some(main_window) = ensure_main_window(&app) {
         // Ensure it's ready to be shown
         WindowController::position_and_show(&main_window, &app);
@@ -369,7 +372,7 @@ impl WindowController {
     }
 
     pub fn hide(app: &AppHandle) {
-        if let Some(window) = ensure_main_window(app) {
+        if let Some(window) = app.get_webview_window("main") {
             // FLUSH CONFIG TO DISK ON HIDE
             if let Some(state) = app.try_state::<AppState>() {
                 if is_wayland() {
