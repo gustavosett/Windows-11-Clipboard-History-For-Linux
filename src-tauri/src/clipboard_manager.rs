@@ -11,6 +11,7 @@ use std::hash::{Hash, Hasher};
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::process::Child;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
@@ -203,6 +204,13 @@ impl Drop for ClipboardManager {
     }
 }
 
+/// Set to true when arboard fails on Wayland (e.g. cosmic-comp in
+/// unprivileged mode without wlr-data-control).  Once cached, subsequent
+/// calls skip arboard entirely to avoid spawning wl-paste 120×/minute
+/// when the clipboard is empty.
+#[cfg(target_os = "linux")]
+static ARBOARD_UNAVAILABLE: AtomicBool = AtomicBool::new(false);
+
 impl ClipboardManager {
     fn clamp_max_history_size(size: usize) -> usize {
         match size {
@@ -327,20 +335,29 @@ impl ClipboardManager {
     // --- Monitoring / Reading ---
 
     pub fn get_current_text(&mut self) -> Result<String, arboard::Error> {
+        #[cfg(target_os = "linux")]
+        {
+            if crate::session::is_wayland() && ARBOARD_UNAVAILABLE.load(Ordering::Relaxed) {
+                if let Some(text) = self.get_text_via_wl_paste() {
+                    return Ok(text);
+                }
+                return Err(arboard::Error::ContentNotAvailable);
+            }
+        }
+
         match Clipboard::new()?.get_text() {
             Ok(text) => Ok(text),
             Err(arboard_err) => {
                 #[cfg(target_os = "linux")]
                 {
                     if crate::session::is_wayland() {
+                        ARBOARD_UNAVAILABLE.store(true, Ordering::Relaxed);
                         eprintln!(
-                            "[ClipboardManager] arboard read failed: {}. Trying wl-paste fallback...",
-                            arboard_err
+                            "[ClipboardManager] arboard unavailable on this Wayland session, using wl-paste fallback"
                         );
                         if let Some(text) = self.get_text_via_wl_paste() {
                             return Ok(text);
                         }
-                        eprintln!("[ClipboardManager] wl-paste fallback also failed");
                     }
                 }
                 Err(arboard_err)
@@ -428,14 +445,16 @@ impl ClipboardManager {
             if !text.is_empty() {
                 return Some(text);
             }
-            eprintln!("[ClipboardManager] wl-paste returned empty output");
         } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            eprintln!(
-                "[ClipboardManager] wl-paste exited with {}: {}",
-                output.status,
-                stderr.trim()
-            );
+            let code = output.status.code().unwrap_or(-1);
+            if code != 1 {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                eprintln!(
+                    "[ClipboardManager] wl-paste exited with {}: {}",
+                    output.status,
+                    stderr.trim()
+                );
+            }
         }
 
         None
