@@ -404,9 +404,9 @@ impl ClipboardManager {
                     return Ok(text);
                 }
 
-                self.log_error_rate_limited(
-                    "wl-paste could not read clipboard (clipboard may be empty)",
-                );
+                // Empty clipboard is normal on Wayland — not an error.
+                // The previous rate-limited log here produced noise every 30 s
+                // in journal logs during normal idle operation.
             }
         }
 

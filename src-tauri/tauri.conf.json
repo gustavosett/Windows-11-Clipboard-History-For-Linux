@@ -30,7 +30,7 @@
         "skipTaskbar": true,
         "alwaysOnTop": false,
         "center": true,
-        "focus": true
+        "focus": false
       },
       {
         "title": "Settings - Clipboard History",
@@ -44,7 +44,7 @@
         "skipTaskbar": true,
         "alwaysOnTop": false,
         "center": true,
-        "focus": true
+        "focus": false
       }
     ],
     "security": {
