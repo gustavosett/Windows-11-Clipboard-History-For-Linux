@@ -8,8 +8,8 @@ use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, Monitor, PhysicalPosition, PhysicalSize, State, WebviewWindow,
-    WindowEvent,
+    AppHandle, Emitter, Manager, Monitor, PhysicalPosition, PhysicalSize, State, WebviewUrl,
+    WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
 use win11_clipboard_history_lib::autostart_manager;
 use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardManager};
@@ -33,6 +33,14 @@ static STARTED_IN_BACKGROUND: AtomicBool = AtomicBool::new(false);
 /// While false, background mode will still hide the window on focus
 /// After the first user toggle, this is set to true to allow normal show/hide behavior
 static INITIAL_SHOW_ALLOWED: AtomicBool = AtomicBool::new(false);
+
+/// Returns true while the app is in background-startup mode — started with
+/// --background and no user-initiated toggle has occurred yet.
+/// During this window both Focused(true) and Focused(false) handlers must
+/// avoid interacting with the window to prevent a Mutter blink loop.
+fn is_background_startup() -> bool {
+    STARTED_IN_BACKGROUND.load(Ordering::Relaxed) && !INITIAL_SHOW_ALLOWED.load(Ordering::Relaxed)
+}
 
 /// Application state shared across all handlers
 pub struct AppState {
@@ -281,7 +289,7 @@ async fn finish_setup(app: AppHandle) -> Result<(), String> {
     }
 
     // 3. Show main window
-    if let Some(main_window) = app.get_webview_window("main") {
+    if let Some(main_window) = ensure_main_window(&app) {
         // Ensure it's ready to be shown
         WindowController::position_and_show(&main_window, &app);
     }
@@ -322,12 +330,11 @@ impl WindowController {
     /// If tab is Some("emoji"), it will emit an event to switch to the emoji tab
     pub fn toggle_with_tab(app: &AppHandle, tab: Option<&str>) {
         // User-initiated toggle - mark that we're now allowing shows
-        // This stops the background enforcer from hiding the window
-        if STARTED_IN_BACKGROUND.load(Ordering::SeqCst) {
-            INITIAL_SHOW_ALLOWED.store(true, Ordering::SeqCst);
+        if STARTED_IN_BACKGROUND.load(Ordering::Relaxed) {
+            INITIAL_SHOW_ALLOWED.store(true, Ordering::Relaxed);
         }
 
-        if let Some(window) = app.get_webview_window("main") {
+        if let Some(window) = ensure_main_window(app) {
             if window.is_visible().unwrap_or(false) {
                 // If window is visible, emit tab switch event if tab is specified
                 // This allows Super+. to switch to emoji tab even when window is open
@@ -362,7 +369,7 @@ impl WindowController {
     }
 
     pub fn hide(app: &AppHandle) {
-        if let Some(window) = app.get_webview_window("main") {
+        if let Some(window) = ensure_main_window(app) {
             // FLUSH CONFIG TO DISK ON HIDE
             if let Some(state) = app.try_state::<AppState>() {
                 if is_wayland() {
@@ -554,6 +561,76 @@ impl WindowController {
     }
 }
 
+// --- Main Window Factory (lazy creation) ---
+
+/// Returns the main clipboard window, creating it on first use if it doesn't
+/// exist.  This avoids creating a GDK surface during background startup,
+/// which would be managed by Mutter and trigger
+/// `meta_window_set_stack_position_no_sync` assertions (taskbar blink).
+fn ensure_main_window(app: &AppHandle) -> Option<WebviewWindow> {
+    if let Some(window) = app.get_webview_window("main") {
+        return Some(window);
+    }
+
+    let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+        .title("Clipboard History")
+        .inner_size(360.0, 480.0)
+        .min_inner_size(300.0, 300.0)
+        .resizable(true)
+        .decorations(false)
+        .transparent(true)
+        .visible(false)
+        .skip_taskbar(true)
+        .build()
+        .ok()?;
+
+    let w_clone = window.clone();
+    let app_handle_for_event = app.clone();
+
+    window.on_window_event(move |event| match event {
+        WindowEvent::Focused(true) => {
+            if is_background_startup() {
+                println!("[WindowController] Background mode: intercepted focus, hiding window");
+                let _ = w_clone.hide();
+            }
+        }
+        WindowEvent::Focused(false) => {
+            // During background startup, ignore focus-loss events entirely.
+            // The window isn't meant to be visible, and hiding it here
+            // triggers Mutter's stack-position management on an unmapped
+            // window, causing meta_window_set_stack_position_no_sync
+            // assertion failures and a focus→hide→refocus blink loop.
+            if is_background_startup() {
+                return;
+            }
+
+            let state = w_clone.state::<AppState>();
+            if state.is_mouse_inside.load(Ordering::Relaxed) {
+                return;
+            }
+
+            if let Some(settings_window) = app_handle_for_event.get_webview_window("settings") {
+                if settings_window.is_visible().unwrap_or(false) {
+                    return;
+                }
+            }
+
+            if is_wayland() {
+                state.config_manager.lock().sync_to_disk();
+            }
+
+            let _ = w_clone.hide();
+        }
+        WindowEvent::Moved(pos) => {
+            let state = w_clone.state::<AppState>();
+            handle_window_moved_for_wayland(&w_clone, &state, pos);
+        }
+        _ => {}
+    });
+
+    Some(window)
+}
+
 // --- Settings Window Controller ---
 
 struct SettingsController;
@@ -725,7 +802,7 @@ fn main() {
     let start_in_background = args.iter().any(|arg| arg == "--background");
     if start_in_background {
         println!("[Startup] Starting in background mode (system tray only)");
-        STARTED_IN_BACKGROUND.store(true, Ordering::SeqCst);
+        STARTED_IN_BACKGROUND.store(true, Ordering::Relaxed);
     }
 
     // Check if --settings flag is present (for first instance startup)
@@ -799,8 +876,8 @@ fn main() {
                     // If the user clicked "Start Using", `finish_setup` would have been called.
                     // `finish_setup` calls `mark_first_run_complete`.
                     if win11_clipboard_history_lib::permission_checker::is_first_run() {
-                         println!("[Setup] Setup window closed without completion. Exiting app.");
-                         window.app_handle().exit(0);
+                        println!("[Setup] Setup window closed without completion. Exiting app.");
+                        window.app_handle().exit(0);
                     }
                 }
             }
@@ -808,13 +885,17 @@ fn main() {
         .setup(move |app| {
             let app_handle = app.handle().clone();
 
-            // FIRST THING: If started in background mode, immediately hide the main window
-            // This runs before anything else to prevent the window from appearing
-            if start_in_background_clone {
-                if let Some(main_window) = app.get_webview_window("main") {
-                    let _ = main_window.hide();
-                    println!("[Setup] Immediately hiding main window for background mode");
+            // If not started in background mode, create the main window now.
+            // In background mode, the window is created lazily on first user
+            // toggle to avoid Mutter managing a hidden GDK surface during
+            // startup (which triggers meta_window_set_stack_position_no_sync
+            // assertions and a taskbar-icon blink).
+            if !start_in_background_clone {
+                if ensure_main_window(&app_handle).is_none() {
+                    eprintln!("[Setup] FATAL: Failed to create main window");
                 }
+            } else {
+                println!("[Setup] Background mode: deferring main window creation");
             }
 
             // Auto-migrate old autostart entries to use the wrapper script
@@ -829,8 +910,6 @@ fn main() {
             let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &settings, &quit])?;
-
-
 
             // Get temp directory for tray icon (avoids permission issues with XDG_RUNTIME_DIR)
             let temp_dir = std::env::temp_dir().join("win11-clipboard-history");
@@ -870,11 +949,11 @@ fn main() {
 
             // Update icon asynchronously if dynamic is enabled (to fix the initial default icon)
             if settings.enable_dynamic_tray_icon {
-                 let app_handle_bg = app.handle().clone();
-                 let settings_bg = settings.clone();
-                 tauri::async_runtime::spawn(async move {
+                let app_handle_bg = app.handle().clone();
+                let settings_bg = settings.clone();
+                tauri::async_runtime::spawn(async move {
                     theme_manager::refresh_tray_icon(&app_handle_bg, &settings_bg).await;
-                 });
+                });
             }
 
             // Verify that settings window was created from config
@@ -884,54 +963,8 @@ fn main() {
                 println!("[Setup] Settings window created successfully from config");
             }
 
-            // Window Event Handlers (Focus & Move)
-            let main_window = app.get_webview_window("main").unwrap();
-            let w_clone = main_window.clone();
-            let app_handle_for_event = app_handle.clone();
-
-            main_window.on_window_event(move |event| match event {
-                // Block any window show attempts when started in background mode
-                // This catches cases where GTK/Tauri automatically shows the window
-                WindowEvent::Focused(true) => {
-                    // Load both flags atomically with SeqCst to avoid race conditions
-                    let started_in_background = STARTED_IN_BACKGROUND.load(Ordering::SeqCst);
-                    let initial_show_allowed = INITIAL_SHOW_ALLOWED.load(Ordering::SeqCst);
-
-                    // If started in background and initial show hasn't been allowed yet,
-                    // immediately hide the window
-                    if started_in_background && !initial_show_allowed {
-                        println!("[WindowController] Background mode: intercepted focus, hiding window");
-                        let _ = w_clone.hide();
-                    }
-                }
-                WindowEvent::Focused(false) => {
-                    let state = w_clone.state::<AppState>();
-                    if state.is_mouse_inside.load(Ordering::Relaxed) {
-                        return;
-                    }
-
-                    // Don't hide if settings window is visible (for live preview)
-                    if let Some(settings_window) =
-                        app_handle_for_event.get_webview_window("settings")
-                    {
-                        if settings_window.is_visible().unwrap_or(false) {
-                            return;
-                        }
-                    }
-
-                    if is_wayland() {
-                        state.config_manager.lock().sync_to_disk();
-                    }
-
-                    let _ = w_clone.hide();
-                }
-
-                WindowEvent::Moved(pos) => {
-                    let state = w_clone.state::<AppState>();
-                    handle_window_moved_for_wayland(&w_clone, &state, pos);
-                }
-                _ => {}
-            });
+            // Window event handlers are set up by ensure_main_window() when
+            // the main window is created (either here or lazily on first toggle).
 
             start_clipboard_watcher(app_handle.clone(), clipboard_manager.clone());
 
@@ -939,8 +972,7 @@ fn main() {
             {
                 let app_handle_for_theme = app_handle.clone();
                 tauri::async_runtime::spawn(async move {
-                    if let Err(e) =
-                        theme_manager::start_theme_listener(app_handle_for_theme).await
+                    if let Err(e) = theme_manager::start_theme_listener(app_handle_for_theme).await
                     {
                         eprintln!("[ThemeManager] Failed to start theme listener: {}", e);
                     }
@@ -963,39 +995,13 @@ fn main() {
                 });
             }
 
-            // If --background flag was passed, ensure the main window stays hidden
-            // This is the primary mechanism for starting minimized to tray
-            // Background mode: spawn enforcer thread as fallback
-            // This catches cases where something shows the window after our initial hide
-            if start_in_background_clone {
-                if let Some(main_window) = app.get_webview_window("main") {
-                    // Spawn a background task that keeps checking and hiding the window
-                    // for the first few seconds, in case something shows it after we hide it
-                    let window_clone = main_window.clone();
-                    std::thread::spawn(move || {
-                        for i in 0..10 {
-                            std::thread::sleep(std::time::Duration::from_millis(200));
-
-                            // User has already triggered a toggle, stop blocking
-                            if INITIAL_SHOW_ALLOWED.load(Ordering::SeqCst) {
-                                break;
-                            }
-
-                            // Check if window still exists and is visible, then hide it
-                            // Use unwrap_or(false) to safely handle cases where window was destroyed
-                            match window_clone.is_visible() {
-                                Ok(true) => {
-                                    println!("[Startup] Background enforcer #{}: window was visible, hiding again", i + 1);
-                                    let _ = window_clone.hide();
-                                }
-                                Ok(false) => {} // Window exists but is hidden, nothing to do
-                                Err(_) => break, // Window was destroyed, stop the enforcer
-                            }
-                        }
-                        println!("[Startup] Background enforcer finished");
-                    });
-                }
-            }
+            // No background enforcer: the main window is only created when
+            // ensure_main_window() is called (lazily on first toggle during
+            // background mode, or eagerly in the !start_in_background_clone
+            // branch above).  This avoids Mutter managing a hidden GDK
+            // surface during startup, which triggered the
+            // meta_window_set_stack_position_no_sync assertion and the
+            // taskbar-icon blink.
 
             Ok(())
         })

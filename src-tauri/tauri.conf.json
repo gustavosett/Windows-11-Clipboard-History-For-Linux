@@ -17,21 +17,6 @@
     },
     "windows": [
       {
-        "title": "Clipboard History",
-        "label": "main",
-        "width": 360,
-        "height": 480,
-        "minWidth": 300,
-        "minHeight": 300,
-        "resizable": true,
-        "decorations": false,
-        "transparent": true,
-        "visible": false,
-        "skipTaskbar": true,
-        "alwaysOnTop": true,
-        "focus": true
-      },
-      {
         "title": "Setup - Clipboard History",
         "label": "setup",
         "width": 550,
