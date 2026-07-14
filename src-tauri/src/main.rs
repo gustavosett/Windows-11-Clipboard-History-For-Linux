@@ -392,6 +392,11 @@ impl WindowController {
             Self::position_for_non_wayland(window);
         }
 
+        // The window is born with skip_taskbar(true) to prevent Mutter
+        // taskbar blink during background startup. Restore normal taskbar
+        // presence now that the user has explicitly requested visibility.
+        let _ = window.set_skip_taskbar(false);
+
         let is_wayland_session = is_wayland();
 
         if is_wayland_session {
@@ -645,6 +650,7 @@ impl SettingsController {
 
         match app.get_webview_window("settings") {
             Some(window) => {
+                let _ = window.set_skip_taskbar(false);
                 let _ = window.show();
                 let _ = window.set_focus();
             }
