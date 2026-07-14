@@ -20,8 +20,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 use x11rb::protocol::xproto::ConnectionExt;
 
-/// Polling interval for all waiters. Cheap X11 round-trips (~0.1ms each).
-const POLL_INTERVAL: Duration = Duration::from_millis(3);
+/// Polling interval for all waiters. Balanced X11 round-trips (~0.1ms each)
+/// with reduced churn — 15ms keeps verification responsive while avoiding
+/// excessive short-lived connections under load.
+const POLL_INTERVAL: Duration = Duration::from_millis(15);
 
 /// Returns the current owner window of the CLIPBOARD selection,
 /// or `None` when it cannot be determined (non-X11, connection failure).
