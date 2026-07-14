@@ -31,7 +31,7 @@ pub fn save_focused_window() {
     }
 }
 
-pub fn restore_focused_window() -> Result<(), String> {
+pub fn restore_focused_window() -> Result<bool, String> {
     let window_id = LAST_FOCUSED_WINDOW.load(Ordering::SeqCst);
 
     if window_id == 0 {
@@ -47,11 +47,12 @@ pub fn restore_focused_window() -> Result<(), String> {
 
     conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
 
-    // Small delay to ensure the Window Manager processes the focus change
-    // before we attempt to simulate keystrokes
-    thread::sleep(FOCUS_RESTORE_DELAY);
+    // Wait for the Window Manager to actually process the focus change,
+    // polling the real focus state instead of sleeping a fixed delay.
+    // If unverifiable, settle_focus sleeps the same fixed delay as before.
+    let confirmed = crate::paste_sync::settle_focus(window_id, FOCUS_RESTORE_DELAY);
 
-    Ok(())
+    Ok(confirmed)
 }
 
 pub fn get_focused_window() -> Option<u32> {

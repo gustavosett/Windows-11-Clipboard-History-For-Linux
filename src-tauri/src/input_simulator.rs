@@ -5,16 +5,16 @@ use std::time::Duration;
 type PasteStrategy = (&'static str, fn() -> Result<(), String>);
 
 /// Delay before starting the paste sequence to ensure window focus is stable
-const PRE_PASTE_DELAY_MS: u64 = 50;
+const PRE_PASTE_DELAY_MS: u64 = 1;
 
 /// Delay between key events to ensure proper registration
 const KEY_EVENT_DELAY_MS: u64 = 50;
 
 /// Delay after device creation for uinput to be recognized
-const UINPUT_DEVICE_SETTLE_MS: u64 = 100;
+const UINPUT_DEVICE_SETTLE_MS: u64 = 50;
 
 /// Delay after paste sequence completes
-const POST_PASTE_DELAY_MS: u64 = 30;
+const POST_PASTE_DELAY_MS: u64 = 1;
 
 pub fn simulate_paste_keystroke() -> Result<(), String> {
     // Give window manager time to settle focus before sending keystrokes
@@ -130,10 +130,8 @@ fn simulate_paste_xtest() -> Result<(), String> {
 /// Simulate Ctrl+V using xdotool
 fn simulate_paste_xdotool() -> Result<(), String> {
     // Send Ctrl+V to the currently focused window without specifying a target
-    // Using --delay ensures proper timing between key events
     let output = std::process::Command::new("xdotool")
-        .args(["key", "--delay"])
-        .arg(KEY_EVENT_DELAY_MS.to_string())
+        .arg("key")
         .arg("--clearmodifiers")
         .arg("ctrl+v")
         .output()

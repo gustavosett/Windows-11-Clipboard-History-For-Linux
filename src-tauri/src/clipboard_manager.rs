@@ -892,8 +892,9 @@ impl ClipboardManager {
     }
 
     fn simulate_paste_action(&self) -> Result<(), String> {
-        // Wait for clipboard write to settle
-        thread::sleep(Duration::from_millis(60));
+        // Wait for the clipboard write to settle: confirmed via the X11
+        // selection owner when possible, same fixed sleep otherwise.
+        crate::paste_sync::settle_clipboard_owned(Duration::from_millis(60));
 
         // Trigger keystroke
         crate::input_simulator::simulate_paste_keystroke()?;
@@ -1027,6 +1028,9 @@ impl ClipboardManager {
             self.kill_and_reap_child();
         }
 
+        // Snapshot the current selection owner so we can detect the handoff.
+        let owner_before = crate::paste_sync::clipboard_owner();
+
         let mut child = Command::new(cmd)
             .args(args)
             .stdin(Stdio::piped())
@@ -1041,7 +1045,13 @@ impl ClipboardManager {
                 .map_err(|e| format!("Pipe write error: {}", e))?;
         }
 
-        thread::sleep(Duration::from_millis(WL_COPY_SETTLE_TIME));
+        // Wait for the helper to actually acquire the selection, polling the
+        // real X11 CLIPBOARD owner instead of sleeping a fixed delay.
+        // Sleeps the same fixed delay as before when unverifiable (Wayland).
+        crate::paste_sync::settle_clipboard_handoff(
+            owner_before,
+            Duration::from_millis(WL_COPY_SETTLE_TIME),
+        );
 
         match child.try_wait() {
             Ok(Some(status)) if !status.success() => {
