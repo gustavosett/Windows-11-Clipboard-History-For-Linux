@@ -11,10 +11,9 @@ use std::hash::{Hash, Hasher};
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::process::Child;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 // --- Constants ---
@@ -24,6 +23,10 @@ const PREVIEW_TEXT_MAX_LEN: usize = 100;
 const GIF_CACHE_MARKER: &str = "win11-clipboard-history/gifs/";
 const FILE_URI_PREFIX: &str = "file://";
 const WL_COPY_SETTLE_TIME: u64 = 150;
+
+// arboard retry & log-rate-limit intervals (tunable without touching logic).
+const ARBOARD_RETRY_INTERVAL: Duration = Duration::from_secs(120);
+const LOG_INTERVAL: Duration = Duration::from_secs(30);
 
 // --- Helper Functions ---
 
@@ -59,10 +62,44 @@ pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
     s.finish()
 }
 
-/// Helper to get a fresh clipboard instance.
-fn get_system_clipboard() -> Result<Clipboard, String> {
-    Clipboard::new().map_err(|e| e.to_string())
+/// Initialise and cache a long-lived arboard Clipboard connection.
+///
+/// arboard docs: "If your application is longer-running (ie a GUI, TUI, etc),
+/// it is highly recommended that you either store the Clipboard object in some
+/// long-lived data structure (like app context, etc)"
+///
+/// arboard docs on Wayland:
+/// "Wayland support relies on the wlr-data-control protocol extension(s),
+/// which are not supported by all Wayland compositors."
+///
+/// When initialisation fails on Wayland we skip arboard for the entire
+/// session and fall back to wl-copy/wl-paste, avoiding repeated connection
+/// attempts every poll cycle.
+fn init_clipboard() -> Option<Clipboard> {
+    match Clipboard::new() {
+        Ok(cb) => {
+            println!("[ClipboardManager] Initialised long-lived clipboard connection");
+            Some(cb)
+        }
+        Err(e) => {
+            eprintln!(
+                "[ClipboardManager] Failed to create arboard clipboard: {}\n\
+                 This is expected on Wayland compositors that do not support\n\
+                 the wlr-data-control protocol. Falling back to external\n\
+                 clipboard tools (wl-copy/wl-paste/xclip).",
+                e
+            );
+            None
+        }
+    }
 }
+
+// arboard docs on paste semantics:
+// "Nothing you copy to the clipboard is sent anywhere to start.
+//  It stays inside arboard until something else requests it."
+//
+// This means no data leaves our process during set_text/set_image/etc
+// until another application actively reads from the clipboard.
 
 // --- Data Structures ---
 
@@ -177,6 +214,16 @@ pub struct ClipboardManager {
     /// Maximum number of history items to keep
     max_history_size: usize,
     clipboard_server: Mutex<Option<Child>>,
+    /// When we last printed an error message (for log rate-limiting).
+    last_error_log: Option<Instant>,
+    /// When we last retried arboard initialisation (for transient failures).
+    last_clipboard_retry: Option<Instant>,
+    /// Long-lived arboard Clipboard connection (per arboard docs).
+    ///
+    /// `None` means arboard could not be initialised (e.g. Wayland compositor
+    /// lacks wlr-data-control). We skip arboard entirely and use external
+    /// tools (wl-copy/wl-paste/xclip) instead.
+    clipboard: Option<Clipboard>,
 }
 
 impl ClipboardManager {
@@ -204,13 +251,6 @@ impl Drop for ClipboardManager {
     }
 }
 
-/// Set to true when arboard fails on Wayland (e.g. cosmic-comp in
-/// unprivileged mode without wlr-data-control).  Once cached, subsequent
-/// calls skip arboard entirely to avoid spawning wl-paste 120×/minute
-/// when the clipboard is empty.
-#[cfg(target_os = "linux")]
-static ARBOARD_UNAVAILABLE: AtomicBool = AtomicBool::new(false);
-
 impl ClipboardManager {
     fn clamp_max_history_size(size: usize) -> usize {
         match size {
@@ -231,6 +271,9 @@ impl ClipboardManager {
             persistence_path,
             max_history_size: max_size,
             clipboard_server: Mutex::new(None),
+            last_error_log: None,
+            last_clipboard_retry: None,
+            clipboard: init_clipboard(),
         };
         manager.load_history();
         manager
@@ -335,33 +378,73 @@ impl ClipboardManager {
     // --- Monitoring / Reading ---
 
     pub fn get_current_text(&mut self) -> Result<String, arboard::Error> {
-        #[cfg(target_os = "linux")]
-        {
-            if crate::session::is_wayland() && ARBOARD_UNAVAILABLE.load(Ordering::Relaxed) {
-                if let Some(text) = self.get_text_via_wl_paste() {
+        // Retry arboard init periodically — the compositor may have gained
+        // wlr-data-control support since startup (e.g. compositor switch).
+        self.retry_clipboard_init();
+
+        if let Some(ref mut clipboard) = self.clipboard {
+            match clipboard.get_text() {
+                Ok(text) => {
+                    self.last_error_log = None;
                     return Ok(text);
                 }
-                return Err(arboard::Error::ContentNotAvailable);
+                Err(e) => {
+                    self.log_error_rate_limited(&format!("arboard get_text failed: {}", e));
+                }
             }
         }
 
-        match Clipboard::new()?.get_text() {
-            Ok(text) => Ok(text),
-            Err(arboard_err) => {
-                #[cfg(target_os = "linux")]
-                {
-                    if crate::session::is_wayland() {
-                        ARBOARD_UNAVAILABLE.store(true, Ordering::Relaxed);
-                        eprintln!(
-                            "[ClipboardManager] arboard unavailable on this Wayland session, using wl-paste fallback"
-                        );
-                        if let Some(text) = self.get_text_via_wl_paste() {
-                            return Ok(text);
-                        }
-                    }
+        #[cfg(target_os = "linux")]
+        {
+            if crate::session::is_wayland() {
+                // Always try wl-paste — transient failures should not
+                // suppress subsequent attempts.
+                if let Some(text) = self.get_text_via_wl_paste() {
+                    self.last_error_log = None;
+                    return Ok(text);
                 }
-                Err(arboard_err)
+
+                self.log_error_rate_limited(
+                    "wl-paste could not read clipboard (clipboard may be empty)",
+                );
             }
+        }
+
+        Err(arboard::Error::ContentNotAvailable)
+    }
+
+    /// Periodically retry arboard initialisation when it was `None` at
+    /// startup (e.g. Wayland compositor without wlr-data-control).
+    /// Only logs on state change (unavailable → available), not on repeated
+    /// failures — the fallback (wl-copy/wl-paste) works fine in the meantime.
+    fn retry_clipboard_init(&mut self) {
+        if self.clipboard.is_some() {
+            return;
+        }
+        if self
+            .last_clipboard_retry
+            .is_some_and(|t| t.elapsed() < ARBOARD_RETRY_INTERVAL)
+        {
+            return;
+        }
+        self.last_clipboard_retry = Some(Instant::now());
+
+        if let Ok(cb) = Clipboard::new() {
+            println!("[ClipboardManager] Acquired clipboard connection (was unavailable)");
+            self.clipboard = Some(cb);
+        }
+    }
+
+    /// Print an error message at most once per `LOG_INTERVAL` to avoid
+    /// log spam from the polling watcher when clipboard reads fail.
+    fn log_error_rate_limited(&mut self, msg: &str) {
+        let now = Instant::now();
+        let should_log = self
+            .last_error_log
+            .map_or(true, |t| now - t >= LOG_INTERVAL);
+        if should_log {
+            self.last_error_log = Some(now);
+            eprintln!("[ClipboardManager] {}", msg);
         }
     }
 
@@ -380,7 +463,6 @@ impl ClipboardManager {
             .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
             .is_err()
         {
-            eprintln!("[ClipboardManager] Skipping wl-paste: previous invocation still running");
             return None;
         }
 
@@ -393,10 +475,9 @@ impl ClipboardManager {
             .spawn()
         {
             Ok(c) => c,
-            Err(e) => {
+            Err(_) => {
                 // Release the circuit breaker since we won't spawn a thread.
                 WL_PASTE_RUNNING.store(false, Ordering::Release);
-                eprintln!("[ClipboardManager] wl-paste failed to spawn: {}", e);
                 return None;
             }
         };
@@ -417,12 +498,8 @@ impl ClipboardManager {
 
         let output = match rx.recv_timeout(timeout) {
             Ok(Ok(output)) => output,
-            Ok(Err(e)) => {
-                eprintln!("[ClipboardManager] wl-paste wait failed: {}", e);
-                return None;
-            }
+            Ok(Err(_)) | Err(mpsc::RecvTimeoutError::Disconnected) => return None,
             Err(mpsc::RecvTimeoutError::Timeout) => {
-                eprintln!("[ClipboardManager] wl-paste timed out after {:?}", timeout);
                 // Kill the hung wl-paste process so it does not linger. After
                 // this the spawned thread's wait_with_output() will return and
                 // automatically reap the child, releasing the circuit breaker.
@@ -432,12 +509,6 @@ impl ClipboardManager {
                     .output();
                 return None;
             }
-            Err(mpsc::RecvTimeoutError::Disconnected) => {
-                eprintln!(
-                    "[ClipboardManager] wl-paste channel disconnected before receiving output"
-                );
-                return None;
-            }
         };
 
         if output.status.success() {
@@ -445,31 +516,27 @@ impl ClipboardManager {
             if !text.is_empty() {
                 return Some(text);
             }
-        } else {
-            let code = output.status.code().unwrap_or(-1);
-            if code != 1 {
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                eprintln!(
-                    "[ClipboardManager] wl-paste exited with {}: {}",
-                    output.status,
-                    stderr.trim()
-                );
-            }
         }
 
         None
     }
 
     /// Try to get HTML content from clipboard. Returns None if not available.
-    pub fn get_current_html(&self) -> Option<String> {
-        let mut clipboard = get_system_clipboard().ok()?;
-        clipboard.get().html().ok()
+    ///
+    /// Calls `retry_clipboard_init` so HTML reads benefit from the same
+    /// periodic arboard retry logic as `get_current_text`.
+    pub fn get_current_html(&mut self) -> Option<String> {
+        self.retry_clipboard_init();
+        self.clipboard.as_mut()?.get().html().ok()
     }
 
     pub fn get_current_image(
         &mut self,
     ) -> Result<Option<(ImageData<'static>, u64)>, arboard::Error> {
-        let mut clipboard = Clipboard::new()?;
+        let clipboard = match self.clipboard.as_mut() {
+            Some(cb) => cb,
+            None => return Ok(None),
+        };
 
         match clipboard.get_image() {
             Ok(image) => {
@@ -839,7 +906,7 @@ impl ClipboardManager {
 
     /// Robustly set text to clipboard using xclip/wl-copy on Linux if available,
     /// falling back to arboard. This fixes issues on distros like Kali Linux.
-    pub fn set_text_robust(&self, text: &str) -> Result<(), String> {
+    pub fn set_text_robust(&mut self, text: &str) -> Result<(), String> {
         #[cfg(target_os = "linux")]
         {
             if crate::session::is_wayland() {
@@ -867,13 +934,16 @@ impl ClipboardManager {
         }
 
         // Fallback to arboard
-        let mut clipboard = get_system_clipboard()?;
-        clipboard.set_text(text).map_err(|e| e.to_string())
+        if let Some(ref mut clipboard) = self.clipboard {
+            clipboard.set_text(text).map_err(|e| e.to_string())
+        } else {
+            Err("Clipboard not available (no arboard connection; external tools may have also failed)".to_string())
+        }
     }
 
     /// Robustly set HTML to clipboard using xclip/wl-copy on Linux if available,
     /// falling back to arboard.
-    pub fn set_html_robust(&self, html: &str, plain: &str) -> Result<(), String> {
+    pub fn set_html_robust(&mut self, html: &str, plain: &str) -> Result<(), String> {
         #[cfg(target_os = "linux")]
         {
             if crate::session::is_wayland() {
@@ -902,10 +972,13 @@ impl ClipboardManager {
         }
 
         // Fallback to arboard (which handles multiple MIME types correctly)
-        let mut clipboard = get_system_clipboard()?;
-        clipboard
-            .set_html(html, Some(plain))
-            .map_err(|e| e.to_string())
+        if let Some(ref mut clipboard) = self.clipboard {
+            clipboard
+                .set_html(html, Some(plain))
+                .map_err(|e| e.to_string())
+        } else {
+            Err("Clipboard not available (no arboard connection; external tools may have also failed)".to_string())
+        }
     }
 
     fn set_clipboard_external(&self, cmd: &str, args: &[&str], data: &str) -> Result<(), String> {
@@ -1008,7 +1081,7 @@ impl ClipboardManager {
 
     /// Robustly set image to clipboard using xclip/wl-copy on Linux if available,
     /// falling back to arboard. Fixes X11 clipboard ownership loss (issue #259).
-    fn set_image_robust(&self, base64_str: &str) -> Result<(), String> {
+    fn set_image_robust(&mut self, base64_str: &str) -> Result<(), String> {
         let bytes = BASE64
             .decode(base64_str)
             .map_err(|e| format!("Base64 decode failed: {}", e))?;
@@ -1031,16 +1104,19 @@ impl ClipboardManager {
         }
 
         // Fallback to arboard
-        let mut clipboard = get_system_clipboard()?;
-        let img =
-            image::load_from_memory(&bytes).map_err(|e| format!("Image load failed: {}", e))?;
-        let rgba = img.to_rgba8();
-        let image_data = ImageData {
-            width: rgba.width() as usize,
-            height: rgba.height() as usize,
-            bytes: rgba.into_raw().into(),
-        };
-        clipboard.set_image(image_data).map_err(|e| e.to_string())
+        if let Some(ref mut clipboard) = self.clipboard {
+            let img =
+                image::load_from_memory(&bytes).map_err(|e| format!("Image load failed: {}", e))?;
+            let rgba = img.to_rgba8();
+            let image_data = ImageData {
+                width: rgba.width() as usize,
+                height: rgba.height() as usize,
+                bytes: rgba.into_raw().into(),
+            };
+            clipboard.set_image(image_data).map_err(|e| e.to_string())
+        } else {
+            Err("Clipboard not available (no arboard connection; external tools may have also failed)".to_string())
+        }
     }
 }
 
@@ -1059,7 +1135,7 @@ mod tests {
     }
 
     fn try_get_clipboard() -> Option<Clipboard> {
-        get_system_clipboard().ok()
+        Clipboard::new().ok()
     }
 
     /// Poll the clipboard text with a timeout, sleeping `interval` between
@@ -1245,7 +1321,7 @@ mod tests {
             }
         };
 
-        let m = make_manager("persist", 10);
+        let mut m = make_manager("persist", 10);
         let test_text = "persistence-test-42";
 
         // Set text via robust path (which uses external tools on Linux)
@@ -1279,7 +1355,7 @@ mod tests {
             }
         };
 
-        let m = make_manager("html_persist", 10);
+        let mut m = make_manager("html_persist", 10);
         let html = "<b>bold text</b>";
         let plain = "bold text";
 
@@ -1316,7 +1392,7 @@ mod tests {
             }
         };
 
-        let m = make_manager("repeat", 10);
+        let mut m = make_manager("repeat", 10);
 
         for i in 0..5 {
             let text = format!("repeat-test-{}", i);
@@ -1358,7 +1434,7 @@ mod tests {
             eprintln!("skipping — pgrep not available");
             return;
         }
-        let m = make_manager("proc", 10);
+        let mut m = make_manager("proc", 10);
         for i in 0..5 {
             m.set_text_robust(&format!("p{}", i)).unwrap();
             std::thread::sleep(Duration::from_millis(100));

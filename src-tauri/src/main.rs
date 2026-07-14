@@ -266,15 +266,13 @@ async fn finish_paste(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn copy_text_to_clipboard(_state: State<'_, AppState>, text: String) -> Result<(), String> {
-    // 1. Update Internal Manager (for history consistency, optional but good)
-    // Only write to the system clipboard; the history manager is updated by the clipboard watcher if enabled.
-
-    use arboard::Clipboard;
-    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard.set_text(text).map_err(|e| e.to_string())?;
-
-    Ok(())
+async fn copy_text_to_clipboard(state: State<'_, AppState>, text: String) -> Result<(), String> {
+    // Only write to the system clipboard; the history manager is updated by
+    // the clipboard watcher if enabled. Uses the manager's robust write path
+    // to reuse the long-lived arboard connection instead of creating a fresh
+    // one for each copy.
+    let mut manager = state.clipboard_manager.lock();
+    manager.set_text_robust(&text)
 }
 
 #[tauri::command]
