@@ -43,7 +43,7 @@ Most Linux clipboard managers are purely functional but lack visual appeal. This
 | **⚡ Instant Access** | Opens instantly with `Super+V` or `Ctrl+Alt+V`. |
 | **🧠 Smart Positioning** | The window follows your mouse cursor across multiple monitors. |
 | **📌 Pin & Sync** | Pin important snippets to keep them at the top. |
-| **🎬 GIF Integration** | Search Tenor and paste GIFs directly into Discord, Slack, etc. |
+| **🎬 ~~GIF Integration~~** | ~~Search Tenor and paste GIFs directly into Discord, Slack, etc.~~ **Disabled:** [Google killed the Tenor GIF API](https://arstechnica.com/gadgets/2026/06/google-kills-tenor-gif-api-forcing-changes-at-x-discord-and-more/). |
 | **🤩 Emoji Picker** | A built-in, searchable emoji keyboard. |
 | **🛡️ Privacy First** | Your history is stored locally. No data leaves your machine. |
 
@@ -58,7 +58,7 @@ Most Linux clipboard managers are purely functional but lack visual appeal. This
 | <kbd>Enter</kbd> | Paste Selected Item |
 | <kbd>Esc</kbd> | Close Window |
 
-> **Pro Tip:** Need to paste a GIF? Just select it! The app simulates `Ctrl+V` to paste the file URI directly into your chat apps.
+> ~~**Pro Tip:** Need to paste a GIF? Just select it!~~ **The GIF tab is currently disabled because Google killed the Tenor API.** The implementation remains in the source tree so a sustainable provider can be integrated later. [Read what happened](https://arstechnica.com/gadgets/2026/06/google-kills-tenor-gif-api-forcing-changes-at-x-discord-and-more/).
 
 ---
 

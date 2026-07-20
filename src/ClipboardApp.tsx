@@ -8,7 +8,6 @@ import { useClipboardHistory } from './hooks/useClipboardHistory'
 import { TabBar, TabBarRef } from './components/TabBar'
 import { DragHandle } from './components/DragHandle'
 import { EmojiPicker } from './components/EmojiPicker'
-import { GifPicker } from './components/GifPicker'
 import { KaomojiPicker } from './components/KaomojiPicker'
 import { SymbolPicker } from './components/SymbolPicker'
 import { calculateSecondaryOpacity, calculateTertiaryOpacity } from './utils/themeUtils'
@@ -144,7 +143,7 @@ function ClipboardApp() {
     // Listen for switch-tab events from Rust (e.g., when Super+. is pressed)
     const unlistenSwitchTab = listen<string>('switch-tab', (event) => {
       const tabName = event.payload as ActiveTab
-      if (['clipboard', 'emoji', 'gifs', 'kaomoji', 'symbols'].includes(tabName)) {
+      if (['clipboard', 'emoji', 'kaomoji', 'symbols'].includes(tabName)) {
         setActiveTab(tabName)
       }
     })
@@ -259,8 +258,8 @@ function ClipboardApp() {
       case 'emoji':
         return <EmojiPicker isDark={isDark} opacity={secondaryOpacity} />
 
-      case 'gifs':
-        return <GifPicker isDark={isDark} opacity={secondaryOpacity} />
+      // case 'gifs':
+      //   return <GifPicker isDark={isDark} opacity={secondaryOpacity} />
 
       case 'kaomoji':
         return (
@@ -315,7 +314,7 @@ function ClipboardApp() {
           'flex-1',
           // Only use scrollbar for non-emoji/gif/kaomoji tabs, they have their own virtualized scrolling or containers
           activeTab === 'emoji' ||
-            activeTab === 'gifs' ||
+            // activeTab === 'gifs' ||
             activeTab === 'kaomoji' ||
             activeTab === 'symbols'
             ? 'overflow-hidden'
