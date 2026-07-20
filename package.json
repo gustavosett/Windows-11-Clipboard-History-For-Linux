@@ -34,8 +34,8 @@
     "@tauri-apps/plugin-shell": "^2.3.5",
     "clsx": "^2.1.0",
     "emojilib": "^4.0.3",
-    "fuse.js": "^7.4.2",
-    "lucide-react": "^1.21.0",
+    "fuse.js": "^7.5.0",
+    "lucide-react": "^1.25.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-window": "^2.2.7"
