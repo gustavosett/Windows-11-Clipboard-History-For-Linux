@@ -41,7 +41,10 @@ export function useGifPicker() {
     } catch (err) {
       console.error('Failed to fetch GIFs:', err)
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to load GIFs')
+        const msg = err instanceof Error ? err.message : ''
+        setError(
+          msg.includes('Klipy API Key is not configured') ? 'MISSING_API_KEY' : (msg || 'Failed to load GIFs')
+        )
         setGifs([])
       }
     } finally {

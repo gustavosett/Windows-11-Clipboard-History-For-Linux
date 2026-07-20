@@ -6,6 +6,7 @@ import { emit } from '@tauri-apps/api/event'
 import { clsx } from 'clsx'
 import { Eye, EyeOff } from 'lucide-react'
 
+import { DEFAULT_SETTINGS } from './types/clipboard'
 import type { UserSettings, CustomKaomoji, BooleanSettingKey } from './types/clipboard'
 import { FeaturesSection } from './components/FeaturesSection'
 import { Switch } from './components/Switch'
@@ -15,20 +16,6 @@ import { useRenderingEnv } from './hooks/useRenderingEnv'
 const MIN_HISTORY_SIZE = 1
 const MAX_HISTORY_SIZE = 100_000
 
-const DEFAULT_SETTINGS: UserSettings = {
-  theme_mode: 'system',
-  dark_background_opacity: 0.7,
-  light_background_opacity: 0.7,
-  enable_smart_actions: true,
-  enable_ui_polish: true,
-  enable_dynamic_tray_icon: true,
-  max_history_size: 50,
-  custom_kaomojis: [],
-  ui_scale: 1,
-  auto_delete_interval: 0,
-  auto_delete_unit: 'hours',
-  klipy_api_key: '',
-}
 
 type ThemeMode = 'system' | 'dark' | 'light'
 
