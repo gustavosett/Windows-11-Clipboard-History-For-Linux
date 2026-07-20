@@ -249,13 +249,7 @@ async fn paste_gif_from_url(
     Ok(())
 }
 
-#[tauri::command]
-async fn finish_paste(app: AppHandle) -> Result<(), String> {
-    WindowController::hide(&app);
-    PasteHelper::prepare_target_window().await?;
-    simulate_paste_keystroke().map_err(|e| e.to_string())?;
-    Ok(())
-}
+
 
 #[tauri::command]
 async fn copy_text_to_clipboard(_state: State<'_, AppState>, text: String) -> Result<(), String> {
@@ -1019,7 +1013,6 @@ fn main() {
             paste_text,
             get_recent_emojis,
             paste_gif_from_url,
-            finish_paste,
             finish_setup, // Register the new command
             set_mouse_state,
             get_user_settings,

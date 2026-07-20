@@ -1,10 +1,10 @@
 /**
  * GIF Types
- * TypeScript interfaces for Tenor API responses and GIF data
+ * TypeScript interfaces for Klipy API responses and GIF data
  */
 
-/** Media format from Tenor API */
-export interface TenorMediaFormat {
+/** Media format from Klipy API */
+export interface KlipyMediaFormat {
   url: string
   dims: [number, number]
   duration?: number
@@ -12,25 +12,25 @@ export interface TenorMediaFormat {
 }
 
 /** Media formats available for a GIF */
-export interface TenorMediaFormats {
-  gif?: TenorMediaFormat
-  mediumgif?: TenorMediaFormat
-  tinygif?: TenorMediaFormat
-  nanogif?: TenorMediaFormat
-  mp4?: TenorMediaFormat
-  loopedmp4?: TenorMediaFormat
-  tinymp4?: TenorMediaFormat
-  nanomp4?: TenorMediaFormat
-  webm?: TenorMediaFormat
-  tinywebm?: TenorMediaFormat
-  nanowebm?: TenorMediaFormat
+export interface KlipyMediaFormats {
+  gif?: KlipyMediaFormat
+  mediumgif?: KlipyMediaFormat
+  tinygif?: KlipyMediaFormat
+  nanogif?: KlipyMediaFormat
+  mp4?: KlipyMediaFormat
+  loopedmp4?: KlipyMediaFormat
+  tinymp4?: KlipyMediaFormat
+  nanomp4?: KlipyMediaFormat
+  webm?: KlipyMediaFormat
+  tinywebm?: KlipyMediaFormat
+  nanowebm?: KlipyMediaFormat
 }
 
-/** Single GIF result from Tenor API */
-export interface TenorGifResult {
+/** Single GIF result from Klipy API */
+export interface KlipyGifResult {
   id: string
   title: string
-  media_formats: TenorMediaFormats
+  media_formats: KlipyMediaFormats
   content_description: string
   itemurl: string
   url: string
@@ -38,9 +38,9 @@ export interface TenorGifResult {
   created: number
 }
 
-/** Tenor API response for search/trending */
-export interface TenorSearchResponse {
-  results: TenorGifResult[]
+/** Klipy API response for search/trending */
+export interface KlipySearchResponse {
+  results: KlipyGifResult[]
   next: string
 }
 

@@ -298,8 +298,8 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
           value={searchQuery}
           onChange={(val: string) => setSearchQuery(val)}
           onClear={handleClearSearch}
-          placeholder="Search Tenor GIFs..."
-          aria-label="Search Tenor GIFs"
+          placeholder="Search Klipy GIFs..."
+          aria-label="Search Klipy GIFs"
           isDark={isDark}
           opacity={opacity}
           rightActions={
@@ -340,7 +340,7 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
       footer={
         <div className="w-full text-center">
           <span className="text-[10px] dark:text-win11-text-disabled text-win11Light-text-disabled">
-            Powered by Tenor
+            Powered by Klipy
           </span>
         </div>
       }

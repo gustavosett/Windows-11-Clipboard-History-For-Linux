@@ -4,6 +4,7 @@ import { getCurrentWindow, Window } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
 import { emit } from '@tauri-apps/api/event'
 import { clsx } from 'clsx'
+import { Eye, EyeOff } from 'lucide-react'
 
 import type { UserSettings, CustomKaomoji, BooleanSettingKey } from './types/clipboard'
 import { FeaturesSection } from './components/FeaturesSection'
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   ui_scale: 1,
   auto_delete_interval: 0,
   auto_delete_unit: 'hours',
+  klipy_api_key: '',
 }
 
 type ThemeMode = 'system' | 'dark' | 'light'
@@ -291,6 +293,9 @@ function SettingsApp() {
 
   // Custom Kaomoji State
   const [newKaomoji, setNewKaomoji] = useState('')
+
+  // Show/Hide API Key State
+  const [showApiKey, setShowApiKey] = useState(false)
 
   // Rendering environment (NVIDIA / AppImage detection)
   const renderingEnv = useRenderingEnv()
@@ -933,6 +938,80 @@ function SettingsApp() {
                     : 'bg-gray-50 border-gray-200 text-gray-900'
                 )}
               />
+            </div>
+          </div>
+        </section>
+
+        {/* GIF Search Settings Section */}
+        <section
+          className={clsx(
+            'rounded-xl border shadow-sm overflow-hidden',
+            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
+          )}
+        >
+          <div className="p-6 border-b border-inherit">
+            <h2 className="text-base font-semibold mb-1">GIF Search Settings</h2>
+            <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              Configure Klipy GIF API credentials
+            </p>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="klipy-api-key" className="text-sm font-medium block">
+                Klipy API Key
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  id="klipy-api-key"
+                  type={showApiKey ? 'text' : 'password'}
+                  value={settings.klipy_api_key || ''}
+                  onChange={(e) => updateSettings({ klipy_api_key: e.target.value })}
+                  placeholder="Enter your Klipy API Key"
+                  className={clsx(
+                    'w-full pl-3 pr-10 py-2 rounded-md border text-sm focus:outline-none focus:ring-2 focus:ring-win11-bg-accent/50 transition-all font-mono',
+                    isDark
+                      ? 'bg-white/5 border-white/10 text-white placeholder-gray-500'
+                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                  )}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className={clsx(
+                    'absolute right-3 p-1 rounded-md transition-colors',
+                    isDark
+                      ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                  )}
+                  title={showApiKey ? 'Hide API Key' : 'Show API Key'}
+                >
+                  {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <div className={clsx('text-xs space-y-1.5 leading-normal mt-2', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                <p>
+                  Since the Tenor API has been discontinued, you need a free Klipy API Key to use the GIF search features.
+                </p>
+                <ol className="list-decimal list-inside space-y-1 pl-1">
+                  <li>
+                    Sign up or log in at the{' '}
+                    <a
+                      href="https://partner.klipy.com"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-win11-bg-accent hover:underline"
+                    >
+                      Klipy Partner Panel
+                    </a>
+                    .
+                  </li>
+                  <li>
+                    Navigate to <strong>API Keys</strong> and click <strong>Add Platform</strong> to generate your key.
+                  </li>
+                  <li>Copy and paste the key into the input field above.</li>
+                </ol>
+              </div>
             </div>
           </div>
         </section>

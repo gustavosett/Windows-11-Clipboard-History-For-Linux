@@ -75,6 +75,7 @@ export interface UserSettings {
   auto_delete_unit: 'minutes' | 'hours' | 'days' | 'weeks'
   custom_kaomojis: CustomKaomoji[]
   ui_scale: number
+  klipy_api_key: string
 }
 
 /** Helper type for boolean settings keys */
