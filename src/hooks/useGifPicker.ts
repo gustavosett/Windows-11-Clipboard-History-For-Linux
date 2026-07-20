@@ -41,7 +41,10 @@ export function useGifPicker() {
     } catch (err) {
       console.error('Failed to fetch GIFs:', err)
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to load GIFs')
+        const msg = err instanceof Error ? err.message : ''
+        setError(
+          msg.includes('Klipy API Key is not configured') ? 'MISSING_API_KEY' : (msg || 'Failed to load GIFs')
+        )
         setGifs([])
       }
     } finally {
@@ -99,21 +102,11 @@ export function useGifPicker() {
   const pasteGif = useCallback(async (gif: Gif) => {
     setIsPasting(true)
     try {
-      // 1. Download and copy to clipboard
+      // 1. Download, copy to clipboard, and paste
       await invoke('paste_gif_from_url', { url: gif.fullUrl })
 
-      // 2. Reset loading state BEFORE hiding window
+      // 2. Reset loading state
       setIsPasting(false)
-
-      // 3. Finish paste sequence (hide window, simulate Ctrl+V)
-      // We use a small timeout to ensure the UI update has painted
-      setTimeout(async () => {
-        try {
-          await invoke('finish_paste')
-        } catch (err) {
-          console.error('Failed to finish paste:', err)
-        }
-      }, 100)
     } catch (err) {
       console.error('Failed to paste GIF:', err)
       setIsPasting(false)

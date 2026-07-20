@@ -53,6 +53,11 @@ pub struct UserSettings {
     /// UI scale factor for the clipboard window (0.5 to 2.0, default 1.0)
     #[serde(default = "default_ui_scale")]
     pub ui_scale: f32,
+
+    // --- API Keys ---
+    /// API key for Klipy GIF service
+    #[serde(default)]
+    pub klipy_api_key: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -97,6 +102,7 @@ impl Default for UserSettings {
             auto_delete_unit: "hours".to_string(),
             custom_kaomojis: Vec::new(),
             ui_scale: default_ui_scale(),
+            klipy_api_key: "".to_string(),
         }
     }
 }

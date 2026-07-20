@@ -99,7 +99,7 @@ impl ClipboardItem {
         let preview = if text.chars().count() > PREVIEW_TEXT_MAX_LEN {
             format!(
                 "{}...",
-                &text.chars().take(PREVIEW_TEXT_MAX_LEN).collect::<String>()
+                text.chars().take(PREVIEW_TEXT_MAX_LEN).collect::<String>()
             )
         } else {
             text.clone()
@@ -112,7 +112,7 @@ impl ClipboardItem {
         let preview = if plain.chars().count() > PREVIEW_TEXT_MAX_LEN {
             format!(
                 "{}...",
-                &plain.chars().take(PREVIEW_TEXT_MAX_LEN).collect::<String>()
+                plain.chars().take(PREVIEW_TEXT_MAX_LEN).collect::<String>()
             )
         } else {
             plain.clone()

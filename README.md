@@ -43,7 +43,7 @@ Most Linux clipboard managers are purely functional but lack visual appeal. This
 | **⚡ Instant Access** | Opens instantly with `Super+V` or `Ctrl+Alt+V`. |
 | **🧠 Smart Positioning** | The window follows your mouse cursor across multiple monitors. |
 | **📌 Pin & Sync** | Pin important snippets to keep them at the top. |
-| **🎬 GIF Integration** | Search Tenor and paste GIFs directly into Discord, Slack, etc. |
+| **🎬 GIF Integration** | Search Klipy and paste GIFs directly into Discord, Slack, etc. |
 | **🤩 Emoji Picker** | A built-in, searchable emoji keyboard. |
 | **🛡️ Privacy First** | Your history is stored locally. No data leaves your machine. |
 

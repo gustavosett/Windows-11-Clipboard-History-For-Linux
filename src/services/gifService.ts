@@ -1,47 +1,35 @@
 /**
  * GIF Service
- * Handles fetching GIFs from Tenor API v1
+ * Handles fetching GIFs from Klipy API v2 (Tenor compatible)
  */
-import type { Gif } from '../types/gif'
+import { invoke } from '@tauri-apps/api/core'
+import type { Gif, KlipyGifResult, KlipySearchResponse } from '../types/gif'
+import type { UserSettings } from '../types/clipboard'
 
-const TENOR_API_KEY = 'LIVDSRZULELA'
-const TENOR_API_BASE = 'https://g.tenor.com/v1'
+const KLIPY_API_BASE = 'https://api.klipy.com/v2'
 const DEFAULT_LIMIT = 30
+const KLIPY_MEDIA_FILTER = 'gif,tinygif,nanogif,mediumgif'
 
-interface TenorV1MediaFormat {
-  url: string
-  dims: [number, number]
-  size: number
+/**
+ * Dynamically retrieves the user's Klipy API key from settings.
+ */
+async function getKlipyApiKey(): Promise<string> {
+  try {
+    const settings = await invoke<UserSettings>('get_user_settings')
+    return settings.klipy_api_key?.trim() || ''
+  } catch (err) {
+    console.error('[gifService] Failed to load user settings for API key:', err)
+    return ''
+  }
 }
 
-interface TenorV1Media {
-  gif?: TenorV1MediaFormat
-  mediumgif?: TenorV1MediaFormat
-  tinygif?: TenorV1MediaFormat
-  nanogif?: TenorV1MediaFormat
-}
-
-interface TenorV1Result {
-  id: string
-  title: string
-  media: TenorV1Media[]
-  content_description?: string
-  itemurl: string
-  url: string
-  tags: string[]
-  created: number
-}
-
-interface TenorV1Response {
-  results: TenorV1Result[]
-  next: string
-}
-
-function transformTenorResult(result: TenorV1Result): Gif {
-  // v1 API has media as an array, get the first item
-  const mediaFormats = result.media[0]
+/**
+ * Transforms a Klipy V2 API result into our app's internal Gif structure.
+ */
+function transformKlipyResult(result: KlipyGifResult): Gif {
+  const mediaFormats = result.media_formats
   if (!mediaFormats) {
-    throw new Error(`Missing media for GIF: ${result.id}`)
+    throw new Error(`Missing media formats for GIF: ${result.id}`)
   }
 
   // Use nanogif for preview (smallest size for grid)
@@ -64,27 +52,32 @@ function transformTenorResult(result: TenorV1Result): Gif {
 }
 
 /**
- * Fetch trending GIFs from Tenor
+ * Fetch trending GIFs from Klipy
  */
 export async function fetchTrendingGifs(limit: number = DEFAULT_LIMIT): Promise<Gif[]> {
-  const params = new URLSearchParams({
-    key: TENOR_API_KEY,
-    limit: String(limit),
-    media_filter: 'minimal',
-  })
-
-  const response = await fetch(`${TENOR_API_BASE}/trending?${params}`)
-
-  if (!response.ok) {
-    throw new Error(`Tenor API error: ${response.status} ${response.statusText}`)
+  const apiKey = await getKlipyApiKey()
+  if (!apiKey) {
+    throw new Error('Klipy API Key is not configured. Please set it in Settings.')
   }
 
-  const data: TenorV1Response = await response.json()
+  const params = new URLSearchParams({
+    key: apiKey,
+    limit: String(limit),
+    media_filter: KLIPY_MEDIA_FILTER,
+  })
 
-  return data.results
+  const response = await fetch(`${KLIPY_API_BASE}/featured?${params}`)
+
+  if (!response.ok) {
+    throw new Error(`Klipy API error: ${response.status} ${response.statusText}`)
+  }
+
+  const data: KlipySearchResponse = await response.json()
+
+  return (data.results || [])
     .map((result) => {
       try {
-        return transformTenorResult(result)
+        return transformKlipyResult(result)
       } catch {
         console.warn(`Skipping malformed GIF result: ${result.id}`)
         return null
@@ -97,29 +90,34 @@ export async function fetchTrendingGifs(limit: number = DEFAULT_LIMIT): Promise<
  * Search GIFs by query
  */
 export async function searchGifs(query: string, limit: number = DEFAULT_LIMIT): Promise<Gif[]> {
+  const apiKey = await getKlipyApiKey()
+  if (!apiKey) {
+    throw new Error('Klipy API Key is not configured. Please set it in Settings.')
+  }
+
   if (!query.trim()) {
     return fetchTrendingGifs(limit)
   }
 
   const params = new URLSearchParams({
-    key: TENOR_API_KEY,
+    key: apiKey,
     q: query.trim(),
     limit: String(limit),
-    media_filter: 'minimal',
+    media_filter: KLIPY_MEDIA_FILTER,
   })
 
-  const response = await fetch(`${TENOR_API_BASE}/search?${params}`)
+  const response = await fetch(`${KLIPY_API_BASE}/search?${params}`)
 
   if (!response.ok) {
-    throw new Error(`Tenor API error: ${response.status} ${response.statusText}`)
+    throw new Error(`Klipy API error: ${response.status} ${response.statusText}`)
   }
 
-  const data: TenorV1Response = await response.json()
+  const data: KlipySearchResponse = await response.json()
 
-  return data.results
+  return (data.results || [])
     .map((result) => {
       try {
-        return transformTenorResult(result)
+        return transformKlipyResult(result)
       } catch {
         console.warn(`Skipping malformed GIF result: ${result.id}`)
         return null

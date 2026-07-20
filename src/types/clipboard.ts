@@ -75,7 +75,24 @@ export interface UserSettings {
   auto_delete_unit: 'minutes' | 'hours' | 'days' | 'weeks'
   custom_kaomojis: CustomKaomoji[]
   ui_scale: number
+  klipy_api_key: string
 }
+
+export const DEFAULT_SETTINGS: UserSettings = {
+  theme_mode: 'system',
+  dark_background_opacity: 0.7,
+  light_background_opacity: 0.7,
+  enable_smart_actions: true,
+  enable_ui_polish: true,
+  enable_dynamic_tray_icon: true,
+  max_history_size: 50,
+  auto_delete_interval: 0,
+  auto_delete_unit: 'hours',
+  custom_kaomojis: [],
+  ui_scale: 1,
+  klipy_api_key: '',
+}
+
 
 /** Helper type for boolean settings keys */
 export type BooleanSettingKey = {

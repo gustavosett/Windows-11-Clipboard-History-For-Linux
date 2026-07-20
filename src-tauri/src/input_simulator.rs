@@ -5,7 +5,7 @@ use std::time::Duration;
 type PasteStrategy = (&'static str, fn() -> Result<(), String>);
 
 /// Delay before starting the paste sequence to ensure window focus is stable
-const PRE_PASTE_DELAY_MS: u64 = 1;
+const PRE_PASTE_DELAY_MS: u64 = 50;
 
 /// Delay between key events to ensure proper registration
 const KEY_EVENT_DELAY_MS: u64 = 50;

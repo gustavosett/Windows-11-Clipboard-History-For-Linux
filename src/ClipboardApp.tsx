@@ -14,22 +14,10 @@ import { SymbolPicker } from './components/SymbolPicker'
 import { calculateSecondaryOpacity, calculateTertiaryOpacity } from './utils/themeUtils'
 import { useSystemThemePreference } from './utils/systemTheme'
 import { useRenderingEnv } from './hooks/useRenderingEnv'
+import { DEFAULT_SETTINGS } from './types/clipboard'
 import type { ActiveTab, UserSettings } from './types/clipboard'
 import { ClipboardTab } from './components/ClipboardTab'
 
-const DEFAULT_SETTINGS: UserSettings = {
-  theme_mode: 'system',
-  dark_background_opacity: 0.7,
-  light_background_opacity: 0.7,
-  enable_smart_actions: true,
-  enable_ui_polish: true,
-  enable_dynamic_tray_icon: true,
-  max_history_size: 50,
-  auto_delete_interval: 0,
-  auto_delete_unit: 'hours',
-  custom_kaomojis: [],
-  ui_scale: 1,
-}
 
 /**
  * Maps theme mode setting to actual dark mode state.

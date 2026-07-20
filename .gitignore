@@ -5,6 +5,8 @@ target/
 # Build outputs
 dist/
 src-tauri/target/
+*.tsbuildinfo
+
 
 # IDE
 .vscode/

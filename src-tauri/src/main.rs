@@ -126,6 +126,11 @@ fn is_settings_window_visible(app: AppHandle) -> bool {
         .unwrap_or(false)
 }
 
+#[tauri::command]
+fn open_settings_window(app: AppHandle) {
+    SettingsController::show(&app);
+}
+
 // --- Theme Detection Commands ---
 
 /// Get system color scheme from XDG Desktop Portal (supports COSMIC and other modern DEs)
@@ -246,14 +251,6 @@ async fn paste_gif_from_url(
     // The clipboard is already set by paste_gif_to_clipboard_with_uri, we just need to paste
     simulate_paste_keystroke().map_err(|e| e.to_string())?;
 
-    Ok(())
-}
-
-#[tauri::command]
-async fn finish_paste(app: AppHandle) -> Result<(), String> {
-    WindowController::hide(&app);
-    PasteHelper::prepare_target_window().await?;
-    simulate_paste_keystroke().map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -1019,12 +1016,12 @@ fn main() {
             paste_text,
             get_recent_emojis,
             paste_gif_from_url,
-            finish_paste,
             finish_setup, // Register the new command
             set_mouse_state,
             get_user_settings,
             set_user_settings,
             is_settings_window_visible,
+            open_settings_window,
             copy_text_to_clipboard,
             get_system_theme,
             refresh_system_theme,

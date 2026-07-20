@@ -1,5 +1,6 @@
 import { useState, memo, useRef, useCallback } from 'react'
 import { Grid, useGridRef } from 'react-window'
+import { invoke } from '@tauri-apps/api/core'
 import { clsx } from 'clsx'
 import { Search, RefreshCw, TrendingUp } from 'lucide-react'
 import { useGifPicker } from '../hooks/useGifPicker'
@@ -248,6 +249,32 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
       return <LoadingSkeleton />
     }
 
+    if (error === 'MISSING_API_KEY') {
+      return (
+        <div className="flex flex-col items-center justify-center h-full py-12 px-6 text-center animate-fade-in">
+          <div className="w-12 h-12 rounded-full dark:bg-win11-bg-tertiary bg-win11Light-bg-tertiary flex items-center justify-center mb-4">
+            <Search className="w-6 h-6 dark:text-win11-text-secondary text-win11Light-text-secondary" />
+          </div>
+          <h3 className="text-sm font-semibold dark:text-win11-text-primary text-win11Light-text-primary mb-2">
+            Klipy API Key Required
+          </h3>
+          <p className="text-xs dark:text-win11-text-secondary text-win11Light-text-secondary mb-6 max-w-[240px]">
+            To search and paste GIFs, please configure your free Klipy API Key in settings.
+          </p>
+          <button
+            onClick={() => invoke('open_settings_window').catch(console.error)}
+            className={clsx(
+              'px-4 py-2 rounded-lg text-xs font-semibold text-white bg-win11-bg-accent',
+              'hover:opacity-90 transition-opacity duration-150 shadow-md',
+              'focus:outline-none focus:ring-2 focus:ring-win11-bg-accent/50'
+            )}
+          >
+            Configure in Settings
+          </button>
+        </div>
+      )
+    }
+
     if (error) {
       return <EmptyState message={error} isError />
     }
@@ -298,8 +325,8 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
           value={searchQuery}
           onChange={(val: string) => setSearchQuery(val)}
           onClear={handleClearSearch}
-          placeholder="Search Tenor GIFs..."
-          aria-label="Search Tenor GIFs"
+          placeholder="Search Klipy GIFs..."
+          aria-label="Search Klipy GIFs"
           isDark={isDark}
           opacity={opacity}
           rightActions={
@@ -340,7 +367,7 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
       footer={
         <div className="w-full text-center">
           <span className="text-[10px] dark:text-win11-text-disabled text-win11Light-text-disabled">
-            Powered by Tenor
+            Powered by Klipy
           </span>
         </div>
       }
