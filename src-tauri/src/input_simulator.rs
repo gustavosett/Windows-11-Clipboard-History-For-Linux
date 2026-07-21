@@ -139,9 +139,9 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
     // XTest uses one native X11 connection and verifies that Ctrl is down
     // before V. xdotool is retained only as a compatibility fallback.
     const X11_STRATEGIES: &[PasteStrategy] = &[
-        ("XTest", simulate_paste_xtest),
-        ("xdotool", simulate_paste_xdotool),
         ("uinput", simulate_paste_uinput),
+        ("xdotool", simulate_paste_xdotool),
+        ("XTest", simulate_paste_xtest),
     ];
     const NON_X11_STRATEGIES: &[PasteStrategy] = &[("uinput", simulate_paste_uinput)];
 
