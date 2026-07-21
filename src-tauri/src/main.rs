@@ -876,6 +876,7 @@ fn main() {
             // Starting it earlier would hotplug a temporary keyboard every
             // time the desktop launches the shortcut command.
             win11_clipboard_history_lib::input_simulator::init();
+            win11_clipboard_history_lib::paste_sync::init();
 
             // FIRST THING: If started in background mode, immediately hide the main window
             // This runs before anything else to prevent the window from appearing

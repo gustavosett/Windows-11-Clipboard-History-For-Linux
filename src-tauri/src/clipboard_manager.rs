@@ -659,8 +659,7 @@ impl ClipboardManager {
                 width,
                 height,
             } => {
-                let mut clipboard = get_system_clipboard()?;
-                self.write_image_to_clipboard(&mut clipboard, base64, *width, *height)?;
+                self.set_image_robust(base64, *width, *height)?;
             }
         }
 
@@ -673,16 +672,33 @@ impl ClipboardManager {
         Ok(())
     }
 
-    fn write_image_to_clipboard(
-        &self,
-        clipboard: &mut Clipboard,
-        base64_str: &str,
-        width: u32,
-        height: u32,
-    ) -> Result<(), String> {
+    fn set_image_robust(&self, base64_str: &str, width: u32, height: u32) -> Result<(), String> {
         let bytes = BASE64
             .decode(base64_str)
             .map_err(|e| format!("Base64 decode failed: {}", e))?;
+
+        #[cfg(target_os = "linux")]
+        {
+            if crate::session::is_wayland() {
+                if self
+                    .set_clipboard_external("wl-copy", &["--type", "image/png"], &bytes)
+                    .is_ok()
+                {
+                    return Ok(());
+                }
+            } else if self
+                .set_clipboard_external(
+                    "xclip",
+                    &["-selection", "clipboard", "-t", "image/png"],
+                    &bytes,
+                )
+                .is_ok()
+            {
+                return Ok(());
+            }
+        }
+
+        let mut clipboard = get_system_clipboard()?;
         let img =
             image::load_from_memory(&bytes).map_err(|e| format!("Image load failed: {}", e))?;
         let rgba = img.to_rgba8();
@@ -697,21 +713,10 @@ impl ClipboardManager {
     }
 
     fn simulate_paste_action(&self) -> Result<(), String> {
-        // Wayland helpers already acknowledge readiness in
-        // set_clipboard_external. On X11, ownership is directly observable.
-        if crate::session::is_x11()
-            && !crate::paste_sync::settle_clipboard_owned(Duration::from_millis(500))
-        {
-            return Err("Clipboard ownership was not confirmed before paste".to_string());
-        }
-
-        // Trigger keystroke
-        crate::input_simulator::simulate_paste_keystroke()?;
-
-        // before the clipboard ownership changes or the app reads it.
-        thread::sleep(Duration::from_millis(250));
-
-        Ok(())
+        // Clipboard writers return only after their platform-specific
+        // readiness barrier. The serving process (or arboard's global worker)
+        // outlives this call, so no fixed post-paste retention is necessary.
+        crate::input_simulator::simulate_paste_keystroke()
     }
 
     /// Robustly set text to clipboard using xclip/wl-copy on Linux if available,
@@ -723,14 +728,14 @@ impl ClipboardManager {
                 if let Ok(()) = self.set_clipboard_external(
                     "wl-copy",
                     &["--type", "text/plain;charset=utf-8"],
-                    text,
+                    text.as_bytes(),
                 ) {
                     return Ok(());
                 }
             } else if let Ok(()) = self.set_clipboard_external(
                 "xclip",
                 &["-selection", "clipboard", "-t", "UTF8_STRING"],
-                text,
+                text.as_bytes(),
             ) {
                 return Ok(());
             }
@@ -747,16 +752,18 @@ impl ClipboardManager {
         #[cfg(target_os = "linux")]
         {
             if crate::session::is_wayland() {
-                if let Ok(()) =
-                    self.set_clipboard_external("wl-copy", &["--type", "text/html"], html)
-                {
+                if let Ok(()) = self.set_clipboard_external(
+                    "wl-copy",
+                    &["--type", "text/html"],
+                    html.as_bytes(),
+                ) {
                     let _ = self.set_text_robust(plain);
                     return Ok(());
                 }
             } else if let Ok(()) = self.set_clipboard_external(
                 "xclip",
                 &["-selection", "clipboard", "-t", "text/html"],
-                html,
+                html.as_bytes(),
             ) {
                 let _ = self.set_text_robust(plain);
                 return Ok(());
@@ -770,7 +777,7 @@ impl ClipboardManager {
             .map_err(|e| e.to_string())
     }
 
-    fn set_clipboard_external(&self, cmd: &str, args: &[&str], data: &str) -> Result<(), String> {
+    fn set_clipboard_external(&self, cmd: &str, args: &[&str], data: &[u8]) -> Result<(), String> {
         use std::io::{Read, Write};
         use std::process::{Command, Stdio};
 
@@ -787,7 +794,7 @@ impl ClipboardManager {
 
         if let Some(mut stdin) = child.stdin.take() {
             stdin
-                .write_all(data.as_bytes())
+                .write_all(data)
                 .map_err(|e| format!("Pipe write error: {}", e))?;
         }
 

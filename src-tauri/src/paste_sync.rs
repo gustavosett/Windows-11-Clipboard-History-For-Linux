@@ -1,165 +1,185 @@
-//! Paste Synchronization Module
+//! Paste synchronization barriers for X11.
 //!
-//! Adaptive X11 barriers for the paste pipeline. Each function polls an
-//! observable server condition and returns as soon as it is confirmed. The
-//! caller chooses a timeout as a failure ceiling, so constrained systems get
-//! more time without imposing that delay on fast systems.
-//!
-//! These helpers return whether the condition was actually confirmed. Paste
-//! code must treat `false` as a failed precondition rather than continuing
-//! with an unverified input sequence.
+//! A single cached X11 connection is used for focus and clipboard checks.
+//! Besides avoiding connection setup on every paste, keeping the atom cache
+//! and polling on one connection makes the hot path both cheaper and easier
+//! to reason about.
 
 use crate::session;
+use parking_lot::Mutex;
+use std::sync::OnceLock;
 use std::thread;
 use std::time::{Duration, Instant};
-use x11rb::protocol::xproto::ConnectionExt;
+use x11rb::connection::Connection;
+use x11rb::protocol::xproto::{Atom, ConnectionExt, InputFocus};
+use x11rb::rust_connection::RustConnection;
 
-/// Polling interval for all waiters. Cheap X11 round-trips (~0.1ms each).
+/// Polling interval for all waiters. X11 round trips are local and cheap.
 const POLL_INTERVAL: Duration = Duration::from_millis(3);
 
-/// A single matching focus sample can occur before a pending WM transition
-/// (such as our popup's UnmapNotify) is processed. Requiring stability closes
-/// that transient-match race at a cost of one short poll on fast systems.
+/// One matching focus sample can precede a pending WM transition. Requiring
+/// two consecutive samples closes that transient-match race.
 const FOCUS_STABLE_SAMPLES: u8 = 2;
 
-/// Returns the current owner window of the CLIPBOARD selection,
-/// or `None` when it cannot be determined (non-X11, connection failure).
-/// `Some(0)` (x11rb::NONE) means "no owner".
-pub fn clipboard_owner() -> Option<u32> {
+struct X11Context {
+    connection: RustConnection,
+    clipboard_atom: Atom,
+}
+
+impl X11Context {
+    fn connect() -> Result<Self, String> {
+        let (connection, _) =
+            x11rb::connect(None).map_err(|error| format!("X11 connection failed: {}", error))?;
+        let clipboard_atom = connection
+            .intern_atom(false, b"CLIPBOARD")
+            .map_err(|error| format!("Failed to intern CLIPBOARD: {}", error))?
+            .reply()
+            .map_err(|error| format!("Failed to intern CLIPBOARD: {}", error))?
+            .atom;
+
+        Ok(Self {
+            connection,
+            clipboard_atom,
+        })
+    }
+
+    fn clipboard_owner(&self) -> Result<u32, String> {
+        self.connection
+            .get_selection_owner(self.clipboard_atom)
+            .map_err(|error| format!("Failed to query clipboard owner: {}", error))?
+            .reply()
+            .map_err(|error| format!("Failed to query clipboard owner: {}", error))
+            .map(|reply| reply.owner)
+    }
+
+    fn focused_window(&self) -> Result<u32, String> {
+        self.connection
+            .get_input_focus()
+            .map_err(|error| format!("Failed to query X11 focus: {}", error))?
+            .reply()
+            .map_err(|error| format!("Failed to query X11 focus: {}", error))
+            .map(|reply| reply.focus)
+    }
+}
+
+static X11_CONTEXT: OnceLock<Mutex<Option<X11Context>>> = OnceLock::new();
+
+fn x11_context() -> &'static Mutex<Option<X11Context>> {
+    X11_CONTEXT.get_or_init(|| Mutex::new(None))
+}
+
+fn with_x11_context<T>(
+    operation: impl FnOnce(&mut X11Context) -> Result<T, String>,
+) -> Result<T, String> {
     if !session::is_x11() {
-        return None;
+        return Err("X11 synchronization requested outside an X11 session".to_string());
     }
-    let (conn, _) = x11rb::connect(None).ok()?;
-    let atom = conn
-        .intern_atom(false, b"CLIPBOARD")
-        .ok()?
-        .reply()
-        .ok()?
-        .atom;
-    let owner = conn.get_selection_owner(atom).ok()?.reply().ok()?.owner;
-    Some(owner)
+
+    let mut slot = x11_context().lock();
+    if slot.is_none() {
+        *slot = Some(X11Context::connect()?);
+    }
+
+    let result = operation(slot.as_mut().expect("X11 context was initialized"));
+    if result.is_err() {
+        // A broken server connection should not poison every later paste.
+        // The next operation reconnects lazily.
+        *slot = None;
+    }
+    result
 }
 
-/// Wait (at most `budget`) for the X11 input focus to land on
-/// `target_window`. Returns `true` if the focus was confirmed early.
-///
-/// Replaces a fixed focus sleep: instead of assuming the
-/// window manager needs N ms to process `set_input_focus`, we watch the
-/// actual focus and return the moment it settles. When verification is
-/// impossible (non-X11, connection failure), sleeps the full budget.
-pub fn settle_focus(target_window: u32, budget: Duration) -> bool {
-    let start = Instant::now();
-    let mut stable_samples = 0;
-    let confirmed = poll_until(budget, || {
-        if !session::is_x11() || target_window == 0 {
-            return PollState::Unverifiable;
-        }
-        match focused_window() {
-            Some(focus) if focus == target_window => {
+/// Warms the cached X11 synchronization connection outside the paste path.
+pub fn init() {
+    if !session::is_x11() {
+        return;
+    }
+
+    if let Err(error) = thread::Builder::new()
+        .name("x11-paste-sync-warmup".to_string())
+        .spawn(|| match with_x11_context(|_| Ok(())) {
+            Ok(()) => eprintln!("[PasteSync] X11 synchronization connection is ready"),
+            Err(error) => eprintln!(
+                "[PasteSync] X11 warmup failed; first paste will retry: {}",
+                error
+            ),
+        })
+    {
+        eprintln!("[PasteSync] Failed to start warmup thread: {}", error);
+    }
+}
+
+/// Returns the current owner window of the CLIPBOARD selection.
+/// `Some(0)` (`x11rb::NONE`) means that the selection has no owner.
+pub fn clipboard_owner() -> Option<u32> {
+    with_x11_context(|context| context.clipboard_owner()).ok()
+}
+
+/// Returns the window that currently has X11 input focus.
+pub fn focused_window() -> Option<u32> {
+    with_x11_context(|context| context.focused_window()).ok()
+}
+
+/// Requests focus for `target_window` and waits until it is observed in two
+/// consecutive samples. The request and verification share one connection,
+/// so request ordering is guaranteed without a fixed settle delay.
+pub fn restore_and_settle_focus(target_window: u32, timeout: Duration) -> Result<bool, String> {
+    if target_window == 0 {
+        return Err("Cannot restore focus to X11 window 0".to_string());
+    }
+
+    with_x11_context(|context| {
+        context
+            .connection
+            .set_input_focus(InputFocus::PARENT, target_window, x11rb::CURRENT_TIME)
+            .map_err(|error| format!("Set focus failed: {}", error))?;
+        context
+            .connection
+            .flush()
+            .map_err(|error| format!("X11 focus flush failed: {}", error))?;
+
+        let mut stable_samples = 0;
+        poll_until(timeout, || {
+            if context.focused_window()? == target_window {
                 stable_samples += 1;
-                if stable_samples >= FOCUS_STABLE_SAMPLES {
-                    PollState::Confirmed
-                } else {
-                    PollState::Pending
-                }
-            }
-            Some(_) => {
+                Ok(stable_samples >= FOCUS_STABLE_SAMPLES)
+            } else {
                 stable_samples = 0;
-                PollState::Pending
+                Ok(false)
             }
-            None => PollState::Unverifiable,
-        }
-    });
-
-    if !confirmed {
-        sleep_remaining(start, budget);
-    }
-    confirmed
+        })
+    })
 }
 
-/// Wait (at most `budget`) for the CLIPBOARD selection owner to *change*
-/// from `owner_before` (to a non-NONE owner). Returns `true` if the handoff
-/// was confirmed early.
-///
-/// Replaces the fixed "clipboard settle" sleep after spawning xclip/wl-copy:
-/// the instant the X server reports the new selection owner, any target app
-/// will read the new content — there is nothing further to wait for.
-/// Checking for a *change* (not just presence) avoids a false positive when
-/// the previous owner is still holding the selection.
-pub fn settle_clipboard_handoff(owner_before: Option<u32>, budget: Duration) -> bool {
-    let start = Instant::now();
-    let confirmed = poll_until(budget, || {
-        let before = match owner_before {
-            Some(owner) => owner,
-            None => return PollState::Unverifiable,
-        };
-        match clipboard_owner() {
-            Some(owner) if owner != x11rb::NONE && owner != before => PollState::Confirmed,
-            Some(_) => PollState::Pending,
-            None => PollState::Unverifiable,
-        }
-    });
+/// Waits for the CLIPBOARD owner to change to a non-empty owner.
+pub fn settle_clipboard_handoff(owner_before: Option<u32>, timeout: Duration) -> bool {
+    let Some(owner_before) = owner_before else {
+        // The caller can immediately use its fallback instead of paying the
+        // full timeout for a condition that cannot be verified.
+        return false;
+    };
 
-    if !confirmed {
-        sleep_remaining(start, budget);
-    }
-    confirmed
+    with_x11_context(|context| {
+        poll_until(timeout, || {
+            let owner = context.clipboard_owner()?;
+            Ok(owner != x11rb::NONE && owner != owner_before)
+        })
+    })
+    .unwrap_or(false)
 }
 
-/// Wait (at most `budget`) for the CLIPBOARD selection to have *some* owner.
-/// Weaker check than [`settle_clipboard_handoff`], used as a final settle
-/// confirmation right before the paste keystroke, after the write has
-/// already been verified upstream.
-pub fn settle_clipboard_owned(budget: Duration) -> bool {
-    let start = Instant::now();
-    let confirmed = poll_until(budget, || match clipboard_owner() {
-        Some(owner) if owner != x11rb::NONE => PollState::Confirmed,
-        Some(_) => PollState::Pending,
-        None => PollState::Unverifiable,
-    });
-
-    if !confirmed {
-        sleep_remaining(start, budget);
-    }
-    confirmed
-}
-
-// --- internals ---
-
-enum PollState {
-    Confirmed,
-    Pending,
-    Unverifiable,
-}
-
-/// Polls `check` every POLL_INTERVAL until it confirms, becomes
-/// unverifiable, or `budget` elapses. Returns `true` only on confirmation.
-fn poll_until(budget: Duration, mut check: impl FnMut() -> PollState) -> bool {
-    let deadline = Instant::now() + budget;
+fn poll_until(
+    timeout: Duration,
+    mut check: impl FnMut() -> Result<bool, String>,
+) -> Result<bool, String> {
+    let deadline = Instant::now() + timeout;
     loop {
-        match check() {
-            PollState::Confirmed => return true,
-            PollState::Unverifiable => return false,
-            PollState::Pending => {}
+        if check()? {
+            return Ok(true);
         }
         if Instant::now() >= deadline {
-            return false;
+            return Ok(false);
         }
         thread::sleep(POLL_INTERVAL);
     }
-}
-
-/// Sleeps whatever is left of `budget`, so an unconfirmed settle takes
-/// exactly as long as the old fixed sleep did — never longer.
-fn sleep_remaining(start: Instant, budget: Duration) {
-    let remaining = budget.saturating_sub(start.elapsed());
-    if !remaining.is_zero() {
-        thread::sleep(remaining);
-    }
-}
-
-fn focused_window() -> Option<u32> {
-    let (conn, _) = x11rb::connect(None).ok()?;
-    let reply = conn.get_input_focus().ok()?.reply().ok()?;
-    Some(reply.focus)
 }

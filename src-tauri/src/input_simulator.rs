@@ -51,38 +51,68 @@ struct UinputDevice {
     file: File,
 }
 
-static UINPUT_DEVICE: OnceLock<Mutex<Option<UinputDevice>>> = OnceLock::new();
+/// Persistent XTest client. Connection setup, extension negotiation and
+/// keyboard-map discovery happen once rather than on every paste.
+struct XtestDevice {
+    connection: x11rb::rust_connection::RustConnection,
+    root_window: u32,
+    ctrl_keycode: u8,
+    v_keycode: u8,
+}
 
-/// Starts uinput discovery outside the paste hot path. If startup happens
-/// before permissions are granted, the first paste retries initialization.
+static UINPUT_DEVICE: OnceLock<Mutex<Option<UinputDevice>>> = OnceLock::new();
+static XTEST_DEVICE: OnceLock<Mutex<Option<XtestDevice>>> = OnceLock::new();
+
+/// Warms the active input backend outside the paste hot path. If startup
+/// initialization fails, the first paste retries it.
 pub fn init() {
-    if session::is_x11() {
+    let (thread_name, warmup): (&str, fn()) = if session::is_x11() {
+        ("xtest-paste-warmup", warm_up_xtest)
+    } else {
+        ("uinput-paste-warmup", warm_up_uinput)
+    };
+
+    if let Err(error) = std::thread::Builder::new()
+        .name(thread_name.to_string())
+        .spawn(warmup)
+    {
+        eprintln!("[SimulatePaste] Failed to start warmup thread: {}", error);
+    }
+}
+
+fn warm_up_xtest() {
+    let mut device = xtest_device_lock().lock();
+    if device.is_some() {
         return;
     }
 
-    if let Err(error) = std::thread::Builder::new()
-        .name("uinput-paste-warmup".to_string())
-        .spawn(|| {
-            let mut device = uinput_device_lock().lock();
-            if device.is_some() {
-                return;
-            }
+    match XtestDevice::create() {
+        Ok(created) => {
+            *device = Some(created);
+            eprintln!("[XTest] Persistent X11 input client is ready");
+        }
+        Err(error) => eprintln!(
+            "[XTest] Startup warmup failed; first paste will retry: {}",
+            error
+        ),
+    }
+}
 
-            match UinputDevice::create() {
-                Ok(created) => {
-                    *device = Some(created);
-                    eprintln!("[uinput] Virtual keyboard warmed up at startup");
-                }
-                Err(error) => {
-                    eprintln!(
-                        "[uinput] Startup warmup failed; first paste will retry: {}",
-                        error
-                    );
-                }
-            }
-        })
-    {
-        eprintln!("[uinput] Failed to start warmup thread: {}", error);
+fn warm_up_uinput() {
+    let mut device = uinput_device_lock().lock();
+    if device.is_some() {
+        return;
+    }
+
+    match UinputDevice::create() {
+        Ok(created) => {
+            *device = Some(created);
+            eprintln!("[uinput] Virtual keyboard warmed up at startup");
+        }
+        Err(error) => eprintln!(
+            "[uinput] Startup warmup failed; first paste will retry: {}",
+            error
+        ),
     }
 }
 
@@ -135,100 +165,134 @@ fn fake_key<C: x11rb::connection::Connection + x11rb::protocol::xtest::Connectio
 }
 
 fn simulate_paste_xtest() -> Result<(), String> {
-    use x11rb::connection::Connection;
-    use x11rb::protocol::xtest::ConnectionExt as XtestConnectionExt;
-
-    let (conn, screen_num) =
-        x11rb::connect(None).map_err(|error| format!("X11 connect failed: {}", error))?;
-    let root_window = conn
-        .setup()
-        .roots
-        .get(screen_num)
-        .ok_or("X11 screen not found")?
-        .root;
-
-    conn.xtest_get_version(2, 1)
-        .map_err(|error| format!("XTest version query failed: {}", error))?
-        .reply()
-        .map_err(|error| format!("XTest version query failed: {}", error))?;
-
-    let (ctrl_keycode, v_keycode) = resolve_paste_keycodes(&conn)?;
-    let mut ctrl_down = false;
-    let mut v_down = false;
-
-    let operation = (|| {
-        fake_key(
-            &conn,
-            X11_KEY_PRESS,
-            ctrl_keycode,
-            root_window,
-            "Failed to press Ctrl",
-        )?;
-        ctrl_down = true;
-        wait_for_x11_key_state(&conn, ctrl_keycode, true)?;
-
-        fake_key(
-            &conn,
-            X11_KEY_PRESS,
-            v_keycode,
-            root_window,
-            "Failed to press V",
-        )?;
-        v_down = true;
-        wait_for_x11_key_state(&conn, v_keycode, true)?;
-
-        fake_key(
-            &conn,
-            X11_KEY_RELEASE,
-            v_keycode,
-            root_window,
-            "Failed to release V",
-        )?;
-        v_down = false;
-
-        fake_key(
-            &conn,
-            X11_KEY_RELEASE,
-            ctrl_keycode,
-            root_window,
-            "Failed to release Ctrl",
-        )?;
-        ctrl_down = false;
-
-        wait_for_x11_key_state(&conn, v_keycode, false)?;
-        wait_for_x11_key_state(&conn, ctrl_keycode, false)
-    })();
-
-    // Never leave a synthetic modifier held if a round trip fails midway.
-    let mut cleanup_errors = Vec::new();
-    if v_down {
-        if let Err(error) = fake_key(
-            &conn,
-            X11_KEY_RELEASE,
-            v_keycode,
-            root_window,
-            "Cleanup failed to release V",
-        ) {
-            cleanup_errors.push(error);
-        }
-    }
-    if ctrl_down {
-        if let Err(error) = fake_key(
-            &conn,
-            X11_KEY_RELEASE,
-            ctrl_keycode,
-            root_window,
-            "Cleanup failed to release Ctrl",
-        ) {
-            cleanup_errors.push(error);
-        }
+    let mut device = xtest_device_lock().lock();
+    if device.is_none() {
+        *device = Some(XtestDevice::create()?);
     }
 
-    match (operation, cleanup_errors.is_empty()) {
-        (Ok(()), true) => Ok(()),
-        (Ok(()), false) => Err(cleanup_errors.join("; ")),
-        (Err(error), true) => Err(error),
-        (Err(error), false) => Err(format!("{}; {}", error, cleanup_errors.join("; "))),
+    let result = device
+        .as_mut()
+        .expect("XTest device was initialized")
+        .send_ctrl_v();
+    if result.is_err() {
+        // Reconnect on the next attempt if the X server connection went away.
+        *device = None;
+    }
+    result
+}
+
+fn xtest_device_lock() -> &'static Mutex<Option<XtestDevice>> {
+    XTEST_DEVICE.get_or_init(|| Mutex::new(None))
+}
+
+impl XtestDevice {
+    fn create() -> Result<Self, String> {
+        use x11rb::connection::Connection;
+        use x11rb::protocol::xtest::ConnectionExt as XtestConnectionExt;
+
+        let (connection, screen_num) =
+            x11rb::connect(None).map_err(|error| format!("X11 connect failed: {}", error))?;
+        let root_window = connection
+            .setup()
+            .roots
+            .get(screen_num)
+            .ok_or("X11 screen not found")?
+            .root;
+
+        connection
+            .xtest_get_version(2, 1)
+            .map_err(|error| format!("XTest version query failed: {}", error))?
+            .reply()
+            .map_err(|error| format!("XTest version query failed: {}", error))?;
+
+        let (ctrl_keycode, v_keycode) = resolve_paste_keycodes(&connection)?;
+
+        Ok(Self {
+            connection,
+            root_window,
+            ctrl_keycode,
+            v_keycode,
+        })
+    }
+
+    fn send_ctrl_v(&mut self) -> Result<(), String> {
+        let mut ctrl_down = false;
+        let mut v_down = false;
+
+        let operation = (|| {
+            fake_key(
+                &self.connection,
+                X11_KEY_PRESS,
+                self.ctrl_keycode,
+                self.root_window,
+                "Failed to press Ctrl",
+            )?;
+            ctrl_down = true;
+            wait_for_x11_key_state(&self.connection, self.ctrl_keycode, true)?;
+
+            fake_key(
+                &self.connection,
+                X11_KEY_PRESS,
+                self.v_keycode,
+                self.root_window,
+                "Failed to press V",
+            )?;
+            v_down = true;
+            wait_for_x11_key_state(&self.connection, self.v_keycode, true)?;
+
+            fake_key(
+                &self.connection,
+                X11_KEY_RELEASE,
+                self.v_keycode,
+                self.root_window,
+                "Failed to release V",
+            )?;
+            v_down = false;
+
+            fake_key(
+                &self.connection,
+                X11_KEY_RELEASE,
+                self.ctrl_keycode,
+                self.root_window,
+                "Failed to release Ctrl",
+            )?;
+            ctrl_down = false;
+
+            wait_for_x11_key_state(&self.connection, self.v_keycode, false)?;
+            wait_for_x11_key_state(&self.connection, self.ctrl_keycode, false)
+        })();
+
+        // Never leave a synthetic modifier held if a round trip fails midway.
+        let mut cleanup_errors = Vec::new();
+        if v_down {
+            if let Err(error) = fake_key(
+                &self.connection,
+                X11_KEY_RELEASE,
+                self.v_keycode,
+                self.root_window,
+                "Cleanup failed to release V",
+            ) {
+                cleanup_errors.push(error);
+            }
+        }
+        if ctrl_down {
+            if let Err(error) = fake_key(
+                &self.connection,
+                X11_KEY_RELEASE,
+                self.ctrl_keycode,
+                self.root_window,
+                "Cleanup failed to release Ctrl",
+            ) {
+                cleanup_errors.push(error);
+            }
+        }
+
+        match (operation, cleanup_errors.is_empty()) {
+            (Ok(()), true) => Ok(()),
+            (Ok(()), false) => Err(cleanup_errors.join("; ")),
+            (Err(error), true) => Err(error),
+            (Err(error), false) => Err(format!("{}; {}", error, cleanup_errors.join("; "))),
+        }
     }
 }
 
