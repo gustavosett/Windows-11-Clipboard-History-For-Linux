@@ -1,33 +1,101 @@
 use crate::session;
-use std::thread;
-use std::time::Duration;
+use parking_lot::Mutex;
+use std::fs::{File, OpenOptions};
+use std::io::Write;
+use std::os::fd::AsRawFd;
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
+use std::time::{Duration, Instant};
 
 type PasteStrategy = (&'static str, fn() -> Result<(), String>);
 
-/// Delay before starting the paste sequence to ensure window focus is stable
-const PRE_PASTE_DELAY_MS: u64 = 1;
+/// The kernel creates a uinput device synchronously, but udev/libinput and the
+/// compositor discover it asynchronously. Device readiness is paid once at
+/// startup, never for every paste.
+const DEVICE_READY_TIMEOUT: Duration = Duration::from_secs(2);
+const DEVICE_READY_POLL_INTERVAL: Duration = Duration::from_millis(5);
+const DEVICE_DISCOVERY_GRACE: Duration = Duration::from_millis(100);
 
-/// Delay between key events to ensure proper registration
-const KEY_EVENT_DELAY_MS: u64 = 50;
+/// X11 key-state checks are round trips to the X server. They normally finish
+/// immediately; the timeout is only a failure ceiling for a stalled server.
+const X11_KEY_STATE_TIMEOUT: Duration = Duration::from_millis(250);
+const X11_KEY_STATE_POLL_INTERVAL: Duration = Duration::from_millis(1);
 
-/// Delay after device creation for uinput to be recognized
-const UINPUT_DEVICE_SETTLE_MS: u64 = 50;
+/// Kept only for the last-resort xdotool fallback. The primary XTest path
+/// verifies the actual key state and needs no fixed inter-key delay.
+const XDOTOOL_KEY_DELAY_MS: &str = "50";
 
-/// Delay after paste sequence completes
-const POST_PASTE_DELAY_MS: u64 = 1;
+const EV_SYN: u16 = 0x00;
+const EV_KEY: u16 = 0x01;
+const SYN_REPORT: u16 = 0x00;
+const KEY_LEFTCTRL: u16 = 29;
+const KEY_V: u16 = 47;
+
+const UI_SET_EVBIT: libc::c_ulong = 0x40045564;
+const UI_SET_KEYBIT: libc::c_ulong = 0x40045565;
+const UI_DEV_SETUP: libc::c_ulong = 0x405c5503;
+const UI_DEV_CREATE: libc::c_ulong = 0x5501;
+const UI_DEV_DESTROY: libc::c_ulong = 0x5502;
+
+const X11_KEY_PRESS: u8 = 2;
+const X11_KEY_RELEASE: u8 = 3;
+const XK_CONTROL_L: u32 = 0xffe3;
+const XK_CONTROL_R: u32 = 0xffe4;
+const XK_LOWER_V: u32 = 0x0076;
+const XK_UPPER_V: u32 = 0x0056;
+
+/// Persistent virtual keyboard. Recreating it for every paste allowed the
+/// compositor to attach after Ctrl but before V, which produced a literal
+/// `v` under load.
+struct UinputDevice {
+    file: File,
+}
+
+static UINPUT_DEVICE: OnceLock<Mutex<Option<UinputDevice>>> = OnceLock::new();
+
+/// Starts uinput discovery outside the paste hot path. If startup happens
+/// before permissions are granted, the first paste retries initialization.
+pub fn init() {
+    if session::is_x11() {
+        return;
+    }
+
+    if let Err(error) = std::thread::Builder::new()
+        .name("uinput-paste-warmup".to_string())
+        .spawn(|| {
+            let mut device = uinput_device_lock().lock();
+            if device.is_some() {
+                return;
+            }
+
+            match UinputDevice::create() {
+                Ok(created) => {
+                    *device = Some(created);
+                    eprintln!("[uinput] Virtual keyboard warmed up at startup");
+                }
+                Err(error) => {
+                    eprintln!(
+                        "[uinput] Startup warmup failed; first paste will retry: {}",
+                        error
+                    );
+                }
+            }
+        })
+    {
+        eprintln!("[uinput] Failed to start warmup thread: {}", error);
+    }
+}
 
 pub fn simulate_paste_keystroke() -> Result<(), String> {
-    // Give window manager time to settle focus before sending keystrokes
-    thread::sleep(Duration::from_millis(PRE_PASTE_DELAY_MS));
-
     eprintln!("[SimulatePaste] Sending Ctrl+V...");
 
+    // XTest uses one native X11 connection and verifies that Ctrl is down
+    // before V. xdotool is retained only as a compatibility fallback.
     const X11_STRATEGIES: &[PasteStrategy] = &[
-        ("xdotool", simulate_paste_xdotool),
         ("XTest", simulate_paste_xtest),
+        ("xdotool", simulate_paste_xdotool),
         ("uinput", simulate_paste_uinput),
     ];
-
     const NON_X11_STRATEGIES: &[PasteStrategy] = &[("uinput", simulate_paste_uinput)];
 
     let strategies = if session::is_x11() {
@@ -36,237 +104,516 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
         NON_X11_STRATEGIES
     };
 
-    for (name, func) in strategies {
-        match func() {
+    for (name, strategy) in strategies {
+        match strategy() {
             Ok(()) => {
                 eprintln!("[SimulatePaste] Ctrl+V sent via {}", name);
-                // Small delay after paste to let the target app process it
-                thread::sleep(Duration::from_millis(POST_PASTE_DELAY_MS));
                 return Ok(());
             }
-            Err(err) => {
-                eprintln!("[SimulatePaste] {} failed: {}", name, err);
-            }
+            Err(error) => eprintln!("[SimulatePaste] {} failed: {}", name, error),
         }
     }
 
     Err("All paste methods failed".to_string())
 }
 
-/// Helper for XTest input generation
+// =============================================================================
+// X11 / XTest
+// =============================================================================
+
 fn fake_key<C: x11rb::connection::Connection + x11rb::protocol::xtest::ConnectionExt>(
     conn: &C,
     key_type: u8,
     keycode: u8,
     root_window: u32,
-    ctx: &str,
+    context: &str,
 ) -> Result<(), String> {
     conn.xtest_fake_input(key_type, keycode, 0, root_window, 0, 0, 0)
-        .map_err(|e| format!("{}: {}", ctx, e))?;
-    conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
-    Ok(())
+        .map_err(|error| format!("{}: {}", context, error))?;
+    conn.flush()
+        .map_err(|error| format!("X11 flush failed: {}", error))
 }
 
-/// Simulate Ctrl+V using X11 XTest extension
 fn simulate_paste_xtest() -> Result<(), String> {
     use x11rb::connection::Connection;
     use x11rb::protocol::xtest::ConnectionExt as XtestConnectionExt;
-    use x11rb::wrapper::ConnectionExt as WrapperConnectionExt; // Imported for sync()
-
-    const CTRL_L_KEYCODE: u8 = 37;
-    const V_KEYCODE: u8 = 55;
 
     let (conn, screen_num) =
-        x11rb::connect(None).map_err(|e| format!("X11 connect failed: {}", e))?;
-    let screen = &conn.setup().roots[screen_num];
-    let root_window = screen.root;
+        x11rb::connect(None).map_err(|error| format!("X11 connect failed: {}", error))?;
+    let root_window = conn
+        .setup()
+        .roots
+        .get(screen_num)
+        .ok_or("X11 screen not found")?
+        .root;
 
     conn.xtest_get_version(2, 1)
-        .map_err(|e| format!("XTest version query failed: {}", e))?
+        .map_err(|error| format!("XTest version query failed: {}", error))?
         .reply()
-        .map_err(|e| format!("XTest version query failed: {}", e))?;
+        .map_err(|error| format!("XTest version query failed: {}", error))?;
 
-    conn.sync()
-        .map_err(|e| format!("Sync setup failed: {}", e))?;
+    let (ctrl_keycode, v_keycode) = resolve_paste_keycodes(&conn)?;
+    let mut ctrl_down = false;
+    let mut v_down = false;
 
-    // Press Ctrl and wait for it to be registered
-    fake_key(
-        &conn,
-        2,
-        CTRL_L_KEYCODE,
-        root_window,
-        "Failed to press Ctrl",
-    )?;
-    conn.sync()
-        .map_err(|e| format!("Sync after Ctrl press failed: {}", e))?;
-    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
+    let operation = (|| {
+        fake_key(
+            &conn,
+            X11_KEY_PRESS,
+            ctrl_keycode,
+            root_window,
+            "Failed to press Ctrl",
+        )?;
+        ctrl_down = true;
+        wait_for_x11_key_state(&conn, ctrl_keycode, true)?;
 
-    // Press V
-    fake_key(&conn, 2, V_KEYCODE, root_window, "Failed to press V")?;
-    conn.sync()
-        .map_err(|e| format!("Sync after V press failed: {}", e))?;
-    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
+        fake_key(
+            &conn,
+            X11_KEY_PRESS,
+            v_keycode,
+            root_window,
+            "Failed to press V",
+        )?;
+        v_down = true;
+        wait_for_x11_key_state(&conn, v_keycode, true)?;
 
-    // Release V
-    fake_key(&conn, 3, V_KEYCODE, root_window, "Failed to release V")?;
-    conn.sync()
-        .map_err(|e| format!("Sync after V release failed: {}", e))?;
-    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
+        fake_key(
+            &conn,
+            X11_KEY_RELEASE,
+            v_keycode,
+            root_window,
+            "Failed to release V",
+        )?;
+        v_down = false;
 
-    // Release Ctrl
-    fake_key(
-        &conn,
-        3,
-        CTRL_L_KEYCODE,
-        root_window,
-        "Failed to release Ctrl",
-    )?;
+        fake_key(
+            &conn,
+            X11_KEY_RELEASE,
+            ctrl_keycode,
+            root_window,
+            "Failed to release Ctrl",
+        )?;
+        ctrl_down = false;
 
-    conn.sync()
-        .map_err(|e| format!("Final sync failed: {}", e))?;
-    Ok(())
+        wait_for_x11_key_state(&conn, v_keycode, false)?;
+        wait_for_x11_key_state(&conn, ctrl_keycode, false)
+    })();
+
+    // Never leave a synthetic modifier held if a round trip fails midway.
+    let mut cleanup_errors = Vec::new();
+    if v_down {
+        if let Err(error) = fake_key(
+            &conn,
+            X11_KEY_RELEASE,
+            v_keycode,
+            root_window,
+            "Cleanup failed to release V",
+        ) {
+            cleanup_errors.push(error);
+        }
+    }
+    if ctrl_down {
+        if let Err(error) = fake_key(
+            &conn,
+            X11_KEY_RELEASE,
+            ctrl_keycode,
+            root_window,
+            "Cleanup failed to release Ctrl",
+        ) {
+            cleanup_errors.push(error);
+        }
+    }
+
+    match (operation, cleanup_errors.is_empty()) {
+        (Ok(()), true) => Ok(()),
+        (Ok(()), false) => Err(cleanup_errors.join("; ")),
+        (Err(error), true) => Err(error),
+        (Err(error), false) => Err(format!("{}; {}", error, cleanup_errors.join("; "))),
+    }
 }
 
-/// Simulate Ctrl+V using xdotool
+fn resolve_paste_keycodes<C: x11rb::connection::Connection>(conn: &C) -> Result<(u8, u8), String> {
+    use x11rb::protocol::xproto::ConnectionExt as XprotoConnectionExt;
+
+    let setup = conn.setup();
+    let first_keycode = setup.min_keycode;
+    let keycode_count = u16::from(setup.max_keycode)
+        .checked_sub(u16::from(first_keycode))
+        .and_then(|count| count.checked_add(1))
+        .and_then(|count| u8::try_from(count).ok())
+        .ok_or("Invalid X11 keycode range")?;
+
+    let mapping = conn
+        .get_keyboard_mapping(first_keycode, keycode_count)
+        .map_err(|error| format!("Failed to query X11 keymap: {}", error))?
+        .reply()
+        .map_err(|error| format!("Failed to query X11 keymap: {}", error))?;
+
+    let ctrl = find_keycode(
+        &mapping.keysyms,
+        mapping.keysyms_per_keycode,
+        first_keycode,
+        &[XK_CONTROL_L, XK_CONTROL_R],
+    )
+    .ok_or("Ctrl key not found in the active X11 keymap")?;
+    let v = find_keycode(
+        &mapping.keysyms,
+        mapping.keysyms_per_keycode,
+        first_keycode,
+        &[XK_LOWER_V, XK_UPPER_V],
+    )
+    .ok_or("V key not found in the active X11 keymap")?;
+
+    Ok((ctrl, v))
+}
+
+fn find_keycode(
+    keysyms: &[u32],
+    keysyms_per_keycode: u8,
+    first_keycode: u8,
+    wanted: &[u32],
+) -> Option<u8> {
+    let width = usize::from(keysyms_per_keycode);
+    if width == 0 {
+        return None;
+    }
+
+    keysyms
+        .chunks(width)
+        .position(|symbols| symbols.iter().any(|symbol| wanted.contains(symbol)))
+        .and_then(|offset| u8::try_from(offset).ok())
+        .and_then(|offset| first_keycode.checked_add(offset))
+}
+
+fn wait_for_x11_key_state<C: x11rb::connection::Connection>(
+    conn: &C,
+    keycode: u8,
+    expected_pressed: bool,
+) -> Result<(), String> {
+    use x11rb::protocol::xproto::ConnectionExt as XprotoConnectionExt;
+
+    let start = Instant::now();
+    loop {
+        let reply = conn
+            .query_keymap()
+            .map_err(|error| format!("Failed to query X11 key state: {}", error))?
+            .reply()
+            .map_err(|error| format!("Failed to query X11 key state: {}", error))?;
+
+        if key_is_pressed(&reply.keys, keycode) == expected_pressed {
+            return Ok(());
+        }
+        if start.elapsed() >= X11_KEY_STATE_TIMEOUT {
+            return Err(format!(
+                "Timed out waiting for X11 key {} to become {}",
+                keycode,
+                if expected_pressed {
+                    "pressed"
+                } else {
+                    "released"
+                }
+            ));
+        }
+        std::thread::sleep(X11_KEY_STATE_POLL_INTERVAL);
+    }
+}
+
+fn key_is_pressed(keymap: &[u8; 32], keycode: u8) -> bool {
+    let byte = usize::from(keycode / 8);
+    let bit = keycode % 8;
+    keymap[byte] & (1 << bit) != 0
+}
+
 fn simulate_paste_xdotool() -> Result<(), String> {
-    // Send Ctrl+V to the currently focused window without specifying a target
     let output = std::process::Command::new("xdotool")
-        .arg("key")
-        .arg("--clearmodifiers")
-        .arg("ctrl+v")
+        .args([
+            "key",
+            "--delay",
+            XDOTOOL_KEY_DELAY_MS,
+            "--clearmodifiers",
+            "ctrl+v",
+        ])
         .output()
-        .map_err(|e| format!("Failed to run xdotool key: {}", e))?;
+        .map_err(|error| format!("Failed to run xdotool: {}", error))?;
 
     if output.status.success() {
-        eprintln!("[SimulatePaste] xdotool sent ctrl+v to focused window");
         Ok(())
     } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("xdotool key failed: {}", stderr))
+        Err(format!(
+            "xdotool failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ))
     }
 }
 
-fn simulate_paste_uinput() -> Result<(), String> {
-    use std::fs::OpenOptions;
-    use std::io::Write;
-    use std::os::unix::io::AsRawFd;
+// =============================================================================
+// Wayland / uinput
+// =============================================================================
 
-    const EV_SYN: u16 = 0x00;
-    const EV_KEY: u16 = 0x01;
-    const SYN_REPORT: u16 = 0x00;
-    const KEY_LEFTCTRL: u16 = 29;
-    const KEY_V: u16 = 47;
+fn uinput_device_lock() -> &'static Mutex<Option<UinputDevice>> {
+    UINPUT_DEVICE.get_or_init(|| Mutex::new(None))
+}
 
-    fn make_event(type_: u16, code: u16, value: i32) -> [u8; 24] {
-        let mut event = [0u8; 24];
-        event[16..18].copy_from_slice(&type_.to_ne_bytes());
-        event[18..20].copy_from_slice(&code.to_ne_bytes());
-        event[20..24].copy_from_slice(&value.to_ne_bytes());
-        event
-    }
+impl UinputDevice {
+    fn create() -> Result<Self, String> {
+        let file = OpenOptions::new()
+            .write(true)
+            .open("/dev/uinput")
+            .map_err(|error| format!("Failed to open /dev/uinput: {}", error))?;
+        let fd = file.as_raw_fd();
 
-    let mut uinput = OpenOptions::new()
-        .write(true)
-        .open("/dev/uinput")
-        .map_err(|e| format!("Failed to open /dev/uinput: {}", e))?;
-
-    const UI_SET_EVBIT: libc::c_ulong = 0x40045564;
-    const UI_SET_KEYBIT: libc::c_ulong = 0x40045565;
-    const UI_DEV_SETUP: libc::c_ulong = 0x405c5503;
-    const UI_DEV_CREATE: libc::c_ulong = 0x5501;
-    const UI_DEV_DESTROY: libc::c_ulong = 0x5502;
-
-    unsafe {
-        if libc::ioctl(uinput.as_raw_fd(), UI_SET_EVBIT, EV_KEY as libc::c_int) < 0 {
-            return Err("Failed to set EV_KEY".to_string());
-        }
-        if libc::ioctl(
-            uinput.as_raw_fd(),
-            UI_SET_KEYBIT,
-            KEY_LEFTCTRL as libc::c_int,
-        ) < 0
-        {
-            return Err("Failed to set KEY_LEFTCTRL".to_string());
-        }
-        if libc::ioctl(uinput.as_raw_fd(), UI_SET_KEYBIT, KEY_V as libc::c_int) < 0 {
-            return Err("Failed to set KEY_V".to_string());
+        unsafe {
+            if libc::ioctl(fd, UI_SET_EVBIT, EV_KEY as libc::c_int) < 0 {
+                return Err(last_os_error("Failed to enable EV_KEY"));
+            }
+            if libc::ioctl(fd, UI_SET_KEYBIT, KEY_LEFTCTRL as libc::c_int) < 0 {
+                return Err(last_os_error("Failed to enable KEY_LEFTCTRL"));
+            }
+            if libc::ioctl(fd, UI_SET_KEYBIT, KEY_V as libc::c_int) < 0 {
+                return Err(last_os_error("Failed to enable KEY_V"));
+            }
         }
 
         #[repr(C)]
         struct UinputSetup {
-            id: [u16; 4],
+            id: libc::input_id,
             name: [u8; 80],
             ff_effects_max: u32,
         }
 
+        let device_name = format!("win11-clipboard-paste-{}", std::process::id());
         let mut setup = UinputSetup {
-            id: [0x03, 0x1234, 0x5678, 0x0001],
+            id: libc::input_id {
+                bustype: 0x03,
+                vendor: 0x1234,
+                product: 0x5678,
+                version: 0x0001,
+            },
             name: [0; 80],
             ff_effects_max: 0,
         };
-        let name = b"emoji-paste-helper";
-        setup.name[..name.len()].copy_from_slice(name);
+        setup.name[..device_name.len()].copy_from_slice(device_name.as_bytes());
 
-        if libc::ioctl(uinput.as_raw_fd(), UI_DEV_SETUP, &setup) < 0 {
-            return Err("Failed to setup uinput device".to_string());
+        unsafe {
+            if libc::ioctl(fd, UI_DEV_SETUP, &setup) < 0 {
+                return Err(last_os_error("Failed to configure uinput device"));
+            }
+            if libc::ioctl(fd, UI_DEV_CREATE) < 0 {
+                return Err(last_os_error("Failed to create uinput device"));
+            }
         }
-        if libc::ioctl(uinput.as_raw_fd(), UI_DEV_CREATE) < 0 {
-            return Err("Failed to create uinput device".to_string());
+
+        if let Err(error) = wait_for_uinput_device(&device_name) {
+            unsafe {
+                libc::ioctl(fd, UI_DEV_DESTROY);
+            }
+            return Err(error);
+        }
+
+        // The event node is an observable udev barrier. This one-time grace is
+        // outside the hot path after startup and lets the compositor attach.
+        std::thread::sleep(DEVICE_DISCOVERY_GRACE);
+        eprintln!("[uinput] Persistent virtual keyboard is ready");
+
+        Ok(Self { file })
+    }
+
+    fn send_ctrl_v(&mut self) -> Result<(), String> {
+        let sequence = ctrl_v_sequence();
+        if let Err(error) = self.write_events(&sequence) {
+            let _ = self.release_all_keys();
+            return Err(error);
+        }
+        Ok(())
+    }
+
+    fn release_all_keys(&mut self) -> Result<(), String> {
+        self.write_events(&[
+            input_event(EV_KEY, KEY_V, 0),
+            input_event(EV_KEY, KEY_LEFTCTRL, 0),
+            input_event(EV_SYN, SYN_REPORT, 0),
+        ])
+    }
+
+    fn write_events(&mut self, events: &[libc::input_event]) -> Result<(), String> {
+        self.file
+            .write_all(input_events_as_bytes(events))
+            .map_err(|error| format!("Failed to write uinput sequence: {}", error))
+    }
+}
+
+impl Drop for UinputDevice {
+    fn drop(&mut self) {
+        let _ = self.release_all_keys();
+        unsafe {
+            libc::ioctl(self.file.as_raw_fd(), UI_DEV_DESTROY);
+        }
+    }
+}
+
+fn simulate_paste_uinput() -> Result<(), String> {
+    let mut device = uinput_device_lock().lock();
+
+    if let Some(existing) = device.as_mut() {
+        match existing.send_ctrl_v() {
+            Ok(()) => return Ok(()),
+            Err(error) => {
+                eprintln!("[uinput] Existing device failed; recreating: {}", error);
+                *device = None;
+            }
         }
     }
 
-    // Wait longer for the virtual device to be recognized by the system
-    // This is critical for some desktop environments (Cinnamon, GNOME)
-    thread::sleep(Duration::from_millis(UINPUT_DEVICE_SETTLE_MS));
-
-    // Press Ctrl
-    uinput
-        .write_all(&make_event(EV_KEY, KEY_LEFTCTRL, 1))
-        .map_err(|e| e.to_string())?;
-    uinput
-        .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
-        .map_err(|e| e.to_string())?;
-    uinput.flush().map_err(|e| e.to_string())?;
-    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
-
-    // Press V
-    uinput
-        .write_all(&make_event(EV_KEY, KEY_V, 1))
-        .map_err(|e| e.to_string())?;
-    uinput
-        .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
-        .map_err(|e| e.to_string())?;
-    uinput.flush().map_err(|e| e.to_string())?;
-    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
-
-    // Release V
-    uinput
-        .write_all(&make_event(EV_KEY, KEY_V, 0))
-        .map_err(|e| e.to_string())?;
-    uinput
-        .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
-        .map_err(|e| e.to_string())?;
-    uinput.flush().map_err(|e| e.to_string())?;
-    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
-
-    // Release Ctrl
-    uinput
-        .write_all(&make_event(EV_KEY, KEY_LEFTCTRL, 0))
-        .map_err(|e| e.to_string())?;
-    uinput
-        .write_all(&make_event(EV_SYN, SYN_REPORT, 0))
-        .map_err(|e| e.to_string())?;
-    uinput.flush().map_err(|e| e.to_string())?;
-
-    // Wait for events to be processed before destroying device
-    thread::sleep(Duration::from_millis(KEY_EVENT_DELAY_MS));
-
-    unsafe {
-        libc::ioctl(uinput.as_raw_fd(), UI_DEV_DESTROY);
-    }
-
-    // Small delay after device destruction
-    thread::sleep(Duration::from_millis(POST_PASTE_DELAY_MS));
-
+    let mut created = UinputDevice::create()?;
+    created.send_ctrl_v()?;
+    *device = Some(created);
     Ok(())
+}
+
+fn ctrl_v_sequence() -> [libc::input_event; 6] {
+    [
+        // One frame makes Ctrl and V visible together; the second releases
+        // both. There is no scheduling window between separate key writes.
+        input_event(EV_KEY, KEY_LEFTCTRL, 1),
+        input_event(EV_KEY, KEY_V, 1),
+        input_event(EV_SYN, SYN_REPORT, 0),
+        input_event(EV_KEY, KEY_V, 0),
+        input_event(EV_KEY, KEY_LEFTCTRL, 0),
+        input_event(EV_SYN, SYN_REPORT, 0),
+    ]
+}
+
+fn input_event(type_: u16, code: u16, value: i32) -> libc::input_event {
+    // input_event has target-specific time fields. Zeroing the libc type uses
+    // the correct ABI on both 32- and 64-bit Linux, unlike a hardcoded 24-byte
+    // buffer.
+    let mut event: libc::input_event = unsafe { std::mem::zeroed() };
+    event.type_ = type_;
+    event.code = code;
+    event.value = value;
+    event
+}
+
+fn input_events_as_bytes(events: &[libc::input_event]) -> &[u8] {
+    // SAFETY: input_event is a plain C ABI struct and the returned byte slice
+    // has exactly the lifetime and initialized size of the source slice.
+    unsafe {
+        std::slice::from_raw_parts(events.as_ptr().cast::<u8>(), std::mem::size_of_val(events))
+    }
+}
+
+fn wait_for_uinput_device(device_name: &str) -> Result<PathBuf, String> {
+    let start = Instant::now();
+    loop {
+        if let Some(path) = find_uinput_event_node(device_name) {
+            eprintln!(
+                "[uinput] Event node {} appeared after {:?}",
+                path.display(),
+                start.elapsed()
+            );
+            return Ok(path);
+        }
+        if start.elapsed() >= DEVICE_READY_TIMEOUT {
+            return Err(format!(
+                "Timed out waiting for '{}' to appear in /dev/input",
+                device_name
+            ));
+        }
+        std::thread::sleep(DEVICE_READY_POLL_INTERVAL);
+    }
+}
+
+fn find_uinput_event_node(device_name: &str) -> Option<PathBuf> {
+    let entries = std::fs::read_dir("/sys/class/input").ok()?;
+    for entry in entries.flatten() {
+        let name = match std::fs::read_to_string(entry.path().join("name")) {
+            Ok(name) => name,
+            Err(_) => continue,
+        };
+        if name.trim() != device_name {
+            continue;
+        }
+
+        let children = match std::fs::read_dir(entry.path()) {
+            Ok(children) => children,
+            Err(_) => continue,
+        };
+        for child in children.flatten() {
+            let file_name = child.file_name();
+            let file_name = file_name.to_string_lossy();
+            if file_name.starts_with("event") {
+                let path = Path::new("/dev/input").join(file_name.as_ref());
+                if path.exists() {
+                    return Some(path);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn last_os_error(context: &str) -> String {
+    format!("{}: {}", context, std::io::Error::last_os_error())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ctrl_v_is_emitted_as_two_complete_frames() {
+        let events = ctrl_v_sequence();
+        let actual: Vec<(u16, u16, i32)> = events
+            .iter()
+            .map(|event| (event.type_, event.code, event.value))
+            .collect();
+
+        assert_eq!(
+            actual,
+            vec![
+                (EV_KEY, KEY_LEFTCTRL, 1),
+                (EV_KEY, KEY_V, 1),
+                (EV_SYN, SYN_REPORT, 0),
+                (EV_KEY, KEY_V, 0),
+                (EV_KEY, KEY_LEFTCTRL, 0),
+                (EV_SYN, SYN_REPORT, 0),
+            ]
+        );
+    }
+
+    #[test]
+    fn input_event_bytes_use_the_platform_abi_size() {
+        let events = ctrl_v_sequence();
+        assert_eq!(
+            input_events_as_bytes(&events).len(),
+            events.len() * std::mem::size_of::<libc::input_event>()
+        );
+    }
+
+    #[test]
+    fn keymap_bit_lookup_handles_keycode_boundaries() {
+        let mut keymap = [0u8; 32];
+        keymap[4] = 1 << 5; // keycode 37
+        keymap[6] = 1 << 7; // keycode 55
+
+        assert!(key_is_pressed(&keymap, 37));
+        assert!(key_is_pressed(&keymap, 55));
+        assert!(!key_is_pressed(&keymap, 36));
+        assert!(!key_is_pressed(&keymap, 56));
+    }
+
+    #[test]
+    fn keycodes_are_resolved_from_the_active_mapping() {
+        // Three keycodes starting at 20, with two symbols each.
+        let mapping = [0, 0, XK_CONTROL_L, 0, XK_LOWER_V, XK_UPPER_V];
+
+        assert_eq!(
+            find_keycode(&mapping, 2, 20, &[XK_CONTROL_L, XK_CONTROL_R]),
+            Some(21)
+        );
+        assert_eq!(
+            find_keycode(&mapping, 2, 20, &[XK_LOWER_V, XK_UPPER_V]),
+            Some(22)
+        );
+    }
 }

@@ -11,7 +11,7 @@ use std::hash::{Hash, Hasher};
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 // --- Constants ---
@@ -20,7 +20,8 @@ pub const DEFAULT_MAX_HISTORY_SIZE: usize = 50;
 const PREVIEW_TEXT_MAX_LEN: usize = 100;
 const GIF_CACHE_MARKER: &str = "win11-clipboard-history/gifs/";
 const FILE_URI_PREFIX: &str = "file://";
-const WL_COPY_SETTLE_TIME: u64 = 150;
+const CLIPBOARD_HELPER_READY_TIMEOUT: Duration = Duration::from_secs(2);
+const CLIPBOARD_HELPER_POLL_INTERVAL: Duration = Duration::from_millis(2);
 
 // --- Helper Functions ---
 
@@ -696,9 +697,13 @@ impl ClipboardManager {
     }
 
     fn simulate_paste_action(&self) -> Result<(), String> {
-        // Wait for the clipboard write to settle: confirmed via the X11
-        // selection owner when possible, same fixed sleep otherwise.
-        crate::paste_sync::settle_clipboard_owned(Duration::from_millis(60));
+        // Wayland helpers already acknowledge readiness in
+        // set_clipboard_external. On X11, ownership is directly observable.
+        if crate::session::is_x11()
+            && !crate::paste_sync::settle_clipboard_owned(Duration::from_millis(500))
+        {
+            return Err("Clipboard ownership was not confirmed before paste".to_string());
+        }
 
         // Trigger keystroke
         crate::input_simulator::simulate_paste_keystroke()?;
@@ -786,13 +791,28 @@ impl ClipboardManager {
                 .map_err(|e| format!("Pipe write error: {}", e))?;
         }
 
-        // Wait for the helper to actually acquire the selection, polling the
-        // real X11 CLIPBOARD owner instead of sleeping a fixed delay.
-        // Sleeps the same fixed delay as before when unverifiable (Wayland).
-        crate::paste_sync::settle_clipboard_handoff(
+        if cmd == "wl-copy" {
+            // wl-copy's foreground parent exits only after the Wayland
+            // selection was installed. Waiting for that exit is an adaptive
+            // readiness acknowledgement: immediate on a fast compositor and
+            // longer only while a constrained compositor is still working.
+            return wait_for_clipboard_helper_ready(&mut child, cmd);
+        }
+
+        // On X11, selection ownership is directly observable. A timeout is a
+        // failed precondition, not permission to emit an unverified Ctrl+V.
+        let handoff_confirmed = crate::paste_sync::settle_clipboard_handoff(
             owner_before,
-            Duration::from_millis(WL_COPY_SETTLE_TIME),
+            CLIPBOARD_HELPER_READY_TIMEOUT,
         );
+        if !handoff_confirmed {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(format!(
+                "{} did not acquire the clipboard selection within {:?}",
+                cmd, CLIPBOARD_HELPER_READY_TIMEOUT
+            ));
+        }
 
         match child.try_wait() {
             Ok(Some(status)) if !status.success() => {
@@ -808,16 +828,57 @@ impl ClipboardManager {
                 ))
             }
             Ok(_) => {
-                // If it's still running or exited successfully, we assume it worked.
-                // For xclip/wl-copy, they often background themselves or stay alive to serve content.
-                if cmd == "xclip" {
-                    thread::spawn(move || {
-                        let _ = child.wait();
-                    });
-                }
+                // xclip remains alive to serve selection requests. Reap it in
+                // the background after another application takes ownership.
+                thread::spawn(move || {
+                    let _ = child.wait();
+                });
                 Ok(())
             }
             Err(e) => Err(format!("Process status check failed: {}", e)),
+        }
+    }
+}
+
+/// Waits for helpers such as wl-copy whose parent process exits after the
+/// clipboard selection is ready. The child serving the selection has already
+/// forked by then, so waiting for the parent does not shorten clipboard life.
+fn wait_for_clipboard_helper_ready(
+    child: &mut std::process::Child,
+    command: &str,
+) -> Result<(), String> {
+    use std::io::Read;
+
+    let start = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) if status.success() => return Ok(()),
+            Ok(Some(status)) => {
+                let mut stderr = String::new();
+                if let Some(mut pipe) = child.stderr.take() {
+                    let _ = pipe.read_to_string(&mut stderr);
+                }
+                return Err(format!(
+                    "{} exited with status {}. Stderr: {}",
+                    command,
+                    status,
+                    stderr.trim()
+                ));
+            }
+            Ok(None) if start.elapsed() < CLIPBOARD_HELPER_READY_TIMEOUT => {
+                thread::sleep(CLIPBOARD_HELPER_POLL_INTERVAL);
+            }
+            Ok(None) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(format!(
+                    "{} did not confirm clipboard readiness within {:?}",
+                    command, CLIPBOARD_HELPER_READY_TIMEOUT
+                ));
+            }
+            Err(error) => {
+                return Err(format!("Failed to inspect {} status: {}", command, error));
+            }
         }
     }
 }

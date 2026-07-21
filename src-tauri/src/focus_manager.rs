@@ -8,8 +8,10 @@ use std::time::{Duration, Instant};
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{AtomEnum, ClientMessageEvent, ConnectionExt, EventMask, InputFocus};
 
-/// Time to wait after restoring focus before allowing the paste to proceed
-const FOCUS_RESTORE_DELAY: Duration = Duration::from_millis(150);
+/// Failure ceiling for focus restoration. Fast systems return after two
+/// confirmed samples; constrained systems are allowed more time without
+/// imposing that time on every paste.
+const FOCUS_RESTORE_TIMEOUT: Duration = Duration::from_millis(750);
 
 /// Stores the ID of the window that had focus before we opened
 static LAST_FOCUSED_WINDOW: AtomicU32 = AtomicU32::new(0);
@@ -48,9 +50,8 @@ pub fn restore_focused_window() -> Result<bool, String> {
     conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
 
     // Wait for the Window Manager to actually process the focus change,
-    // polling the real focus state instead of sleeping a fixed delay.
-    // If unverifiable, settle_focus sleeps the same fixed delay as before.
-    let confirmed = crate::paste_sync::settle_focus(window_id, FOCUS_RESTORE_DELAY);
+    // requiring a stable observed state instead of sleeping a fixed delay.
+    let confirmed = crate::paste_sync::settle_focus(window_id, FOCUS_RESTORE_TIMEOUT);
 
     Ok(confirmed)
 }

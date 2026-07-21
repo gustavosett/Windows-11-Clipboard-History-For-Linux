@@ -40,6 +40,10 @@ pub struct AppState {
     emoji_manager: Arc<Mutex<EmojiManager>>,
     config_manager: Arc<Mutex<ConfigManager>>,
     is_mouse_inside: Arc<AtomicBool>,
+    /// Serializes the complete clipboard/focus/input transaction. Locking only
+    /// the virtual device still allows two commands to swap clipboard content
+    /// before either chord is emitted.
+    paste_gate: tokio::sync::Mutex<()>,
 }
 
 // --- Commands ---
@@ -149,6 +153,8 @@ fn is_theme_listener_active() -> bool {
 
 #[tauri::command]
 async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> Result<(), String> {
+    let _paste_guard = state.paste_gate.lock().await;
+
     // 1. Get Item (Scope lock tightly)
     let item = {
         let manager = state.clipboard_manager.lock();
@@ -159,7 +165,7 @@ async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> R
         Some(item) => {
             // 2. Prepare Environment (Hide Window -> Restore Focus)
             WindowController::hide(&app);
-            PasteHelper::prepare_target_window().await?;
+            PasteHelper::prepare_target_window(&app).await?;
 
             // 3. Perform Paste
             let mut manager = state.clipboard_manager.lock();
@@ -191,6 +197,8 @@ async fn paste_text(
     text: String,
     item_type: Option<String>,
 ) -> Result<(), String> {
+    let _paste_guard = state.paste_gate.lock().await;
+
     // 0. Record usage if applicable
     if let Some(t) = item_type.as_deref() {
         if t == "emoji" {
@@ -200,7 +208,7 @@ async fn paste_text(
 
     // 1. Prepare Environment
     WindowController::hide(&app);
-    PasteHelper::prepare_target_window().await?;
+    PasteHelper::prepare_target_window(&app).await?;
 
     // 2. Set Clipboard & Mark
     {
@@ -221,6 +229,8 @@ async fn paste_gif_from_url(
     state: State<'_, AppState>,
     url: String,
 ) -> Result<(), String> {
+    let _paste_guard = state.paste_gate.lock().await;
+
     // 1. Download (Blocking) - Window stays open to show loading if UI supports it
     let url_clone = url.clone();
     let file_uri = tokio::task::spawn_blocking(move || {
@@ -241,7 +251,7 @@ async fn paste_gif_from_url(
 
     // 3. Prepare Environment & Paste
     WindowController::hide(&app);
-    PasteHelper::prepare_target_window().await?;
+    PasteHelper::prepare_target_window(&app).await?;
 
     // The clipboard is already set by paste_gif_to_clipboard_with_uri, we just need to paste
     simulate_paste_keystroke().map_err(|e| e.to_string())?;
@@ -250,9 +260,10 @@ async fn paste_gif_from_url(
 }
 
 #[tauri::command]
-async fn finish_paste(app: AppHandle) -> Result<(), String> {
+async fn finish_paste(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let _paste_guard = state.paste_gate.lock().await;
     WindowController::hide(&app);
-    PasteHelper::prepare_target_window().await?;
+    PasteHelper::prepare_target_window(&app).await?;
     simulate_paste_keystroke().map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -298,25 +309,65 @@ async fn finish_setup(app: AppHandle) -> Result<(), String> {
 struct PasteHelper;
 
 impl PasteHelper {
+    const TARGET_READY_TIMEOUT: Duration = Duration::from_millis(750);
+    const TARGET_READY_POLL_INTERVAL: Duration = Duration::from_millis(2);
+    const TARGET_STABLE_SAMPLES: u8 = 2;
+
     /// Restores focus to the previous window and waits for it to settle.
     /// This ensures keystrokes are sent to the correct application.
-    async fn prepare_target_window() -> Result<(), String> {
+    async fn prepare_target_window(app: &AppHandle) -> Result<(), String> {
+        if is_wayland() {
+            return Self::wait_for_wayland_popup_to_release_focus(app).await;
+        }
+
         match restore_focused_window() {
             Ok(true) => {
                 // Focus was *verified* on the target window by the poller;
                 // no extra settle time is needed.
             }
             Ok(false) => {
-                // Focus restore was requested but could not be verified —
-                // keep the original conservative settle delay.
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                return Err("Target window did not acquire stable focus".to_string());
             }
             Err(e) => {
-                eprintln!("[PasteHelper] Warning: Focus restoration failed: {}", e);
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                return Err(format!("Focus restoration failed: {}", e));
             }
         }
         Ok(())
+    }
+
+    /// Wayland does not allow an application to force focus onto an arbitrary
+    /// client. Hiding our popup lets the compositor restore focus naturally;
+    /// poll Tauri's real visibility/focus state rather than sleeping blindly.
+    async fn wait_for_wayland_popup_to_release_focus(app: &AppHandle) -> Result<(), String> {
+        let window = app
+            .get_webview_window("main")
+            .ok_or("Main window is not available")?;
+        let start = std::time::Instant::now();
+        let mut stable_samples = 0;
+
+        loop {
+            let last_state = match (window.is_visible(), window.is_focused()) {
+                (Ok(false), Ok(false)) => {
+                    stable_samples += 1;
+                    if stable_samples >= Self::TARGET_STABLE_SAMPLES {
+                        return Ok(());
+                    }
+                    "visible=false, focused=false (settling)".to_string()
+                }
+                (visible, focused) => {
+                    stable_samples = 0;
+                    format!("visible={:?}, focused={:?}", visible, focused)
+                }
+            };
+
+            if start.elapsed() >= Self::TARGET_READY_TIMEOUT {
+                return Err(format!(
+                    "Timed out waiting for the clipboard popup to release focus ({})",
+                    last_state
+                ));
+            }
+            tokio::time::sleep(Self::TARGET_READY_POLL_INTERVAL).await;
+        }
     }
 }
 
@@ -802,6 +853,7 @@ fn main() {
             emoji_manager: emoji_manager.clone(),
             config_manager: config_manager.clone(),
             is_mouse_inside: is_mouse_inside.clone(),
+            paste_gate: tokio::sync::Mutex::new(()),
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Destroyed = event {
@@ -818,6 +870,12 @@ fn main() {
         })
         .setup(move |app| {
             let app_handle = app.handle().clone();
+
+            // This runs only for the primary instance, after the
+            // single-instance plugin has rejected shortcut helper processes.
+            // Starting it earlier would hotplug a temporary keyboard every
+            // time the desktop launches the shortcut command.
+            win11_clipboard_history_lib::input_simulator::init();
 
             // FIRST THING: If started in background mode, immediately hide the main window
             // This runs before anything else to prevent the window from appearing
