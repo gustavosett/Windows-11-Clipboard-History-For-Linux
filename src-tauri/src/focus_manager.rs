@@ -21,6 +21,11 @@ pub fn save_focused_window() {
         return;
     }
 
+    // Never reuse a target captured for an older popup invocation if this
+    // query fails. Pasting nowhere is safer than redirecting input to a stale
+    // application window.
+    LAST_FOCUSED_WINDOW.store(0, Ordering::SeqCst);
+
     match crate::paste_sync::focused_window() {
         Some(window_id) => {
             LAST_FOCUSED_WINDOW.store(window_id, Ordering::SeqCst);

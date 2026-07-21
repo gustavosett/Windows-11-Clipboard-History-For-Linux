@@ -316,8 +316,14 @@ impl PasteHelper {
     /// Restores focus to the previous window and waits for it to settle.
     /// This ensures keystrokes are sent to the correct application.
     async fn prepare_target_window(app: &AppHandle) -> Result<(), String> {
+        // `hide()` is dispatched to Tauri's event loop when commands run off
+        // the main thread. Observe its completion before asking X11 to restore
+        // focus, otherwise a pending UnmapNotify can steal focus back after an
+        // apparently stable X11 sample.
+        Self::wait_for_popup_to_release_focus(app).await?;
+
         if is_wayland() {
-            return Self::wait_for_wayland_popup_to_release_focus(app).await;
+            return Ok(());
         }
 
         match restore_focused_window() {
@@ -335,10 +341,10 @@ impl PasteHelper {
         Ok(())
     }
 
-    /// Wayland does not allow an application to force focus onto an arbitrary
-    /// client. Hiding our popup lets the compositor restore focus naturally;
-    /// poll Tauri's real visibility/focus state rather than sleeping blindly.
-    async fn wait_for_wayland_popup_to_release_focus(app: &AppHandle) -> Result<(), String> {
+    /// Waits for Tauri's asynchronous hide/focus events to settle. On Wayland
+    /// this is the strongest target-readiness signal available; on X11 it is
+    /// the prerequisite for explicitly restoring the previously focused app.
+    async fn wait_for_popup_to_release_focus(app: &AppHandle) -> Result<(), String> {
         let window = app
             .get_webview_window("main")
             .ok_or("Main window is not available")?;

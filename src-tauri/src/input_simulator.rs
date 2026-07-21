@@ -7,7 +7,14 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
-type PasteStrategy = (&'static str, fn() -> Result<(), String>);
+type PasteStrategy = (&'static str, fn() -> Result<(), PasteFailure>);
+
+enum PasteFailure {
+    /// No paste key was attempted, so another backend may safely run.
+    Retryable(String),
+    /// Input may already have reached the target; retrying could paste twice.
+    Ambiguous(String),
+}
 
 /// The kernel creates a uinput device synchronously, but udev/libinput and the
 /// compositor discover it asynchronously. Device readiness is paid once at
@@ -58,6 +65,16 @@ struct XtestDevice {
     root_window: u32,
     ctrl_keycode: u8,
     v_keycode: u8,
+}
+
+/// Tracks keys before their press request is flushed. This deliberately treats
+/// a flush error as ambiguous: the server may have received the press even
+/// though the client did not receive a successful completion signal.
+struct XtestKeyGuard<'a> {
+    connection: &'a x11rb::rust_connection::RustConnection,
+    root_window: u32,
+    held: Vec<u8>,
+    paste_may_have_been_sent: bool,
 }
 
 static UINPUT_DEVICE: OnceLock<Mutex<Option<UinputDevice>>> = OnceLock::new();
@@ -140,7 +157,15 @@ pub fn simulate_paste_keystroke() -> Result<(), String> {
                 eprintln!("[SimulatePaste] Ctrl+V sent via {}", name);
                 return Ok(());
             }
-            Err(error) => eprintln!("[SimulatePaste] {} failed: {}", name, error),
+            Err(PasteFailure::Retryable(error)) => {
+                eprintln!("[SimulatePaste] {} unavailable: {}", name, error);
+            }
+            Err(PasteFailure::Ambiguous(error)) => {
+                return Err(format!(
+                    "{} failed after input may have been emitted; refusing fallback: {}",
+                    name, error
+                ));
+            }
         }
     }
 
@@ -164,16 +189,17 @@ fn fake_key<C: x11rb::connection::Connection + x11rb::protocol::xtest::Connectio
         .map_err(|error| format!("X11 flush failed: {}", error))
 }
 
-fn simulate_paste_xtest() -> Result<(), String> {
+fn simulate_paste_xtest() -> Result<(), PasteFailure> {
     let mut device = xtest_device_lock().lock();
     if device.is_none() {
-        *device = Some(XtestDevice::create()?);
+        *device = Some(XtestDevice::create().map_err(PasteFailure::Retryable)?);
     }
 
-    let result = device
-        .as_mut()
-        .expect("XTest device was initialized")
-        .send_ctrl_v();
+    let current = device.as_mut().expect("XTest device was initialized");
+    let result = current
+        .refresh_keymap_if_needed()
+        .map_err(PasteFailure::Retryable)
+        .and_then(|()| current.send_ctrl_v());
     if result.is_err() {
         // Reconnect on the next attempt if the X server connection went away.
         *device = None;
@@ -215,84 +241,123 @@ impl XtestDevice {
         })
     }
 
-    fn send_ctrl_v(&mut self) -> Result<(), String> {
-        let mut ctrl_down = false;
-        let mut v_down = false;
+    fn refresh_keymap_if_needed(&mut self) -> Result<(), String> {
+        use x11rb::connection::Connection;
+        use x11rb::protocol::Event;
+
+        let mut mapping_changed = false;
+        while let Some(event) = self
+            .connection
+            .poll_for_event()
+            .map_err(|error| format!("Failed to poll X11 events: {}", error))?
+        {
+            if matches!(event, Event::MappingNotify(_)) {
+                mapping_changed = true;
+            }
+        }
+
+        if mapping_changed {
+            (self.ctrl_keycode, self.v_keycode) = resolve_paste_keycodes(&self.connection)?;
+            eprintln!("[XTest] Keyboard mapping changed; refreshed paste keycodes");
+        }
+
+        Ok(())
+    }
+
+    fn send_ctrl_v(&mut self) -> Result<(), PasteFailure> {
+        let mut guard = XtestKeyGuard::new(&self.connection, self.root_window);
 
         let operation = (|| {
-            fake_key(
-                &self.connection,
-                X11_KEY_PRESS,
-                self.ctrl_keycode,
-                self.root_window,
-                "Failed to press Ctrl",
-            )?;
-            ctrl_down = true;
+            guard.press(self.ctrl_keycode, false, "Failed to press Ctrl")?;
             wait_for_x11_key_state(&self.connection, self.ctrl_keycode, true)?;
 
-            fake_key(
-                &self.connection,
-                X11_KEY_PRESS,
-                self.v_keycode,
-                self.root_window,
-                "Failed to press V",
-            )?;
-            v_down = true;
+            guard.press(self.v_keycode, true, "Failed to press V")?;
             wait_for_x11_key_state(&self.connection, self.v_keycode, true)?;
 
-            fake_key(
-                &self.connection,
-                X11_KEY_RELEASE,
-                self.v_keycode,
-                self.root_window,
-                "Failed to release V",
-            )?;
-            v_down = false;
+            guard.release(self.v_keycode, "Failed to release V")?;
 
-            fake_key(
-                &self.connection,
-                X11_KEY_RELEASE,
-                self.ctrl_keycode,
-                self.root_window,
-                "Failed to release Ctrl",
-            )?;
-            ctrl_down = false;
+            guard.release(self.ctrl_keycode, "Failed to release Ctrl")?;
 
             wait_for_x11_key_state(&self.connection, self.v_keycode, false)?;
             wait_for_x11_key_state(&self.connection, self.ctrl_keycode, false)
         })();
 
-        // Never leave a synthetic modifier held if a round trip fails midway.
-        let mut cleanup_errors = Vec::new();
-        if v_down {
-            if let Err(error) = fake_key(
-                &self.connection,
-                X11_KEY_RELEASE,
-                self.v_keycode,
-                self.root_window,
-                "Cleanup failed to release V",
-            ) {
-                cleanup_errors.push(error);
-            }
-        }
-        if ctrl_down {
-            if let Err(error) = fake_key(
-                &self.connection,
-                X11_KEY_RELEASE,
-                self.ctrl_keycode,
-                self.root_window,
-                "Cleanup failed to release Ctrl",
-            ) {
-                cleanup_errors.push(error);
-            }
-        }
+        let paste_may_have_been_sent = guard.paste_may_have_been_sent;
+        let cleanup_errors = guard.cleanup();
 
         match (operation, cleanup_errors.is_empty()) {
             (Ok(()), true) => Ok(()),
-            (Ok(()), false) => Err(cleanup_errors.join("; ")),
-            (Err(error), true) => Err(error),
-            (Err(error), false) => Err(format!("{}; {}", error, cleanup_errors.join("; "))),
+            (Ok(()), false) => Err(PasteFailure::Ambiguous(cleanup_errors.join("; "))),
+            (Err(error), true) if !paste_may_have_been_sent => Err(PasteFailure::Retryable(error)),
+            (Err(error), true) => Err(PasteFailure::Ambiguous(error)),
+            (Err(error), false) => Err(PasteFailure::Ambiguous(format!(
+                "{}; {}",
+                error,
+                cleanup_errors.join("; ")
+            ))),
         }
+    }
+}
+
+impl<'a> XtestKeyGuard<'a> {
+    fn new(connection: &'a x11rb::rust_connection::RustConnection, root_window: u32) -> Self {
+        Self {
+            connection,
+            root_window,
+            held: Vec::with_capacity(2),
+            paste_may_have_been_sent: false,
+        }
+    }
+
+    fn press(&mut self, keycode: u8, dispatches_paste: bool, context: &str) -> Result<(), String> {
+        // Record intent before flushing so cleanup also covers a request whose
+        // delivery became ambiguous during flush.
+        self.held.push(keycode);
+        self.paste_may_have_been_sent |= dispatches_paste;
+        fake_key(
+            self.connection,
+            X11_KEY_PRESS,
+            keycode,
+            self.root_window,
+            context,
+        )
+    }
+
+    fn release(&mut self, keycode: u8, context: &str) -> Result<(), String> {
+        fake_key(
+            self.connection,
+            X11_KEY_RELEASE,
+            keycode,
+            self.root_window,
+            context,
+        )?;
+        self.held.retain(|held| *held != keycode);
+        Ok(())
+    }
+
+    fn cleanup(&mut self) -> Vec<String> {
+        let mut errors = Vec::new();
+        for keycode in self.held.clone().into_iter().rev() {
+            match fake_key(
+                self.connection,
+                X11_KEY_RELEASE,
+                keycode,
+                self.root_window,
+                "Cleanup failed to release XTest key",
+            ) {
+                Ok(()) => self.held.retain(|held| *held != keycode),
+                Err(error) => errors.push(error),
+            }
+        }
+        errors
+    }
+}
+
+impl Drop for XtestKeyGuard<'_> {
+    fn drop(&mut self) {
+        // Explicit cleanup reports errors to the caller. Drop is a final
+        // best-effort retry for connection failures during that cleanup.
+        let _ = self.cleanup();
     }
 }
 
@@ -388,7 +453,7 @@ fn key_is_pressed(keymap: &[u8; 32], keycode: u8) -> bool {
     keymap[byte] & (1 << bit) != 0
 }
 
-fn simulate_paste_xdotool() -> Result<(), String> {
+fn simulate_paste_xdotool() -> Result<(), PasteFailure> {
     let output = std::process::Command::new("xdotool")
         .args([
             "key",
@@ -398,15 +463,17 @@ fn simulate_paste_xdotool() -> Result<(), String> {
             "ctrl+v",
         ])
         .output()
-        .map_err(|error| format!("Failed to run xdotool: {}", error))?;
+        .map_err(|error| PasteFailure::Retryable(format!("Failed to start xdotool: {}", error)))?;
 
     if output.status.success() {
         Ok(())
     } else {
-        Err(format!(
+        // Once the process started, a failing exit status cannot prove that it
+        // emitted no input. Do not risk a duplicate through another backend.
+        Err(PasteFailure::Ambiguous(format!(
             "xdotool failed: {}",
             String::from_utf8_lossy(&output.stderr).trim()
-        ))
+        )))
     }
 }
 
@@ -515,21 +582,22 @@ impl Drop for UinputDevice {
     }
 }
 
-fn simulate_paste_uinput() -> Result<(), String> {
+fn simulate_paste_uinput() -> Result<(), PasteFailure> {
     let mut device = uinput_device_lock().lock();
 
     if let Some(existing) = device.as_mut() {
         match existing.send_ctrl_v() {
             Ok(()) => return Ok(()),
             Err(error) => {
-                eprintln!("[uinput] Existing device failed; recreating: {}", error);
+                eprintln!("[uinput] Existing device failed: {}", error);
                 *device = None;
+                return Err(PasteFailure::Ambiguous(error));
             }
         }
     }
 
-    let mut created = UinputDevice::create()?;
-    created.send_ctrl_v()?;
+    let mut created = UinputDevice::create().map_err(PasteFailure::Retryable)?;
+    created.send_ctrl_v().map_err(PasteFailure::Ambiguous)?;
     *device = Some(created);
     Ok(())
 }

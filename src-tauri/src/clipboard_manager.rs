@@ -100,7 +100,7 @@ impl ClipboardItem {
         let preview = if text.chars().count() > PREVIEW_TEXT_MAX_LEN {
             format!(
                 "{}...",
-                &text.chars().take(PREVIEW_TEXT_MAX_LEN).collect::<String>()
+                text.chars().take(PREVIEW_TEXT_MAX_LEN).collect::<String>()
             )
         } else {
             text.clone()
@@ -113,7 +113,7 @@ impl ClipboardItem {
         let preview = if plain.chars().count() > PREVIEW_TEXT_MAX_LEN {
             format!(
                 "{}...",
-                &plain.chars().take(PREVIEW_TEXT_MAX_LEN).collect::<String>()
+                plain.chars().take(PREVIEW_TEXT_MAX_LEN).collect::<String>()
             )
         } else {
             plain.clone()
@@ -702,20 +702,33 @@ impl ClipboardManager {
         let img =
             image::load_from_memory(&bytes).map_err(|e| format!("Image load failed: {}", e))?;
         let rgba = img.to_rgba8();
+        let expected_bytes = rgba.into_raw();
 
         let image_data = ImageData {
             width: width as usize,
             height: height as usize,
-            bytes: rgba.into_raw().into(),
+            bytes: expected_bytes.clone().into(),
         };
 
-        clipboard.set_image(image_data).map_err(|e| e.to_string())
+        clipboard.set_image(image_data).map_err(|e| e.to_string())?;
+
+        // Reading through the same arboard instance performs the backend
+        // round trip that confirms our provider owns and serves the selection.
+        let observed = clipboard.get_image().map_err(|e| e.to_string())?;
+        if observed.width != width as usize
+            || observed.height != height as usize
+            || observed.bytes.as_ref() != expected_bytes.as_slice()
+        {
+            return Err("Clipboard image verification returned different data".to_string());
+        }
+
+        Ok(())
     }
 
     fn simulate_paste_action(&self) -> Result<(), String> {
         // Clipboard writers return only after their platform-specific
-        // readiness barrier. The serving process (or arboard's global worker)
-        // outlives this call, so no fixed post-paste retention is necessary.
+        // readiness barrier. The serving process (or arboard's verified global
+        // worker) outlives this call, so no fixed post-paste retention is needed.
         crate::input_simulator::simulate_paste_keystroke()
     }
 
@@ -743,7 +756,12 @@ impl ClipboardManager {
 
         // Fallback to arboard
         let mut clipboard = get_system_clipboard()?;
-        clipboard.set_text(text).map_err(|e| e.to_string())
+        clipboard.set_text(text).map_err(|e| e.to_string())?;
+        let observed = clipboard.get_text().map_err(|e| e.to_string())?;
+        if observed != text {
+            return Err("Clipboard text verification returned different data".to_string());
+        }
+        Ok(())
     }
 
     /// Robustly set HTML to clipboard using xclip/wl-copy on Linux if available,
@@ -774,7 +792,12 @@ impl ClipboardManager {
         let mut clipboard = get_system_clipboard()?;
         clipboard
             .set_html(html, Some(plain))
-            .map_err(|e| e.to_string())
+            .map_err(|e| e.to_string())?;
+        let observed = clipboard.get().html().map_err(|e| e.to_string())?;
+        if observed != html {
+            return Err("Clipboard HTML verification returned different data".to_string());
+        }
+        Ok(())
     }
 
     fn set_clipboard_external(&self, cmd: &str, args: &[&str], data: &[u8]) -> Result<(), String> {
