@@ -36,7 +36,7 @@ serde_json = "1"
 
 # Image Handling
 image = "0.25.10"
-base64 = "0.22"
+base64 = "0.23"
 
 # HTTP Client for GIF downloads
 reqwest = { version = "0.13.3", features = ["blocking"] }
@@ -60,7 +60,7 @@ whoami = "2.1.2"
 percent-encoding = "2.3"
 
 # X11 Simulation for paste injection
-x11rb = { version = "0.13", features = ["allow-unsafe-code", "xtest"] }
+x11rb = { version = "0.14", features = ["allow-unsafe-code", "xtest"] }
 libc = "0.2"
 gtk = "0.18"
 # D-Bus for XDG Desktop Portal (theme detection for COSMIC and other DEs)
