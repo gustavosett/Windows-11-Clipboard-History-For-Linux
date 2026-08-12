@@ -17,6 +17,9 @@ interface KaomojiPickerProps {
   customKaomojis?: CustomKaomoji[]
   /** Clear the search query and focus the search box when the window is shown */
   clearSearchOnOpen?: boolean
+  /** Controlled search query, owned by the parent so it survives tab switches */
+  searchQuery: string
+  onSearchChange: (value: string) => void
 }
 
 export function KaomojiPicker({
@@ -24,8 +27,9 @@ export function KaomojiPicker({
   opacity,
   customKaomojis = [],
   clearSearchOnOpen = false,
+  searchQuery,
+  onSearchChange,
 }: KaomojiPickerProps) {
-  const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
   const [categoryFocusedIndex, setCategoryFocusedIndex] = useState(0)
@@ -39,7 +43,7 @@ export function KaomojiPicker({
 
   // Clear search and focus the search box when the window is shown
   useResetSearchOnWindowShown(clearSearchOnOpen, () => {
-    if (searchQuery !== '') setSearchQuery('')
+    if (searchQuery !== '') onSearchChange('')
     if (categoryFocusedIndex !== 0) setCategoryFocusedIndex(0)
     if (gridFocusedIndex !== 0) setGridFocusedIndex(0)
     requestAnimationFrame(() => searchInputRef.current?.focus())
@@ -94,7 +98,7 @@ export function KaomojiPicker({
           ref={searchInputRef}
           value={searchQuery}
           onChange={(val: string) => {
-            setSearchQuery(val)
+            onSearchChange(val)
             setCategoryFocusedIndex(0)
             setGridFocusedIndex(0)
           }}

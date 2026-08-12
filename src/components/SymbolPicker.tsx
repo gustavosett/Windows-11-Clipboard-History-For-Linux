@@ -136,19 +136,26 @@ export interface SymbolPickerProps {
   opacity: number
   /** Clear the search query and focus the search box when the window is shown */
   clearSearchOnOpen?: boolean
+  /** Controlled search query, owned by the parent so it survives tab switches */
+  searchQuery: string
+  onSearchChange: (value: string) => void
 }
 
-export function SymbolPicker({ isDark, opacity, clearSearchOnOpen = false }: SymbolPickerProps) {
+export function SymbolPicker({
+  isDark,
+  opacity,
+  clearSearchOnOpen = false,
+  searchQuery,
+  onSearchChange,
+}: SymbolPickerProps) {
   const {
-    searchQuery,
-    setSearchQuery,
     selectedCategory,
     setSelectedCategory,
     categories,
     filteredSymbols,
     recentSymbols,
     pasteSymbol,
-  } = useSymbolPicker()
+  } = useSymbolPicker(searchQuery)
 
   const [hoveredSymbol, setHoveredSymbol] = useState<SymbolItem | null>(null)
 
@@ -167,7 +174,7 @@ export function SymbolPicker({ isDark, opacity, clearSearchOnOpen = false }: Sym
 
   // Clear search and focus the search box when the window is shown
   useResetSearchOnWindowShown(clearSearchOnOpen, () => {
-    if (searchQuery !== '') setSearchQuery('')
+    if (searchQuery !== '') onSearchChange('')
     if (recentFocusedIndex !== 0) setRecentFocusedIndex(0)
     if (mainFocusedIndex !== 0) setMainFocusedIndex(0)
     requestAnimationFrame(() => searchInputRef.current?.focus())
@@ -175,11 +182,11 @@ export function SymbolPicker({ isDark, opacity, clearSearchOnOpen = false }: Sym
 
   const handleSearchChange = useCallback(
     (val: string) => {
-      setSearchQuery(val)
+      onSearchChange(val)
       setRecentFocusedIndex(0)
       setMainFocusedIndex(0)
     },
-    [setSearchQuery]
+    [onSearchChange]
   )
 
   const handleCategorySelect = useCallback(

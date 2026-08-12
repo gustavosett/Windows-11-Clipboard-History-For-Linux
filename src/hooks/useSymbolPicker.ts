@@ -9,8 +9,7 @@ import { getSymbols, getSymbolCategories, type SymbolItem } from '../services/sy
 const RECENT_SYMBOLS_KEY = 'win11_clipboard_recent_symbols'
 const MAX_RECENT_SYMBOLS = 24
 
-export function useSymbolPicker() {
-  const [searchQuery, setSearchQuery] = useState('')
+export function useSymbolPicker(searchQuery: string) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
   const [recentSymbols, setRecentSymbols] = useState<SymbolItem[]>(() => {
@@ -54,7 +53,6 @@ export function useSymbolPicker() {
 
   return {
     searchQuery,
-    setSearchQuery,
     selectedCategory,
     setSelectedCategory,
     categories,

@@ -94,6 +94,13 @@ function ClipboardApp() {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
 
+  // Search queries for the pickers, owned here so they survive tab switches.
+  // Cleared when the window is (re)opened if the "clear search on open" setting is enabled.
+  const [pickerSearch, setPickerSearch] = useState({ emoji: '', kaomoji: '', symbols: '' })
+  const updatePickerSearch = useCallback((tab: 'emoji' | 'kaomoji' | 'symbols', value: string) => {
+    setPickerSearch((prev) => ({ ...prev, [tab]: value }))
+  }, [])
+
   const renderingEnv = useRenderingEnv()
   const isDark = useThemeMode(settings.theme_mode)
 
@@ -207,7 +214,12 @@ function ClipboardApp() {
 
   // Handle window-shown event for focus management (registered once)
   useEffect(() => {
-    const focusFirstItem = () => {
+    const onWindowShown = () => {
+      // Clear all picker searches when the window is reopened, if enabled
+      if (clearSearchOnOpenRef.current) {
+        setPickerSearch({ emoji: '', kaomoji: '', symbols: '' })
+      }
+
       const currentTab = activeTabRef.current
 
       // Clipboard tab focus is handled inside ClipboardTab component
@@ -224,7 +236,7 @@ function ClipboardApp() {
     }
 
     // Listen to window-shown event (emitted from Rust when window is toggled visible)
-    const unlistenWindowShown = listen('window-shown', focusFirstItem)
+    const unlistenWindowShown = listen('window-shown', onWindowShown)
 
     return () => {
       unlistenWindowShown.then((unlisten) => unlisten())
@@ -270,6 +282,8 @@ function ClipboardApp() {
             isDark={isDark}
             opacity={secondaryOpacity}
             clearSearchOnOpen={settings.clear_search_on_open}
+            searchQuery={pickerSearch.emoji}
+            onSearchChange={(value) => updatePickerSearch('emoji', value)}
           />
         )
 
@@ -283,6 +297,8 @@ function ClipboardApp() {
             opacity={secondaryOpacity}
             customKaomojis={settings.custom_kaomojis}
             clearSearchOnOpen={settings.clear_search_on_open}
+            searchQuery={pickerSearch.kaomoji}
+            onSearchChange={(value) => updatePickerSearch('kaomoji', value)}
           />
         )
 
@@ -292,6 +308,8 @@ function ClipboardApp() {
             isDark={isDark}
             opacity={secondaryOpacity}
             clearSearchOnOpen={settings.clear_search_on_open}
+            searchQuery={pickerSearch.symbols}
+            onSearchChange={(value) => updatePickerSearch('symbols', value)}
           />
         )
 

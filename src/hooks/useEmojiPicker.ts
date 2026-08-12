@@ -13,8 +13,7 @@ interface RecentEmoji {
   use_count: number
 }
 
-export function useEmojiPicker() {
-  const [searchQuery, setSearchQuery] = useState('')
+export function useEmojiPicker(searchQuery: string) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [recentEmojis, setRecentEmojis] = useState<Emoji[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -89,7 +88,6 @@ export function useEmojiPicker() {
 
   return {
     searchQuery,
-    setSearchQuery,
     selectedCategory,
     setSelectedCategory,
     categories,
