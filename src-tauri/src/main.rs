@@ -12,7 +12,10 @@ use tauri::{
     WindowEvent,
 };
 use win11_clipboard_history_lib::autostart_manager;
-use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardManager};
+use win11_clipboard_history_lib::clipboard_manager::{
+    calculate_hash, encode_image_to_base64, read_clipboard_html, read_clipboard_image,
+    read_clipboard_text, ClipboardItem, ClipboardManager,
+};
 use win11_clipboard_history_lib::config_manager::{resolve_window_position, ConfigManager};
 use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
 use win11_clipboard_history_lib::focus_manager::x11_robust_activate;
@@ -51,6 +54,11 @@ pub struct AppState {
 #[tauri::command]
 fn get_history(state: State<AppState>) -> Vec<ClipboardItem> {
     state.clipboard_manager.lock().get_history()
+}
+
+#[tauri::command]
+fn get_item_content(state: State<AppState>, id: String) -> Option<ClipboardItem> {
+    state.clipboard_manager.lock().get_item_content(&id)
 }
 
 #[tauri::command]
@@ -703,47 +711,76 @@ fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<Clipboar
             std::thread::sleep(Duration::from_millis(500));
             cleanup_counter += 1;
 
-            let mut manager = clipboard_manager.lock();
-
-            // Background cleanup every ~30 seconds (60 * 500ms)
+            // Background cleanup every ~30 seconds (60 * 500ms).
+            // Load settings (disk I/O) before taking the manager lock.
             if cleanup_counter >= 60 {
                 cleanup_counter = 0;
-                let settings = UserSettingsManager::new().load();
-                let interval_in_minutes = settings.auto_delete_interval_in_minutes();
+                let interval_in_minutes = UserSettingsManager::new()
+                    .load()
+                    .auto_delete_interval_in_minutes();
 
-                if interval_in_minutes > 0 && manager.cleanup_old_items(interval_in_minutes) {
-                    println!("[Watcher] Background cleanup triggered sync");
-                    let _ = app.emit("history-cleared", ());
-                }
-            }
-
-            // Text
-            if let Ok(text) = manager.get_current_text() {
-                if !text.is_empty() {
-                    let text_hash =
-                        win11_clipboard_history_lib::clipboard_manager::calculate_hash(&text);
-
-                    if Some(text_hash) != last_text_hash {
-                        last_text_hash = Some(text_hash);
-                        last_image_hash = None;
-
-                        // Try to get HTML content for rich text support
-                        let html = manager.get_current_html();
-
-                        if let Some(item) = manager.add_text(text, html) {
-                            let _ = app.emit("clipboard-changed", &item);
-                        }
+                if interval_in_minutes > 0 {
+                    let mut manager = clipboard_manager.lock();
+                    if manager.cleanup_old_items(interval_in_minutes) {
+                        drop(manager);
+                        println!("[Watcher] Background cleanup triggered sync");
+                        let _ = app.emit("history-cleared", ());
                     }
                 }
             }
 
-            // Image
-            if let Ok(Some((image_data, hash))) = manager.get_current_image() {
-                if Some(hash) != last_image_hash {
-                    last_image_hash = Some(hash);
-                    last_text_hash = None;
-                    if let Some(item) = manager.add_image(image_data, hash) {
-                        let _ = app.emit("clipboard-changed", &item);
+            // Read the system clipboard WITHOUT holding the manager lock.
+            // arboard/X11 clipboard reads can block, and doing so under the
+            // lock would freeze every UI command that needs it.
+            let text = read_clipboard_text().ok();
+
+            // If the text changed, fetch the HTML variant too (outside the lock).
+            let mut text_to_add: Option<(String, Option<String>)> = None;
+            if let Some(text) = text {
+                if !text.is_empty() {
+                    let text_hash = calculate_hash(&text);
+                    if Some(text_hash) != last_text_hash {
+                        last_text_hash = Some(text_hash);
+                        last_image_hash = None;
+                        let html = read_clipboard_html();
+                        text_to_add = Some((text, html));
+                    }
+                }
+            }
+
+            // Encode image data (CPU heavy for large images) outside the lock.
+            // Only encode when the hash changed: re-encoding an unchanged
+            // image every poll would defeat the purpose of the refactor.
+            let image = read_clipboard_image()
+                .ok()
+                .flatten()
+                .and_then(|(data, hash)| {
+                    if Some(hash) == last_image_hash {
+                        return None;
+                    }
+                    let base64 = encode_image_to_base64(&data);
+                    Some((base64, data.width, data.height, hash))
+                });
+
+            // Apply changes under a brief lock (dedupe + insert + persist).
+            let mut manager = clipboard_manager.lock();
+
+            if let Some((text, html)) = text_to_add {
+                if let Some(item) = manager.add_text(text, html) {
+                    // Emit a lightweight payload: the frontend ignores it and
+                    // refetches via get_history, so avoid shipping image base64.
+                    let _ = app.emit("clipboard-changed", &item.lightweight());
+                }
+            }
+
+            if let Some((base64, width, height, hash)) = image {
+                last_image_hash = Some(hash);
+                last_text_hash = None;
+                if let Some(base64) = base64 {
+                    if let Some(item) =
+                        manager.add_image_encoded(base64, width as u32, height as u32, hash)
+                    {
+                        let _ = app.emit("clipboard-changed", &item.lightweight());
                     }
                 }
             }
@@ -1077,6 +1114,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             get_history,
+            get_item_content,
             clear_history,
             delete_item,
             toggle_pin,
