@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   enable_smart_actions: true,
   enable_ui_polish: true,
   enable_dynamic_tray_icon: true,
+  clear_search_on_open: true,
   max_history_size: 50,
   auto_delete_interval: 0,
   auto_delete_unit: 'hours',
@@ -92,6 +93,13 @@ function ClipboardApp() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('clipboard')
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
+
+  // Search queries for the pickers, owned here so they survive tab switches.
+  // Cleared when the window is (re)opened if the "clear search on open" setting is enabled.
+  const [pickerSearch, setPickerSearch] = useState({ emoji: '', kaomoji: '', symbols: '' })
+  const updatePickerSearch = useCallback((tab: 'emoji' | 'kaomoji' | 'symbols', value: string) => {
+    setPickerSearch((prev) => ({ ...prev, [tab]: value }))
+  }, [])
 
   const renderingEnv = useRenderingEnv()
   const isDark = useThemeMode(settings.theme_mode)
@@ -193,29 +201,42 @@ function ClipboardApp() {
 
   // Use refs to store current values for the focus handler (to avoid re-registering listener)
   const activeTabRef = useRef(activeTab)
+  const clearSearchOnOpenRef = useRef(settings.clear_search_on_open)
 
   // Keep refs in sync
   useEffect(() => {
     activeTabRef.current = activeTab
   }, [activeTab])
 
+  useEffect(() => {
+    clearSearchOnOpenRef.current = settings.clear_search_on_open
+  }, [settings.clear_search_on_open])
+
   // Handle window-shown event for focus management (registered once)
   useEffect(() => {
-    const focusFirstItem = () => {
-      // Small delay to ensure the window is fully rendered and focused
-      setTimeout(() => {
-        const currentTab = activeTabRef.current
+    const onWindowShown = () => {
+      // Clear all picker searches when the window is reopened, if enabled
+      if (clearSearchOnOpenRef.current) {
+        setPickerSearch({ emoji: '', kaomoji: '', symbols: '' })
+      }
 
-        if (currentTab !== 'clipboard') {
-          // Focus the first tab button if on other tabs
-          // Clipboard tab focus is handled inside ClipboardTab component
-          tabBarRef.current?.focusFirstTab()
-        }
+      const currentTab = activeTabRef.current
+
+      // Clipboard tab focus is handled inside ClipboardTab component
+      if (currentTab === 'clipboard') return
+
+      // Emoji/Kaomoji/Symbol pickers clear and focus their search bar on
+      // window-shown when "clear search on open" is enabled, so skip tab focus.
+      if (clearSearchOnOpenRef.current) return
+
+      // Fallback: focus the first tab button
+      setTimeout(() => {
+        tabBarRef.current?.focusFirstTab()
       }, 100)
     }
 
     // Listen to window-shown event (emitted from Rust when window is toggled visible)
-    const unlistenWindowShown = listen('window-shown', focusFirstItem)
+    const unlistenWindowShown = listen('window-shown', onWindowShown)
 
     return () => {
       unlistenWindowShown.then((unlisten) => unlisten())
@@ -256,7 +277,15 @@ function ClipboardApp() {
         )
 
       case 'emoji':
-        return <EmojiPicker isDark={isDark} opacity={secondaryOpacity} />
+        return (
+          <EmojiPicker
+            isDark={isDark}
+            opacity={secondaryOpacity}
+            clearSearchOnOpen={settings.clear_search_on_open}
+            searchQuery={pickerSearch.emoji}
+            onSearchChange={(value) => updatePickerSearch('emoji', value)}
+          />
+        )
 
       // case 'gifs':
       //   return <GifPicker isDark={isDark} opacity={secondaryOpacity} />
@@ -267,11 +296,22 @@ function ClipboardApp() {
             isDark={isDark}
             opacity={secondaryOpacity}
             customKaomojis={settings.custom_kaomojis}
+            clearSearchOnOpen={settings.clear_search_on_open}
+            searchQuery={pickerSearch.kaomoji}
+            onSearchChange={(value) => updatePickerSearch('kaomoji', value)}
           />
         )
 
       case 'symbols':
-        return <SymbolPicker isDark={isDark} opacity={secondaryOpacity} />
+        return (
+          <SymbolPicker
+            isDark={isDark}
+            opacity={secondaryOpacity}
+            clearSearchOnOpen={settings.clear_search_on_open}
+            searchQuery={pickerSearch.symbols}
+            onSearchChange={(value) => updatePickerSearch('symbols', value)}
+          />
+        )
 
       default:
         return null

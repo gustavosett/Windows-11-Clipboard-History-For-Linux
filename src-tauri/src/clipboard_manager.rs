@@ -62,6 +62,60 @@ fn get_system_clipboard() -> Result<Clipboard, String> {
     Clipboard::new().map_err(|e| e.to_string())
 }
 
+// --- Free-function clipboard access ---
+//
+// The clipboard watcher must read the system clipboard WITHOUT holding the
+// manager lock: arboard/X11 clipboard reads can block for a long time if the
+// clipboard owner is slow, and holding the lock across such a read would
+// freeze every UI command (get_history, toggle_pin, ...) that needs it.
+
+/// Read plain text from the system clipboard. May block on some platforms.
+pub fn read_clipboard_text() -> Result<String, arboard::Error> {
+    Clipboard::new()?.get_text()
+}
+
+/// Try to get HTML content from clipboard. Returns None if not available.
+pub fn read_clipboard_html() -> Option<String> {
+    let mut clipboard = get_system_clipboard().ok()?;
+    clipboard.get().html().ok()
+}
+
+/// Read an image from the system clipboard, returning raw RGBA bytes + hash.
+/// May block on some platforms.
+pub fn read_clipboard_image() -> Result<Option<(ImageData<'static>, u64)>, arboard::Error> {
+    let mut clipboard = Clipboard::new()?;
+
+    match clipboard.get_image() {
+        Ok(image) => {
+            let hash = calculate_hash(&image.bytes);
+            let owned = ImageData {
+                width: image.width,
+                height: image.height,
+                bytes: image.bytes.into_owned().into(),
+            };
+            Ok(Some((owned, hash)))
+        }
+        Err(arboard::Error::ContentNotAvailable) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
+/// Encode raw RGBA image bytes to a base64 PNG string.
+/// CPU heavy for large images, so callers should avoid holding locks.
+pub fn encode_image_to_base64(image_data: &ImageData<'_>) -> Option<String> {
+    let img = DynamicImage::ImageRgba8(
+        image::RgbaImage::from_raw(
+            image_data.width as u32,
+            image_data.height as u32,
+            image_data.bytes.to_vec(),
+        )?, // Returns None if dimensions don't match bytes
+    );
+
+    let mut buffer = Cursor::new(Vec::new());
+    img.write_to(&mut buffer, ImageFormat::Png).ok()?;
+    Some(BASE64.encode(buffer.get_ref()))
+}
+
 // --- Data Structures ---
 
 /// Content type for clipboard items
@@ -157,6 +211,27 @@ impl ClipboardItem {
             .split('#')
             .nth(1)
             .and_then(|h| h.parse::<u64>().ok())
+    }
+
+    /// Returns a copy of this item with heavy image data removed.
+    /// Used for list/history payloads so image base64 is not shipped over
+    /// IPC on every open/sync. Full content is fetched on demand via
+    /// `get_item_content`.
+    pub fn lightweight(&self) -> Self {
+        let content = match &self.content {
+            ClipboardContent::Image { width, height, .. } => ClipboardContent::Image {
+                base64: String::new(),
+                width: *width,
+                height: *height,
+            },
+            other => other.clone(),
+        };
+        // The remaining fields (id, timestamp, pinned, preview) are small, so
+        // cloning the rest of the struct is cheap; only `content` is heavy.
+        Self {
+            content,
+            ..self.clone()
+        }
     }
 }
 
@@ -299,35 +374,18 @@ impl ClipboardManager {
     // --- Monitoring / Reading ---
 
     pub fn get_current_text(&mut self) -> Result<String, arboard::Error> {
-        // We unwrap internal map error because arboard::Error is the expected return type here
-        // for the monitoring loop in main.rs
-        Clipboard::new()?.get_text()
+        read_clipboard_text()
     }
 
     /// Try to get HTML content from clipboard. Returns None if not available.
     pub fn get_current_html(&self) -> Option<String> {
-        let mut clipboard = get_system_clipboard().ok()?;
-        clipboard.get().html().ok()
+        read_clipboard_html()
     }
 
     pub fn get_current_image(
         &mut self,
     ) -> Result<Option<(ImageData<'static>, u64)>, arboard::Error> {
-        let mut clipboard = Clipboard::new()?;
-
-        match clipboard.get_image() {
-            Ok(image) => {
-                let hash = calculate_hash(&image.bytes);
-                let owned = ImageData {
-                    width: image.width,
-                    height: image.height,
-                    bytes: image.bytes.into_owned().into(),
-                };
-                Ok(Some((owned, hash)))
-            }
-            Err(arboard::Error::ContentNotAvailable) => Ok(None),
-            Err(e) => Err(e),
-        }
+        read_clipboard_image()
     }
 
     // --- Adding Items ---
@@ -384,6 +442,24 @@ impl ClipboardManager {
             hash,
         );
 
+        self.insert_item(item.clone());
+        Some(item)
+    }
+
+    /// Add an already-encoded image (base64 PNG) to history.
+    /// Encoding is expected to happen before acquiring the lock.
+    pub fn add_image_encoded(
+        &mut self,
+        base64: String,
+        width: u32,
+        height: u32,
+        hash: u64,
+    ) -> Option<ClipboardItem> {
+        if self.should_skip_image(hash) {
+            return None;
+        }
+
+        let item = ClipboardItem::new_image(base64, width, height, hash);
         self.insert_item(item.clone());
         Some(item)
     }
@@ -464,17 +540,7 @@ impl ClipboardManager {
     }
 
     fn convert_image_to_base64(&self, image_data: &ImageData<'_>) -> Option<String> {
-        let img = DynamicImage::ImageRgba8(
-            image::RgbaImage::from_raw(
-                image_data.width as u32,
-                image_data.height as u32,
-                image_data.bytes.to_vec(),
-            )?, // Returns None if dimensions don't match bytes
-        );
-
-        let mut buffer = Cursor::new(Vec::new());
-        img.write_to(&mut buffer, ImageFormat::Png).ok()?;
-        Some(BASE64.encode(buffer.get_ref()))
+        encode_image_to_base64(image_data)
     }
 
     fn insert_item(&mut self, item: ClipboardItem) {
@@ -510,7 +576,18 @@ impl ClipboardManager {
     // --- Accessors ---
 
     pub fn get_history(&self) -> Vec<ClipboardItem> {
-        self.history.clone()
+        // Return lightweight copies (image base64 stripped) to keep IPC
+        // payloads small. Full image content is fetched on demand via
+        // get_item_content.
+        self.history
+            .iter()
+            .map(ClipboardItem::lightweight)
+            .collect()
+    }
+
+    /// Returns the full item (including image base64) by id.
+    pub fn get_item_content(&self, id: &str) -> Option<ClipboardItem> {
+        self.history.iter().find(|item| item.id == id).cloned()
     }
 
     pub fn get_item(&self, id: &str) -> Option<&ClipboardItem> {

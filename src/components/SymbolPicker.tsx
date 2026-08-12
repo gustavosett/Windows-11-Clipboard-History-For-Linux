@@ -3,6 +3,7 @@ import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
 import { useSymbolPicker } from '../hooks/useSymbolPicker'
+import { useResetSearchOnWindowShown } from '../hooks/useResetSearchOnWindowShown'
 import { SearchBar } from './common/SearchBar'
 import { SectionHeader } from './common/SectionHeader'
 import type { SymbolItem } from '../services/symbolService'
@@ -133,19 +134,28 @@ function SymbolGridCell({
 export interface SymbolPickerProps {
   isDark: boolean
   opacity: number
+  /** Clear the search query and focus the search box when the window is shown */
+  clearSearchOnOpen?: boolean
+  /** Controlled search query, owned by the parent so it survives tab switches */
+  searchQuery: string
+  onSearchChange: (value: string) => void
 }
 
-export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
+export function SymbolPicker({
+  isDark,
+  opacity,
+  clearSearchOnOpen = false,
+  searchQuery,
+  onSearchChange,
+}: SymbolPickerProps) {
   const {
-    searchQuery,
-    setSearchQuery,
     selectedCategory,
     setSelectedCategory,
     categories,
     filteredSymbols,
     recentSymbols,
     pasteSymbol,
-  } = useSymbolPicker()
+  } = useSymbolPicker(searchQuery)
 
   const [hoveredSymbol, setHoveredSymbol] = useState<SymbolItem | null>(null)
 
@@ -155,19 +165,28 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
   const gridRef = useGridRef(null)
   const recentGridRef = useRef<HTMLDivElement>(null)
   const mainGridContainerRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Roving tabindex states
   const [recentFocusedIndex, setRecentFocusedIndex] = useState(0)
   const [mainFocusedIndex, setMainFocusedIndex] = useState(0)
   const [categoryFocusedIndex, setCategoryFocusedIndex] = useState(0)
 
+  // Clear search and focus the search box when the window is shown
+  useResetSearchOnWindowShown(clearSearchOnOpen, () => {
+    if (searchQuery !== '') onSearchChange('')
+    if (recentFocusedIndex !== 0) setRecentFocusedIndex(0)
+    if (mainFocusedIndex !== 0) setMainFocusedIndex(0)
+    requestAnimationFrame(() => searchInputRef.current?.focus())
+  })
+
   const handleSearchChange = useCallback(
     (val: string) => {
-      setSearchQuery(val)
+      onSearchChange(val)
       setRecentFocusedIndex(0)
       setMainFocusedIndex(0)
     },
-    [setSearchQuery]
+    [onSearchChange]
   )
 
   const handleCategorySelect = useCallback(
@@ -218,6 +237,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
     <PickerLayout
       header={
         <SearchBar
+          ref={searchInputRef}
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Search symbols..."

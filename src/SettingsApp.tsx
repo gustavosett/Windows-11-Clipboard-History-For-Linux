@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   enable_smart_actions: true,
   enable_ui_polish: true,
   enable_dynamic_tray_icon: true,
+  clear_search_on_open: true,
   max_history_size: 50,
   custom_kaomojis: [],
   ui_scale: 1,

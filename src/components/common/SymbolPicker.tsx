@@ -127,16 +127,15 @@ export interface SymbolPickerProps {
 }
 
 export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
+  const [searchQuery, setSearchQuery] = useState('')
   const {
-    searchQuery,
-    setSearchQuery,
     selectedCategory,
     setSelectedCategory,
     categories,
     filteredSymbols,
     recentSymbols,
     pasteSymbol,
-  } = useSymbolPicker()
+  } = useSymbolPicker(searchQuery)
 
   const [hoveredSymbol, setHoveredSymbol] = useState<SymbolItem | null>(null)
 

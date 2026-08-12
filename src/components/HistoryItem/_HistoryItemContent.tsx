@@ -1,5 +1,7 @@
 import { clsx } from 'clsx'
+import { useEffect, useRef, useState } from 'react'
 import type { ClipboardItem } from '../../types/clipboard'
+import { useLazyImageContent } from '../../hooks/useLazyImageContent'
 
 export function TextContent({
   item,
@@ -36,26 +38,48 @@ export function ImageContent({
   isDark: boolean
   effectiveCompact: boolean
 }) {
-  if (item.content.type !== 'Image') return null
-  const { width, height, base64 } = item.content.data
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const [inView, setInView] = useState(false)
 
-  if (effectiveCompact) {
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => setInView(entries[0]?.isIntersecting ?? false),
+      { rootMargin: '150px 0px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  const isImage = item.content.type === 'Image'
+  const base64 = item.content.type === 'Image' ? item.content.data.base64 : ''
+  const wantsFullImage = isImage && !effectiveCompact
+  const lazyBase64 = useLazyImageContent(item.id, wantsFullImage && inView && !base64)
+  const src = base64 || lazyBase64
+
+  if (item.content.type !== 'Image') return null
+  const { width, height } = item.content.data
+
+  if (effectiveCompact || !src) {
     return (
-      <span
-        className={clsx(
-          'text-sm italic',
-          isDark ? 'text-win11-text-tertiary' : 'text-win11Light-text-secondary'
-        )}
-      >
-        Image ({width}×{height})
-      </span>
+      <div ref={wrapperRef}>
+        <span
+          className={clsx(
+            'text-sm italic',
+            isDark ? 'text-win11-text-tertiary' : 'text-win11Light-text-secondary'
+          )}
+        >
+          Image ({width}×{height})
+        </span>
+      </div>
     )
   }
 
   return (
-    <div className="relative">
+    <div ref={wrapperRef} className="relative">
       <img
-        src={`data:image/png;base64,${base64}`}
+        src={`data:image/png;base64,${src}`}
         alt="Clipboard image"
         className="max-w-full max-h-24 rounded object-contain bg-black/10"
       />

@@ -10,6 +10,7 @@ import { SearchBar } from './common/SearchBar'
 import { EmptyState } from './EmptyState'
 import { HistoryItem } from './HistoryItem'
 import { useHistoryKeyboardNavigation } from '../hooks/useHistoryKeyboardNavigation'
+import { useResetSearchOnWindowShown } from '../hooks/useResetSearchOnWindowShown'
 
 export function ClipboardTab(props: {
   history: ClipboardItem[]
@@ -184,17 +185,11 @@ export function ClipboardTab(props: {
     }
   }, [isSearchVisible])
 
-  // Reset search when window is shown (reopened)
-  useEffect(() => {
-    const resetSearch = () => {
-      setIsSearchVisible(false)
-      setSearchQuery('')
-    }
-    const unlistenWindowShown = listen('window-shown', resetSearch)
-    return () => {
-      unlistenWindowShown.then((u) => u())
-    }
-  }, [])
+  // Reset search when window is shown (reopened) if the setting is enabled
+  useResetSearchOnWindowShown(settings.clear_search_on_open, () => {
+    if (isSearchVisible) setIsSearchVisible(false)
+    if (searchQuery !== '') setSearchQuery('')
+  })
 
   // Filter history by search query
   const filteredHistory = useMemo(() => {

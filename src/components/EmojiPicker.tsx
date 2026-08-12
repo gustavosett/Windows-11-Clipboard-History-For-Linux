@@ -3,6 +3,7 @@ import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
 import { useEmojiPicker } from '../hooks/useEmojiPicker'
+import { useResetSearchOnWindowShown } from '../hooks/useResetSearchOnWindowShown'
 import { SearchBar } from './common/SearchBar'
 import { SectionHeader } from './common/SectionHeader'
 import type { Emoji } from '../services/emojiService'
@@ -135,12 +136,21 @@ function EmojiGridCell({
 export interface EmojiPickerProps {
   isDark: boolean
   opacity: number
+  /** Clear the search query and focus the search box when the window is shown */
+  clearSearchOnOpen?: boolean
+  /** Controlled search query, owned by the parent so it survives tab switches */
+  searchQuery: string
+  onSearchChange: (value: string) => void
 }
 
-export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
+export function EmojiPicker({
+  isDark,
+  opacity,
+  clearSearchOnOpen = false,
+  searchQuery,
+  onSearchChange,
+}: EmojiPickerProps) {
   const {
-    searchQuery,
-    setSearchQuery,
     selectedCategory,
     setSelectedCategory,
     categories,
@@ -148,7 +158,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
     recentEmojis,
     isLoading,
     pasteEmoji,
-  } = useEmojiPicker()
+  } = useEmojiPicker(searchQuery)
 
   const [hoveredEmoji, setHoveredEmoji] = useState<Emoji | null>(null)
 
@@ -157,19 +167,28 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
   const gridRef = useGridRef(null)
   const recentGridRef = useRef<HTMLDivElement>(null)
   const mainGridContainerRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Roving tabindex states
   const [recentFocusedIndex, setRecentFocusedIndex] = useState(0)
   const [mainFocusedIndex, setMainFocusedIndex] = useState(0)
   const [categoryFocusedIndex, setCategoryFocusedIndex] = useState(0)
 
+  // Clear search and focus the search box when the window is shown
+  useResetSearchOnWindowShown(clearSearchOnOpen, () => {
+    if (searchQuery !== '') onSearchChange('')
+    if (recentFocusedIndex !== 0) setRecentFocusedIndex(0)
+    if (mainFocusedIndex !== 0) setMainFocusedIndex(0)
+    requestAnimationFrame(() => searchInputRef.current?.focus())
+  })
+
   const handleSearchChange = useCallback(
     (val: string) => {
-      setSearchQuery(val)
+      onSearchChange(val)
       setRecentFocusedIndex(0)
       setMainFocusedIndex(0)
     },
-    [setSearchQuery]
+    [onSearchChange]
   )
 
   const handleCategorySelect = useCallback(
@@ -227,6 +246,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
     <PickerLayout
       header={
         <SearchBar
+          ref={searchInputRef}
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Search emojis..."

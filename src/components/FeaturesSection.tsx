@@ -13,6 +13,11 @@ const FEATURES = [
     label: 'UI Polish',
     desc: 'Enable animations and compact mode support.',
   },
+  {
+    key: 'clear_search_on_open',
+    label: 'Clear Search on Open',
+    desc: 'Clear the search box and focus it every time the window opens.',
+  },
 ] as const
 
 export function FeaturesSection({
