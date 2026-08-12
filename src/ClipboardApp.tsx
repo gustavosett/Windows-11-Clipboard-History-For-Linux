@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   enable_smart_actions: true,
   enable_ui_polish: true,
   enable_dynamic_tray_icon: true,
+  clear_search_on_open: true,
   max_history_size: 50,
   auto_delete_interval: 0,
   auto_delete_unit: 'hours',
@@ -193,24 +194,32 @@ function ClipboardApp() {
 
   // Use refs to store current values for the focus handler (to avoid re-registering listener)
   const activeTabRef = useRef(activeTab)
+  const clearSearchOnOpenRef = useRef(settings.clear_search_on_open)
 
   // Keep refs in sync
   useEffect(() => {
     activeTabRef.current = activeTab
   }, [activeTab])
 
+  useEffect(() => {
+    clearSearchOnOpenRef.current = settings.clear_search_on_open
+  }, [settings.clear_search_on_open])
+
   // Handle window-shown event for focus management (registered once)
   useEffect(() => {
     const focusFirstItem = () => {
-      // Small delay to ensure the window is fully rendered and focused
-      setTimeout(() => {
-        const currentTab = activeTabRef.current
+      const currentTab = activeTabRef.current
 
-        if (currentTab !== 'clipboard') {
-          // Focus the first tab button if on other tabs
-          // Clipboard tab focus is handled inside ClipboardTab component
-          tabBarRef.current?.focusFirstTab()
-        }
+      // Clipboard tab focus is handled inside ClipboardTab component
+      if (currentTab === 'clipboard') return
+
+      // Emoji/Kaomoji/Symbol pickers clear and focus their search bar on
+      // window-shown when "clear search on open" is enabled, so skip tab focus.
+      if (clearSearchOnOpenRef.current) return
+
+      // Fallback: focus the first tab button
+      setTimeout(() => {
+        tabBarRef.current?.focusFirstTab()
       }, 100)
     }
 
@@ -256,7 +265,13 @@ function ClipboardApp() {
         )
 
       case 'emoji':
-        return <EmojiPicker isDark={isDark} opacity={secondaryOpacity} />
+        return (
+          <EmojiPicker
+            isDark={isDark}
+            opacity={secondaryOpacity}
+            clearSearchOnOpen={settings.clear_search_on_open}
+          />
+        )
 
       // case 'gifs':
       //   return <GifPicker isDark={isDark} opacity={secondaryOpacity} />
@@ -267,11 +282,18 @@ function ClipboardApp() {
             isDark={isDark}
             opacity={secondaryOpacity}
             customKaomojis={settings.custom_kaomojis}
+            clearSearchOnOpen={settings.clear_search_on_open}
           />
         )
 
       case 'symbols':
-        return <SymbolPicker isDark={isDark} opacity={secondaryOpacity} />
+        return (
+          <SymbolPicker
+            isDark={isDark}
+            opacity={secondaryOpacity}
+            clearSearchOnOpen={settings.clear_search_on_open}
+          />
+        )
 
       default:
         return null

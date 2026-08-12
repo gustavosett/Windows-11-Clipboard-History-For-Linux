@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { KAOMOJI_CATEGORIES, getKaomojis } from '../services/kaomojiService'
 import { SearchBar } from './common/SearchBar'
 import type { CustomKaomoji } from '../types/clipboard'
+import { useResetSearchOnWindowShown } from '../hooks/useResetSearchOnWindowShown'
 
 import { PickerLayout } from './common/PickerLayout'
 import { CategoryStrip } from './common/CategoryStrip'
@@ -14,9 +15,16 @@ interface KaomojiPickerProps {
   isDark: boolean
   opacity: number
   customKaomojis?: CustomKaomoji[]
+  /** Clear the search query and focus the search box when the window is shown */
+  clearSearchOnOpen?: boolean
 }
 
-export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiPickerProps) {
+export function KaomojiPicker({
+  isDark,
+  opacity,
+  customKaomojis = [],
+  clearSearchOnOpen = false,
+}: KaomojiPickerProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
@@ -27,6 +35,15 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
     null
   )
   const gridContainerRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Clear search and focus the search box when the window is shown
+  useResetSearchOnWindowShown(clearSearchOnOpen, () => {
+    if (searchQuery !== '') setSearchQuery('')
+    if (categoryFocusedIndex !== 0) setCategoryFocusedIndex(0)
+    if (gridFocusedIndex !== 0) setGridFocusedIndex(0)
+    requestAnimationFrame(() => searchInputRef.current?.focus())
+  })
 
   const { containerRef, dimensions } = useResponsiveGrid()
 
@@ -74,6 +91,7 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
     <PickerLayout
       header={
         <SearchBar
+          ref={searchInputRef}
           value={searchQuery}
           onChange={(val: string) => {
             setSearchQuery(val)
