@@ -35,7 +35,7 @@
     "clsx": "^2.1.0",
     "emojilib": "^4.0.3",
     "fuse.js": "^7.5.0",
-    "lucide-react": "^1.27.0",
+    "lucide-react": "^1.31.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-window": "^2.3.0"
