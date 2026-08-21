@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   light_background_opacity: 0.7,
   enable_smart_actions: true,
   enable_ui_polish: true,
+  keep_picker_open_after_insert: false,
   enable_dynamic_tray_icon: true,
   max_history_size: 50,
   auto_delete_interval: 0,

@@ -200,15 +200,25 @@ async fn paste_text(
     let _paste_guard = state.paste_gate.lock().await;
 
     // 0. Record usage if applicable
-    let keep_open_tab = match item_type.as_deref() {
-        Some("emoji") => {
-            state.emoji_manager.lock().record_usage(&text);
-            // Keep the emoji picker open so multiple emojis can be inserted
-            Some("emoji")
+    let keep_open_tab = if UserSettingsManager::new().load().keep_picker_open_after_insert {
+        match item_type.as_deref() {
+            Some("emoji") => {
+                state.emoji_manager.lock().record_usage(&text);
+                // Keep the emoji picker open so multiple emojis can be inserted
+                Some("emoji")
+            }
+            Some("kaomoji") => Some("kaomoji"),
+            Some("symbol") => Some("symbols"),
+            _ => None,
         }
-        Some("kaomoji") => Some("kaomoji"),
-        Some("symbol") => Some("symbols"),
-        _ => None,
+    } else {
+        // Classic behavior: still record emoji usage, but close after paste.
+        if let Some(t) = item_type.as_deref() {
+            if t == "emoji" {
+                state.emoji_manager.lock().record_usage(&text);
+            }
+        }
+        None
     };
 
     // 1. Prepare Environment

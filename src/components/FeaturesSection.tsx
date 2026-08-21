@@ -13,6 +13,11 @@ const FEATURES = [
     label: 'UI Polish',
     desc: 'Enable animations and compact mode support.',
   },
+  {
+    key: 'keep_picker_open_after_insert',
+    label: 'Keep Picker Open After Insert',
+    desc: 'Keep the emoji/kaomoji/symbol picker open after inserting, so you can insert multiple in a row.',
+  },
 ] as const
 
 export function FeaturesSection({
