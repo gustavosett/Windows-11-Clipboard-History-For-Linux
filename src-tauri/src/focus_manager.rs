@@ -29,9 +29,9 @@ pub fn save_focused_window() {
     match crate::paste_sync::focused_window() {
         Some(window_id) => {
             LAST_FOCUSED_WINDOW.store(window_id, Ordering::SeqCst);
-            eprintln!("[FocusManager] Saved focused window: {}", window_id);
+            tracing::info!("[FocusManager] Saved focused window: {}", window_id);
         }
-        None => eprintln!("[FocusManager] Failed to query the focused X11 window"),
+        None => tracing::info!("[FocusManager] Failed to query the focused X11 window"),
     }
 }
 
@@ -42,7 +42,7 @@ pub fn restore_focused_window() -> Result<bool, String> {
         return Err("No previous window saved".to_string());
     }
 
-    eprintln!("[FocusManager] Restoring focus to window: {}", window_id);
+    tracing::info!("[FocusManager] Restoring focus to window: {}", window_id);
 
     crate::paste_sync::restore_and_settle_focus(window_id, FOCUS_RESTORE_TIMEOUT)
 }
@@ -116,7 +116,7 @@ pub fn x11_activate_window_by_id(window_id: u32) -> Result<(), String> {
     conn.flush()
         .map_err(|e| format!("Failed to flush: {}", e))?;
 
-    eprintln!(
+    tracing::info!(
         "[FocusManager] Sent _NET_ACTIVE_WINDOW for window {}",
         window_id
     );
@@ -138,7 +138,7 @@ pub fn wait_for_window_by_title(title: &str, timeout: Duration) -> Option<u32> {
 
     while start.elapsed() < timeout {
         if let Some(window_id) = find_window_by_title(title) {
-            eprintln!(
+            tracing::info!(
                 "[FocusManager] Found window '{}' with ID {} after {:?}",
                 title,
                 window_id,
@@ -149,7 +149,7 @@ pub fn wait_for_window_by_title(title: &str, timeout: Duration) -> Option<u32> {
         thread::sleep(WINDOW_MAP_POLL_INTERVAL);
     }
 
-    eprintln!("[FocusManager] Timeout waiting for window '{}'", title);
+    tracing::info!("[FocusManager] Timeout waiting for window '{}'", title);
     None
 }
 
@@ -256,7 +256,7 @@ pub fn x11_force_input_focus(window_id: u32) -> Result<(), String> {
 
     conn.flush().map_err(|e| format!("Flush failed: {}", e))?;
 
-    eprintln!("[FocusManager] Forced input focus to window {}", window_id);
+    tracing::info!("[FocusManager] Forced input focus to window {}", window_id);
     Ok(())
 }
 
@@ -269,7 +269,7 @@ pub fn x11_robust_activate(title: &str) -> Result<(), String> {
 
     // Step 2: Try EWMH _NET_ACTIVE_WINDOW (preferred, WM-friendly)
     if let Err(e) = x11_activate_window_by_id(window_id) {
-        eprintln!(
+        tracing::info!(
             "[FocusManager] EWMH activation failed: {}, trying fallback",
             e
         );
@@ -282,12 +282,12 @@ pub fn x11_robust_activate(title: &str) -> Result<(), String> {
     match get_focused_window() {
         Some(current_focus) => {
             if current_focus != window_id {
-                eprintln!("[FocusManager] Focus not acquired, forcing input focus");
+                tracing::info!("[FocusManager] Focus not acquired, forcing input focus");
                 x11_force_input_focus(window_id)?;
             }
         }
         None => {
-            eprintln!(
+            tracing::info!(
                 "[FocusManager] Could not determine focused window after EWMH activation; forcing input focus as fallback"
             );
             x11_force_input_focus(window_id)?;

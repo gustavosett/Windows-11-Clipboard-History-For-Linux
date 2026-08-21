@@ -4,6 +4,10 @@ import { getCurrentWindow, getAllWindows } from '@tauri-apps/api/window'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+
+// Initialize i18n before any component renders
+import { applyWindowLanguagePolicy } from './i18n/config'
+
 import ClipboardApp from './ClipboardApp'
 import SettingsApp from './SettingsApp'
 import { SetupApp } from './setup'
@@ -22,7 +26,7 @@ function ClipboardAppWithSetup() {
     const init = async () => {
       // Listen for setup completion event from the setup window
       // We set this up early to ensure we don't miss it
-      unlistenSetup = await listen('setup_complete', async () => {
+      unlistenSetup = await listen('setup_complete', () => {
         console.log('Setup complete event received')
         setWaitingForSetup(false)
       })
@@ -45,9 +49,13 @@ function ClipboardAppWithSetup() {
             console.error('Setup window not found in config')
             // Attempt to create it if it somehow doesn't exist (fallback)
             const newSetupWin = new WebviewWindow('setup')
-            newSetupWin.once('tauri://created', () => {
-              newSetupWin.show()
-              newSetupWin.setFocus()
+            // `once` returns a promise; the registration is fire-and-forget.
+            // `once` پرامیس برمی‌گرداند؛ ثبت رویداد fire-and-forget است.
+            void newSetupWin.once('tauri://created', () => {
+              // Fire-and-forget window management; failures surface in logs.
+              // مدیریت پنجره به‌صورت fire-and-forget؛ خطاها در لاگ دیده می‌شوند.
+              void newSetupWin.show()
+              void newSetupWin.setFocus()
             })
           }
         }
@@ -58,7 +66,7 @@ function ClipboardAppWithSetup() {
       }
     }
 
-    init()
+    void init()
 
     return () => {
       if (unlistenSetup) unlistenSetup()
@@ -78,7 +86,11 @@ function ClipboardAppWithSetup() {
  * Root component that routes based on the current window's label
  */
 export default function Root() {
-  const [windowLabel] = useState<string>(() => getCurrentWindow().label)
+  const [windowLabel] = useState<string>(() => {
+    const label = getCurrentWindow().label
+    void applyWindowLanguagePolicy(label)
+    return label
+  })
 
   // Route to appropriate app based on window label
   if (windowLabel === 'settings') {

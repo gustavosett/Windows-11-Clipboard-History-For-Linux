@@ -1,8 +1,11 @@
 #!/bin/bash
-# install.sh - Smart installer for Win11 Clipboard History
-# Usage: curl -fsSL https://raw.githubusercontent.com/gustavosett/Windows-11-Clipboard-History-For-Linux/master/scripts/install.sh | bash
+# install.sh - Smart installer for Windows 11 Style Clipboard History Manager
+# Usage: curl -fsSL https://raw.githubusercontent.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager/master/scripts/install.sh | bash
 
 set -e
+
+# Security note: piping this file to bash trusts GitHub + your DNS/TLS path.
+# Prefer: curl the script, read it, then run it. Package-manager installs are safer.
 
 # Colors
 RED='\033[0;31m'
@@ -17,18 +20,35 @@ warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
 error()   { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
 # Configuration
-REPO_OWNER="gustavosett"
-REPO_NAME="Windows-11-Clipboard-History-For-Linux"
-CLOUDSMITH_REPO="gustavosett/clipboard-manager"
+REPO_OWNER="Mahdi-Arts"
+REPO_NAME="Windows-11-Style-Clipboard-History-Manager"
+# Optional Cloudsmith repository. Disabled by default because it is a
+# `curl | sudo bash` trust path. Enable explicitly:
+#   USE_CLOUDSMITH=1 CLOUDSMITH_REPO=owner/repo ./install.sh
+USE_CLOUDSMITH="${USE_CLOUDSMITH:-0}"
+CLOUDSMITH_REPO="${CLOUDSMITH_REPO:-mahdi-arts/clipboard-manager}"
+
+# Supply-chain controls:
+# - Checksum verification against the release's SHA256SUMS is MANDATORY.
+# - To skip verification (NOT recommended, e.g. offline mirror testing), set
+#   ALLOW_UNVERIFIED=1 — the installer will refuse to run without it.
+# - To require a detached GPG signature over SHA256SUMS, set
+#   WINDOWS_11_CLIPBOARD_TRUST_KEY=<keyid-or-fingerprint>; verification then also
+#   needs a reachable keyserver or an imported public key.
+ALLOW_UNVERIFIED="${ALLOW_UNVERIFIED:-0}"
+WINDOWS_11_CLIPBOARD_TRUST_KEY="${WINDOWS_11_CLIPBOARD_TRUST_KEY:-${MODERN_CLIPBOARD_HISTORY_TRUST_KEY:-}}"
 
 # Cleanup previous AppImage installation (prevents conflicts with package manager installs)
 cleanup_appimage_installation() {
     local has_appimage=false
     
     # Check for AppImage installation artifacts
-    if [ -f "$HOME/.local/bin/win11-clipboard-history.AppImage" ] || \
-       [ -f "$HOME/.local/bin/win11-clipboard-history" ] || \
-       [ -f "$HOME/.local/share/applications/win11-clipboard-history.desktop" ]; then
+    if [ -f "$HOME/.local/bin/windows-11-style-clipboard-history-manager.AppImage" ] || \
+       [ -f "$HOME/.local/bin/windows-11-style-clipboard-history-manager" ] || \
+       [ -f "$HOME/.local/share/applications/windows-11-style-clipboard-history-manager.desktop" ] || \
+       [ -f "$HOME/.local/bin/modern-clipboard-history-for-linux.AppImage" ] || \
+       [ -f "$HOME/.local/bin/modern-clipboard-history-for-linux" ] || \
+       [ -f "$HOME/.local/share/applications/modern-clipboard-history-for-linux.desktop" ]; then
         has_appimage=true
     fi
     
@@ -36,15 +56,16 @@ cleanup_appimage_installation() {
         log "Detected previous AppImage installation. Cleaning up..."
         
         # Kill any running AppImage instances
-        pkill -f "win11-clipboard-history.AppImage" 2>/dev/null || true
+        pkill -f "windows-11-style-clipboard-history-manager.AppImage" 2>/dev/null || true
+        pkill -f "modern-clipboard-history-for-linux.AppImage" 2>/dev/null || true
 
         # Wait for processes to terminate, with a timeout
         timeout=5
         interval=1
         elapsed=0
-        while pgrep -f "win11-clipboard-history.AppImage" >/dev/null 2>&1; do
+        while pgrep -f "windows-11-style-clipboard-history-manager.AppImage\|modern-clipboard-history-for-linux.AppImage" >/dev/null 2>&1; do
             if [ "$elapsed" -ge "$timeout" ]; then
-                warn "Timed out waiting for Win11 Clipboard History AppImage processes to terminate."
+                warn "Timed out waiting for Windows 11 Style Clipboard History Manager AppImage processes to terminate."
                 break
             fi
             sleep "$interval"
@@ -52,10 +73,14 @@ cleanup_appimage_installation() {
         done
         
         # Remove AppImage files
-        rm -f "$HOME/.local/bin/win11-clipboard-history.AppImage" 2>/dev/null || true
-        rm -f "$HOME/.local/bin/win11-clipboard-history" 2>/dev/null || true
-        rm -f "$HOME/.local/share/applications/win11-clipboard-history.desktop" 2>/dev/null || true
-        rm -f "$HOME/.local/share/icons/hicolor"/*/apps/win11-clipboard-history.png 2>/dev/null || true
+        rm -f "$HOME/.local/bin/windows-11-style-clipboard-history-manager.AppImage" 2>/dev/null || true
+        rm -f "$HOME/.local/bin/windows-11-style-clipboard-history-manager" 2>/dev/null || true
+        rm -f "$HOME/.local/share/applications/windows-11-style-clipboard-history-manager.desktop" 2>/dev/null || true
+        rm -f "$HOME/.local/share/icons/hicolor"/*/apps/windows-11-style-clipboard-history-manager.png 2>/dev/null || true
+        rm -f "$HOME/.local/bin/modern-clipboard-history-for-linux.AppImage" 2>/dev/null || true
+        rm -f "$HOME/.local/bin/modern-clipboard-history-for-linux" 2>/dev/null || true
+        rm -f "$HOME/.local/share/applications/modern-clipboard-history-for-linux.desktop" 2>/dev/null || true
+        rm -f "$HOME/.local/share/icons/hicolor"/*/apps/modern-clipboard-history-for-linux.png 2>/dev/null || true
         
         # Update desktop database if available
         if command -v update-desktop-database &>/dev/null; then
@@ -174,24 +199,21 @@ install_via_package_manager() {
 }
 
 install_deb() {
-    log "Setting up APT repository (Cloudsmith)..."
-    
-    # Install prerequisites for HTTPS repos
-    sudo apt-get update -qq
-    sudo apt-get install -y apt-transport-https curl || true
-    
-    # Try Cloudsmith repository first (enables auto-updates)
-    if curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.deb.sh" | sudo -E bash 2>/dev/null; then
-        log "Installing win11-clipboard-history from repository..."
+    if [ "$USE_CLOUDSMITH" = "1" ]; then
+        log "Setting up APT repository (Cloudsmith, USE_CLOUDSMITH=1)..."
         sudo apt-get update -qq
-        if sudo apt-get install -y win11-clipboard-history; then
-            success "Installed via APT repository! (auto-updates enabled)"
-            return 0
+        sudo apt-get install -y apt-transport-https curl || true
+        if curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.deb.sh" | sudo -E bash 2>/dev/null; then
+            log "Installing windows-11-style-clipboard-history-manager from repository..."
+            sudo apt-get update -qq
+            if sudo apt-get install -y windows-11-style-clipboard-history-manager; then
+                success "Installed via APT repository! (auto-updates enabled)"
+                return 0
+            fi
         fi
+        warn "Cloudsmith repository not available, falling back to GitHub release..."
     fi
-    
-    # Fallback: download from GitHub releases
-    warn "Repository not available, falling back to GitHub release..."
+
     log "Installing from GitHub releases (.deb)..."
     
     LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
@@ -204,7 +226,7 @@ install_deb() {
     cd "$TEMP_DIR"
     trap 'rm -rf "$TEMP_DIR"' EXIT
     
-    FILE="win11-clipboard-history_${CLEAN_VERSION}_${DEB_ARCH}.deb"
+    FILE="windows-11-style-clipboard-history-manager_${CLEAN_VERSION}_${DEB_ARCH}.deb"
     BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
     
     log "Downloading $FILE..."
@@ -212,6 +234,7 @@ install_deb() {
         error "Failed to download $FILE"
     fi
     chmod 644 "$FILE"
+    verify_downloaded_file "$FILE" "$BASE_URL"
     
     log "Installing dependencies..."
     sudo apt-get install -y xclip wl-clipboard acl || true
@@ -223,8 +246,42 @@ install_deb() {
     success "Installed via APT (from GitHub release)"
 }
 
+download_and_install_rpm() {
+    local pkg_mgr="$1"
+    LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
+    RELEASE_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -cd '[:alnum:]._-')
+    [ -z "$RELEASE_TAG" ] && error "Failed to fetch version."
+    CLEAN_VERSION="${RELEASE_TAG#v}"
+    TEMP_DIR=$(mktemp -d)
+    chmod 755 "$TEMP_DIR"
+    cd "$TEMP_DIR"
+    trap 'rm -rf "$TEMP_DIR"' EXIT
+    FILE="windows-11-style-clipboard-history-manager-${CLEAN_VERSION}-1.${RPM_ARCH}.rpm"
+    BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
+    log "Downloading $FILE..."
+    if ! curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar --fail; then
+        error "Failed to download $FILE"
+    fi
+    chmod 644 "$FILE"
+    verify_downloaded_file "$FILE" "$BASE_URL"
+    if [ "$pkg_mgr" = "dnf" ]; then
+        sudo dnf install -y xclip wl-clipboard acl libayatana-appindicator-gtk3 || true
+        sudo dnf install -y "./$FILE"
+        success "Installed via DNF (from GitHub release)"
+    else
+        sudo zypper install -y xclip wl-clipboard acl libayatana-appindicator3-1 || true
+        sudo zypper install -y "./$FILE"
+        success "Installed via Zypper (from GitHub release)"
+    fi
+}
+
 install_rpm() {
-    log "Setting up RPM repository (Cloudsmith)..."
+    if [ "$USE_CLOUDSMITH" != "1" ]; then
+        log "Installing from GitHub releases (.rpm)..."
+        download_and_install_rpm dnf
+        return 0
+    fi
+    log "Setting up RPM repository (Cloudsmith, USE_CLOUDSMITH=1)..."
     
     local env_args=()
     if [[ "$DISTRO_ID" == "fedora-asahi-remix" ]]; then
@@ -255,8 +312,8 @@ install_rpm() {
     fi
     
     if [ "$repo_setup_success" = true ]; then
-        log "Installing win11-clipboard-history from repository..."
-        if sudo dnf install -y win11-clipboard-history; then
+        log "Installing windows-11-style-clipboard-history-manager from repository..."
+        if sudo dnf install -y windows-11-style-clipboard-history-manager; then
             success "Installed via DNF repository! (auto-updates enabled)"
             return 0
         fi
@@ -276,7 +333,7 @@ install_rpm() {
     cd "$TEMP_DIR"
     trap 'rm -rf "$TEMP_DIR"' EXIT
     
-    FILE="win11-clipboard-history-${CLEAN_VERSION}-1.${RPM_ARCH}.rpm"
+    FILE="windows-11-style-clipboard-history-manager-${CLEAN_VERSION}-1.${RPM_ARCH}.rpm"
     BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
     
     log "Downloading $FILE..."
@@ -284,6 +341,7 @@ install_rpm() {
         error "Failed to download $FILE"
     fi
     chmod 644 "$FILE"
+    verify_downloaded_file "$FILE" "$BASE_URL"
     
     log "Installing dependencies..."
     sudo dnf install -y xclip wl-clipboard acl libayatana-appindicator-gtk3 || true
@@ -295,47 +353,8 @@ install_rpm() {
 }
 
 install_rpm_suse() {
-    log "Setting up RPM repository (Cloudsmith)..."
-    
-    # Try Cloudsmith repository first (enables auto-updates)
-    if curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh" | sudo -E bash 2>/dev/null; then
-        log "Installing win11-clipboard-history from repository..."
-        if sudo zypper install -y win11-clipboard-history; then
-            success "Installed via Zypper repository! (auto-updates enabled)"
-            return 0
-        fi
-    fi
-    
-    # Fallback: download from GitHub releases
-    warn "Repository not available, falling back to GitHub release..."
     log "Installing from GitHub releases (.rpm)..."
-    
-    LATEST_RELEASE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
-    RELEASE_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -cd '[:alnum:]._-')
-    [ -z "$RELEASE_TAG" ] && error "Failed to fetch version."
-    CLEAN_VERSION="${RELEASE_TAG#v}"
-    
-    TEMP_DIR=$(mktemp -d)
-    chmod 755 "$TEMP_DIR"
-    cd "$TEMP_DIR"
-    trap 'rm -rf "$TEMP_DIR"' EXIT
-    
-    FILE="win11-clipboard-history-${CLEAN_VERSION}-1.${RPM_ARCH}.rpm"
-    BASE_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$RELEASE_TAG"
-    
-    log "Downloading $FILE..."
-    if ! curl -L -o "$FILE" "$BASE_URL/$FILE" --progress-bar --fail; then
-        error "Failed to download $FILE"
-    fi
-    chmod 644 "$FILE"
-    
-    log "Installing dependencies..."
-    sudo zypper install -y xclip wl-clipboard acl libayatana-appindicator3-1 || true
-    
-    log "Installing .rpm package..."
-    sudo zypper install -y "./$FILE"
-    
-    success "Installed via Zypper (from GitHub release)"
+    download_and_install_rpm zypper
 }
 
 install_aur() {
@@ -343,15 +362,15 @@ install_aur() {
     
     # Detect AUR helper
     if command -v yay &>/dev/null; then
-        yay -S --noconfirm win11-clipboard-history-bin
+        yay -S --noconfirm windows-11-style-clipboard-history-manager-bin
     elif command -v paru &>/dev/null; then
-        paru -S --noconfirm win11-clipboard-history-bin
+        paru -S --noconfirm windows-11-style-clipboard-history-manager-bin
     else
         warn "No AUR helper found. Installing yay first..."
         sudo pacman -S --needed --noconfirm git base-devel
         git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
         cd /tmp/yay-bin && makepkg -si --noconfirm
-        yay -S --noconfirm win11-clipboard-history-bin
+        yay -S --noconfirm windows-11-style-clipboard-history-manager-bin
     fi
     
     success "Installed via AUR!"
@@ -389,18 +408,20 @@ install_appimage() {
     
     # Download AppImage
     log "Downloading AppImage..."
-    curl -fsSL -o "$HOME/.local/bin/win11-clipboard-history.AppImage" "$LATEST_URL"
-    chmod +x "$HOME/.local/bin/win11-clipboard-history.AppImage"
+    curl -fsSL -o "$HOME/.local/bin/windows-11-style-clipboard-history-manager.AppImage" "$LATEST_URL"
+    chmod +x "$HOME/.local/bin/windows-11-style-clipboard-history-manager.AppImage"
+    BASE_URL="${LATEST_URL%/*}"
+    verify_downloaded_file "$HOME/.local/bin/windows-11-style-clipboard-history-manager.AppImage" "$BASE_URL"
     
     # Download app icon for proper menu integration
     log "Downloading app icon..."
-    curl -fsSL -o "$HOME/.local/share/icons/hicolor/128x128/apps/win11-clipboard-history.png" \
+    curl -fsSL -o "$HOME/.local/share/icons/hicolor/128x128/apps/windows-11-style-clipboard-history-manager.png" \
         "https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/master/src-tauri/icons/128x128.png" 2>/dev/null || true
     
     # Wrapper script — mirrors src-tauri/bundle/linux/wrapper.sh sanitization
-    cat > "$HOME/.local/bin/win11-clipboard-history" << 'WRAPPER_EOF'
+    cat > "$HOME/.local/bin/windows-11-style-clipboard-history-manager" << 'WRAPPER_EOF'
 #!/bin/bash
-# AppImage wrapper for win11-clipboard-history
+# AppImage wrapper for windows-11-style-clipboard-history-manager
 # Sanitizes Snap/Flatpak environment leaks, then launches the AppImage.
 
 # Always clear library/runtime overrides from sandbox parents
@@ -441,21 +462,21 @@ sanitize_xdg_data_dirs
 
 export NO_AT_BRIDGE=1
 
-exec "$HOME/.local/bin/win11-clipboard-history.AppImage" "$@"
+exec "$HOME/.local/bin/windows-11-style-clipboard-history-manager.AppImage" "$@"
 WRAPPER_EOF
-    chmod +x "$HOME/.local/bin/win11-clipboard-history"
+    chmod +x "$HOME/.local/bin/windows-11-style-clipboard-history-manager"
     
     # .desktop file with proper icon
-    cat > "$HOME/.local/share/applications/win11-clipboard-history.desktop" << EOF
+    cat > "$HOME/.local/share/applications/windows-11-style-clipboard-history-manager.desktop" << EOF
 [Desktop Entry]
 Type=Application
 Name=Clipboard History
 Comment=Windows 11-style Clipboard History Manager
-Exec=$HOME/.local/bin/win11-clipboard-history
-Icon=win11-clipboard-history
+Exec=$HOME/.local/bin/windows-11-style-clipboard-history-manager
+Icon=windows-11-style-clipboard-history-manager
 Terminal=false
 Categories=Utility;
-StartupWMClass=win11-clipboard-history
+StartupWMClass=windows-11-style-clipboard-history-manager
 EOF
     
     # Ask about udev rules for AppImage (optional - maintains portability)
@@ -503,14 +524,14 @@ setup_udev_appimage() {
     log "Setting up permanent uinput permissions (requires sudo)..."
     
     # Create udev rule
-    sudo tee /etc/udev/rules.d/99-win11-clipboard-input.rules > /dev/null << 'EOF'
+    sudo tee /etc/udev/rules.d/99-windows-11-style-clipboard-history-input.rules > /dev/null << 'EOF'
 # udev rules for Windows 11 Clipboard History
 ACTION=="add", SUBSYSTEM=="misc", KERNEL=="uinput", OPTIONS+="static_node=uinput"
 KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", TAG+="uaccess"
 EOF
     
     # Configure module to load on boot
-    echo "uinput" | sudo tee /etc/modules-load.d/win11-clipboard.conf > /dev/null
+    echo "uinput" | sudo tee /etc/modules-load.d/windows-11-style-clipboard-history-manager.conf > /dev/null
     
     # Load now
     sudo modprobe uinput 2>/dev/null || true
@@ -530,27 +551,96 @@ launch_app() {
     log "Starting application..."
     
     # Kill any existing instances (matches both wrapper and -bin binary)
-    pkill -f "win11-clipboard-history-bin" 2>/dev/null || true
-    pkill -f "win11-clipboard-history.AppImage" 2>/dev/null || true
+    pkill -f "windows-11-style-clipboard-history-manager-bin" 2>/dev/null || true
+    pkill -f "windows-11-style-clipboard-history-manager.AppImage" 2>/dev/null || true
+    pkill -f "modern-clipboard-history-for-linux-bin" 2>/dev/null || true
+    pkill -f "modern-clipboard-history-for-linux.AppImage" 2>/dev/null || true
     sleep 1
     
     # Launch detached from terminal
-    nohup win11-clipboard-history >/dev/null 2>&1 < /dev/null & disown
+    nohup windows-11-style-clipboard-history-manager >/dev/null 2>&1 < /dev/null & disown
     
     sleep 2
     
-    if pgrep -f "win11-clipboard-history" > /dev/null; then
+    if pgrep -f "windows-11-style-clipboard-history-manager" > /dev/null; then
         return 0
     else
         return 1
     fi
 }
 
+# ============================================================================
+# Download integrity verification (supply-chain gate)
+# ============================================================================
+
+# verify_downloaded_file <file> <release_base_url>
+#
+# Downloads `SHA256SUMS` from the same release and requires the artifact to
+# match its published checksum. Fails hard on any mismatch. Previously this
+# function was referenced but never defined, which broke every GitHub-releases
+# fallback path — it is now implemented and enforced.
+verify_downloaded_file() {
+    local file="$1"
+    local base_url="$2"
+    local expected=""
+    local actual=""
+    local tmp_sha=""
+
+    if [ ! -f "$file" ]; then
+        error "Cannot verify '$file': file not found"
+    fi
+
+    # Optional GPG verification of the checksum file itself.
+    if [ -n "$WINDOWS_11_CLIPBOARD_TRUST_KEY" ]; then
+        if ! command -v gpg &>/dev/null; then
+            error "GPG verification requested (WINDOWS_11_CLIPBOARD_TRUST_KEY) but gpg is not installed"
+        fi
+        local sig_url="${base_url}/SHA256SUMS.sig"
+        tmp_sha=$(mktemp)
+        trap 'rm -f "$tmp_sha" "${tmp_sha}.sums"' RETURN
+        if curl -fsSL -o "$tmp_sha" "$sig_url" 2>/dev/null; then
+            curl -fsSL -o "${tmp_sha}.sums" "${base_url}/SHA256SUMS" 2>/dev/null || true
+            if ! gpg --verify "$tmp_sha" "${tmp_sha}.sums" 2>/dev/null; then
+                rm -f "$tmp_sha" "${tmp_sha}.sums"
+                error "GPG signature verification failed for SHA256SUMS"
+            fi
+            log "GPG signature verified (key: $WINDOWS_11_CLIPBOARD_TRUST_KEY)"
+        else
+            rm -f "$tmp_sha"
+            error "GPG verification requested but SHA256SUMS.sig was not found in the release"
+        fi
+    fi
+
+    if ! command -v sha256sum &>/dev/null; then
+        error "sha256sum is required to verify downloads. Install coreutils, or set ALLOW_UNVERIFIED=1 only if you accept the risk."
+    fi
+
+    tmp_sha=$(mktemp)
+    trap 'rm -f "$tmp_sha"' RETURN
+    if ! curl -fsSL -o "$tmp_sha" "${base_url}/SHA256SUMS" 2>/dev/null; then
+        if [ "$ALLOW_UNVERIFIED" = "1" ]; then
+            warn "SHA256SUMS not published for this release — skipping verification (ALLOW_UNVERIFIED=1)"
+            return 0
+        fi
+        error "SHA256SUMS not found at ${base_url}/SHA256SUMS — refusing to install an unverified binary. Set ALLOW_UNVERIFIED=1 only if you know what you are doing."
+    fi
+    expected=$(grep -F "$(basename "$file")" "$tmp_sha" | awk '{print $1}' | head -n 1)
+    rm -f "$tmp_sha"
+    if [ -z "$expected" ]; then
+        error "SHA256SUMS does not list $(basename "$file") — refusing to install"
+    fi
+    actual=$(sha256sum "$file" | awk '{print $1}')
+    if [ "$actual" != "$expected" ]; then
+        error "Checksum mismatch for $file! Expected $expected, got $actual — refusing to install (possible tampering or corrupted download)"
+    fi
+    success "Checksum verified: $(basename "$file") matches published SHA256SUMS"
+}
+
 # Main
 main() {
     echo ""
     echo "╔═══════════════════════════════════════════════════════════╗"
-    echo "║     Win11 Clipboard History - Linux Installer             ║"
+    echo "║  Windows 11 Style Clipboard History Manager - Installer   ║"
     echo "╚═══════════════════════════════════════════════════════════╝"
     echo ""
     
@@ -587,7 +677,7 @@ main() {
         echo ""
         success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         success " Installation complete!"
-        success " Run 'win11-clipboard-history' or find it in your menu."
+        success " Run 'windows-11-style-clipboard-history-manager' or find it in your menu."
         success " Press Super+V to open your clipboard history."
         success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     fi

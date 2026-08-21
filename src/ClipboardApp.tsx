@@ -1,34 +1,31 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, Suspense, lazy } from 'react'
 import { clsx } from 'clsx'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
+import { useTranslation } from 'react-i18next'
 import { useClipboardHistory } from './hooks/useClipboardHistory'
 import { TabBar, TabBarRef } from './components/TabBar'
 import { DragHandle } from './components/DragHandle'
-import { EmojiPicker } from './components/EmojiPicker'
-import { KaomojiPicker } from './components/KaomojiPicker'
-import { SymbolPicker } from './components/SymbolPicker'
 import { calculateSecondaryOpacity, calculateTertiaryOpacity } from './utils/themeUtils'
 import { useSystemThemePreference } from './utils/systemTheme'
 import { useRenderingEnv } from './hooks/useRenderingEnv'
 import type { ActiveTab, UserSettings } from './types/clipboard'
 import { ClipboardTab } from './components/ClipboardTab'
+import { DEFAULT_SETTINGS } from './utils/defaultSettings'
+import { DEFAULT_PAGE_SIZE } from './utils/pagination'
 
-const DEFAULT_SETTINGS: UserSettings = {
-  theme_mode: 'system',
-  dark_background_opacity: 0.7,
-  light_background_opacity: 0.7,
-  enable_smart_actions: true,
-  enable_ui_polish: true,
-  enable_dynamic_tray_icon: true,
-  max_history_size: 50,
-  auto_delete_interval: 0,
-  auto_delete_unit: 'hours',
-  custom_kaomojis: [],
-  ui_scale: 1,
-}
+// Lazy-loaded tabs for code splitting
+const EmojiPicker = lazy(() =>
+  import('./components/EmojiPicker').then((m) => ({ default: m.EmojiPicker }))
+)
+const KaomojiPicker = lazy(() =>
+  import('./components/KaomojiPicker').then((m) => ({ default: m.KaomojiPicker }))
+)
+const SymbolPicker = lazy(() =>
+  import('./components/SymbolPicker').then((m) => ({ default: m.SymbolPicker }))
+)
 
 /**
  * Maps theme mode setting to actual dark mode state.
@@ -89,6 +86,17 @@ async function applyUIScale(scale: number) {
  * Main Clipboard App Component
  */
 function ClipboardApp() {
+  // The main clipboard surface intentionally remains English/LTR. Language
+  // preferences apply only to Settings and first-run Setup.
+  // سطح اصلی کلیپ‌بورد عمداً انگلیسی و LTR می‌ماند؛ ترجیح زبان فقط روی
+  // تنظیمات و راه‌اندازی نخست اعمال می‌شود.
+  const { t, i18n } = useTranslation()
+  useEffect(() => {
+    void i18n.changeLanguage('en')
+    document.documentElement.lang = 'en'
+    document.documentElement.dir = 'ltr'
+  }, [i18n])
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('clipboard')
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
@@ -108,8 +116,18 @@ function ClipboardApp() {
   const secondaryOpacity = calculateSecondaryOpacity(opacity)
   const tertiaryOpacity = calculateTertiaryOpacity(opacity)
 
-  const { history, isLoading, clearHistory, deleteItem, togglePin, pasteItem } =
-    useClipboardHistory()
+  const {
+    history,
+    isLoading,
+    isLoadingMore,
+    total,
+    hasMore,
+    loadMore,
+    clearHistory,
+    deleteItem,
+    togglePin,
+    pasteItem,
+  } = useClipboardHistory({ pageSize: DEFAULT_PAGE_SIZE })
 
   // Refs for focus management
   const tabBarRef = useRef<TabBarRef>(null)
@@ -120,15 +138,16 @@ function ClipboardApp() {
     // Load initial settings
     invoke<UserSettings>('get_user_settings')
       .then((loadedSettings) => {
-        setSettings(loadedSettings)
-        applyBackgroundOpacity(loadedSettings)
-        applyUIScale(loadedSettings.ui_scale)
+        const merged = { ...DEFAULT_SETTINGS, ...loadedSettings }
+        setSettings(merged)
+        applyBackgroundOpacity(merged)
+        void applyUIScale(merged.ui_scale)
         setSettingsLoaded(true)
       })
       .catch((err) => {
         console.error('Failed to load user settings:', err)
         applyBackgroundOpacity(DEFAULT_SETTINGS)
-        applyUIScale(DEFAULT_SETTINGS.ui_scale)
+        void applyUIScale(DEFAULT_SETTINGS.ui_scale)
         setSettingsLoaded(true)
       })
 
@@ -137,7 +156,7 @@ function ClipboardApp() {
       const newSettings = event.payload
       setSettings(newSettings)
       applyBackgroundOpacity(newSettings)
-      applyUIScale(newSettings.ui_scale)
+      void applyUIScale(newSettings.ui_scale)
     })
 
     // Listen for switch-tab events from Rust (e.g., when Super+. is pressed)
@@ -149,8 +168,16 @@ function ClipboardApp() {
     })
 
     return () => {
-      unlistenPromise.then((unlisten) => unlisten())
-      unlistenSwitchTab.then((unlisten) => unlisten())
+      // Cleanup is fire-and-forget; the unlisten functions are sync, but the
+      // `.then` chain is void-marked to keep the lint contract explicit.
+      // پاک‌سازی fire-and-forget است؛ توابع unlisten همگام‌اند اما زنجیرهٔ
+      // `.then` با `void` علامت‌گذاری می‌شود تا قرارداد lint صریح بماند.
+      void unlistenPromise.then((unlisten) => {
+        unlisten()
+      })
+      void unlistenSwitchTab.then((unlisten) => {
+        unlisten()
+      })
     }
   }, [])
 
@@ -174,16 +201,20 @@ function ClipboardApp() {
     applyThemeClass(isDark)
   }, [isDark])
 
-  // Handle ESC key to close/hide window
+  // Handle ESC key to close/hide window.
+  // The listener itself stays sync (DOM API expects a void listener); the
+  // window-hide promise is handled explicitly inside.
+  // مدیریت کلید ESC برای بستن پنجره. خود شنونده همگام می‌ماند (DOM
+  // شنوندهٔ void می‌خواهد)؛ پرامیس مخفی‌شدن پنجره داخل آن مدیریت می‌شود.
   useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        try {
-          await getCurrentWindow().hide()
-        } catch (err) {
-          console.error('Failed to hide window:', err)
-        }
+        void getCurrentWindow()
+          .hide()
+          .catch((err) => {
+            console.error('Failed to hide window:', err)
+          })
       }
     }
 
@@ -218,7 +249,9 @@ function ClipboardApp() {
     const unlistenWindowShown = listen('window-shown', focusFirstItem)
 
     return () => {
-      unlistenWindowShown.then((unlisten) => unlisten())
+      void unlistenWindowShown.then((unlisten) => {
+        unlisten()
+      })
     }
   }, []) // Empty dependency array - listener is registered once
 
@@ -235,52 +268,79 @@ function ClipboardApp() {
     invoke('set_mouse_state', { inside: false }).catch(console.error)
   }
 
-  // Render content based on active tab
+  // Render content based on active tab (with lazy loading via Suspense)
   const renderContent = () => {
+    const spinner = (
+      <div className="flex items-center justify-center h-full p-8">
+        <div className="w-5 h-5 border-2 border-win11-bg-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+
     switch (activeTab) {
       case 'clipboard':
         return (
           <ClipboardTab
             history={history}
             isLoading={isLoading}
+            isLoadingMore={isLoadingMore}
+            total={total}
+            hasMore={hasMore}
+            onLoadMore={() => void loadMore()}
             isDark={isDark}
             tertiaryOpacity={tertiaryOpacity}
             secondaryOpacity={secondaryOpacity}
-            clearHistory={clearHistory}
-            deleteItem={deleteItem}
-            togglePin={togglePin}
-            onPaste={pasteItem}
+            clearHistory={() => void clearHistory()}
+            deleteItem={(id) => void deleteItem(id)}
+            togglePin={(id) => void togglePin(id)}
+            onPaste={(id) => void pasteItem(id)}
             settings={settings}
             tabBarRef={tabBarRef}
           />
         )
 
       case 'emoji':
-        return <EmojiPicker isDark={isDark} opacity={secondaryOpacity} />
+        return (
+          <Suspense fallback={spinner}>
+            <EmojiPicker isDark={isDark} opacity={secondaryOpacity} />
+          </Suspense>
+        )
 
       // case 'gifs':
       //   return <GifPicker isDark={isDark} opacity={secondaryOpacity} />
 
       case 'kaomoji':
         return (
-          <KaomojiPicker
-            isDark={isDark}
-            opacity={secondaryOpacity}
-            customKaomojis={settings.custom_kaomojis}
-          />
+          <Suspense fallback={spinner}>
+            <KaomojiPicker
+              isDark={isDark}
+              opacity={secondaryOpacity}
+              customKaomojis={settings.custom_kaomojis}
+            />
+          </Suspense>
         )
 
       case 'symbols':
-        return <SymbolPicker isDark={isDark} opacity={secondaryOpacity} />
+        return (
+          <Suspense fallback={spinner}>
+            <SymbolPicker isDark={isDark} opacity={secondaryOpacity} />
+          </Suspense>
+        )
 
       default:
         return null
     }
   }
 
-  // Don't render until settings are loaded to prevent FOUC
   if (!settingsLoaded) {
-    return null
+    return (
+      <div
+        className="h-screen w-screen flex items-center justify-center bg-transparent"
+        role="status"
+        aria-label={t('common.loading')}
+      >
+        <div className="w-6 h-6 border-2 border-win11-bg-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
   return (

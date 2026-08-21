@@ -1,0 +1,49 @@
+#!/usr/bin/make -f
+
+export NODE_OPTIONS=--max-old-space-size=4096
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	@# No configure step needed
+
+override_dh_auto_build:
+	npm ci --no-audit --no-fund
+	npm run tauri:build
+
+override_dh_auto_install:
+	# Binary
+	install -Dm755 src-tauri/target/release/windows-11-style-clipboard-history-manager-bin \
+		$(CURDIR)/debian/windows-11-style-clipboard-history-manager/usr/lib/windows-11-style-clipboard-history-manager/windows-11-style-clipboard-history-manager-bin
+	# Wrapper script
+	install -Dm755 src-tauri/bundle/linux/wrapper.sh \
+		$(CURDIR)/debian/windows-11-style-clipboard-history-manager/usr/bin/windows-11-style-clipboard-history-manager
+	# Desktop entry
+	install -Dm644 src-tauri/bundle/linux/windows-11-style-clipboard-history-manager.desktop \
+		$(CURDIR)/debian/windows-11-style-clipboard-history-manager/usr/share/applications/io.github.mahdi-arts.clipboard-history.desktop
+	# Icons
+	install -Dm644 src-tauri/icons/128x128.png \
+		$(CURDIR)/debian/windows-11-style-clipboard-history-manager/usr/share/icons/hicolor/128x128/apps/io.github.mahdi-arts.clipboard-history.png
+	install -Dm644 src-tauri/icons/icon.png \
+		$(CURDIR)/debian/windows-11-style-clipboard-history-manager/usr/share/icons/hicolor/256x256/apps/io.github.mahdi-arts.clipboard-history.png
+	install -Dm644 src-tauri/icons/icon.svg \
+		$(CURDIR)/debian/windows-11-style-clipboard-history-manager/usr/share/icons/hicolor/scalable/apps/io.github.mahdi-arts.clipboard-history.svg
+	# udev rules
+	install -Dm644 src-tauri/bundle/linux/99-windows-11-style-clipboard-history-input.rules \
+		$(CURDIR)/debian/windows-11-style-clipboard-history-manager/etc/udev/rules.d/99-windows-11-style-clipboard-history-input.rules
+	# uinput module loading
+	install -d $(CURDIR)/debian/windows-11-style-clipboard-history-manager/etc/modules-load.d
+	echo "uinput" > $(CURDIR)/debian/windows-11-style-clipboard-history-manager/etc/modules-load.d/windows-11-style-clipboard-history-manager.conf
+	# AppArmor profile (complain mode — see packaging/apparmor/)
+	install -Dm644 packaging/apparmor/windows-11-style-clipboard-history-manager \
+		$(CURDIR)/debian/windows-11-style-clipboard-history-manager/usr/share/doc/windows-11-style-clipboard-history-manager/apparmor/windows-11-style-clipboard-history-manager
+	install -Dm755 packaging/apparmor/install.sh \
+		$(CURDIR)/debian/windows-11-style-clipboard-history-manager/usr/share/doc/windows-11-style-clipboard-history-manager/apparmor/install.sh
+
+override_dh_auto_test:
+	# Frontend unit tests do not need a display server.
+	npm test -- --run
+
+override_dh_auto_clean:
+	rm -rf node_modules dist src-tauri/target

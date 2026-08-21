@@ -1,0 +1,16 @@
+# CODEOWNERS — automatic review requests
+# درخواست خودکار بازبینی برای مالکان هر مسیر
+#
+# Default owner for everything in the repository.
+# مالک پیش‌فرض برای تمام مخزن.
+* @Mahdi-Arts
+
+# Security-critical paths — keep reviews tight.
+# مسیرهای حساس امنیتی — بازبینی سخت‌گیرانه.
+/src-tauri/src/ssrf.rs          @Mahdi-Arts
+/src-tauri/src/history_crypto.rs @Mahdi-Arts
+/src-tauri/src/privacy.rs       @Mahdi-Arts
+/src-tauri/src/commands.rs      @Mahdi-Arts
+/src-tauri/deny.toml            @Mahdi-Arts
+/.github/workflows/             @Mahdi-Arts
+/scripts/install.sh             @Mahdi-Arts

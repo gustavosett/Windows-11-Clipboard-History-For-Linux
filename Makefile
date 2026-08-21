@@ -1,4 +1,4 @@
-# Windows 11 Clipboard History For Linux - Makefile
+# Windows 11 Style Clipboard History Manager - Makefile
 # Cross-distro build and install for Ubuntu, Debian, Fedora, and Arch Linux
 #
 # Note: PREFIX defaults to /usr/local for manual installs (Linux convention).
@@ -6,7 +6,7 @@
 #       To install system-wide like a package: sudo make install PREFIX=/usr
 
 SHELL := /bin/bash
-APP_NAME := win11-clipboard-history
+APP_NAME := windows-11-style-clipboard-history-manager
 PREFIX ?= /usr/local
 LIBDIR := $(PREFIX)/lib
 BINDIR := $(PREFIX)/bin
@@ -36,7 +36,7 @@ RESET := \033[0m
 
 .PHONY: all help deps deps-ubuntu deps-debian deps-fedora deps-arch \
         rust node check-deps dev build install uninstall clean clean-first-run run \
-        lint format test release
+        lint format test test-coverage audit packaging hooks release
 
 all: build
 
@@ -49,7 +49,7 @@ endif
 
 help:
 	@echo -e "$(CYAN)╔════════════════════════════════════════════════════════════════╗$(RESET)"
-	@echo -e "$(CYAN)║     Windows 11 Clipboard History For Linux - Build Commands                   ║$(RESET)"
+	@echo -e "$(CYAN)║     Windows 11 Style Clipboard History Manager - Build Commands    ║$(RESET)"
 	@echo -e "$(CYAN)╚════════════════════════════════════════════════════════════════╝$(RESET)"
 	@echo ""
 	@echo -e "$(GREEN)Setup:$(RESET)"
@@ -64,6 +64,7 @@ help:
 	@echo -e "$(GREEN)Development:$(RESET)"
 	@echo "  make dev         - Run in development mode (hot reload)"
 	@echo "  make run         - Run the development version (clean env)"
+	@echo "  make hooks       - Install git hooks (pre-commit + commit-msg)"
 	@echo "  make build       - Build production release"
 	@echo "  make lint        - Run linters"
 	@echo "  make format      - Format code"
@@ -240,18 +241,18 @@ install:
 	@echo -e "$(CYAN)Installing $(APP_NAME)...$(RESET)"
 	@# Install binary to lib directory
 	@mkdir -p $(DESTDIR)$(LIBDIR)/$(APP_NAME)
-	install -Dm755 src-tauri/target/release/$(APP_NAME)-bin $(DESTDIR)$(LIBDIR)/$(APP_NAME)/$(APP_NAME)-bin
+	install -Dm755 src-tauri/target/release/windows-11-style-clipboard-history-manager-bin $(DESTDIR)$(LIBDIR)/$(APP_NAME)/windows-11-style-clipboard-history-manager-bin
 	@# Install wrapper script to bin
 	install -Dm755 src-tauri/bundle/linux/wrapper.sh $(DESTDIR)$(BINDIR)/$(APP_NAME)
 	@# Install icons
-	install -Dm644 src-tauri/icons/128x128.png $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
-	install -Dm644 src-tauri/icons/icon.png $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/$(APP_NAME).png
+	install -Dm644 src-tauri/icons/128x128.png $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/io.github.mahdi-arts.clipboard-history.png
+	install -Dm644 src-tauri/icons/icon.png $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/io.github.mahdi-arts.clipboard-history.png
 	@# Create udev rules for input devices and uinput
 	@mkdir -p $(DESTDIR)/etc/udev/rules.d
-	install -Dm644 src-tauri/bundle/linux/99-win11-clipboard-input.rules $(DESTDIR)/etc/udev/rules.d/
+	install -Dm644 src-tauri/bundle/linux/99-windows-11-style-clipboard-history-input.rules $(DESTDIR)/etc/udev/rules.d/99-windows-11-style-clipboard-history-input.rules
 	@# Ensure uinput loads on boot (use same filename as postinst/postrm)
 	@mkdir -p $(DESTDIR)/etc/modules-load.d
-	@echo "uinput" > $(DESTDIR)/etc/modules-load.d/win11-clipboard.conf
+	@echo "uinput" > $(DESTDIR)/etc/modules-load.d/windows-11-style-clipboard-history-manager.conf
 	@# Load module and reload udev only when installing on live system (not in DESTDIR/fakeroot)
 	@if [ -z "$$(printf '%s' "$(DESTDIR)")" ]; then \
 		modprobe uinput 2>/dev/null || true; \
@@ -259,21 +260,11 @@ install:
 		udevadm trigger 2>/dev/null || true; \
 		udevadm trigger --subsystem-match=misc --action=change 2>/dev/null || true; \
 	fi
-	@# Ensure input group exists and add user (only on live system, not in DESTDIR/fakeroot)
-	@if [ -z "$$(printf '%s' "$(DESTDIR)")" ]; then \
-		getent group input >/dev/null 2>&1 || groupadd input; \
-		if [ -n "$$SUDO_USER" ]; then \
-			if groups $$SUDO_USER 2>/dev/null | grep -q '\binput\b'; then \
-				echo -e "$(GREEN)✓ User $$SUDO_USER already in input group$(RESET)"; \
-			else \
-				usermod -aG input $$SUDO_USER; \
-				echo -e "$(GREEN)✓ Added $$SUDO_USER to input group$(RESET)"; \
-			fi; \
-		fi; \
-	fi
+	@# Do not add users to the broad input group; uaccess or an explicit ACL is safer.
+	@# کاربر به گروه گستردهٔ input افزوده نمی‌شود؛ uaccess یا ACL صریح امن‌تر است.
 	@# Install desktop entry
 	@mkdir -p $(DESTDIR)$(DATADIR)/applications
-	install -Dm644 src-tauri/bundle/linux/$(APP_NAME).desktop $(DESTDIR)$(DATADIR)/applications/
+	install -Dm644 src-tauri/bundle/linux/windows-11-style-clipboard-history-manager.desktop $(DESTDIR)$(DATADIR)/applications/io.github.mahdi-arts.clipboard-history.desktop
 	@update-desktop-database $(DESTDIR)$(DATADIR)/applications 2>/dev/null || true
 	@gtk-update-icon-cache -f -t $(DESTDIR)$(DATADIR)/icons/hicolor 2>/dev/null || true
 	@echo -e "$(GREEN)✓ Installed successfully$(RESET)"
@@ -290,9 +281,9 @@ uninstall:
 	@echo -e "$(CYAN)Uninstalling $(APP_NAME)...$(RESET)"
 	@# Stop any running instances first
 	@if [ -n "$$SUDO_USER" ]; then \
-		pkill -u $$SUDO_USER -x "$(APP_NAME)-bin" 2>/dev/null || true; \
+		pkill -u $$SUDO_USER -x "windows-11-style-clipboard-history-manager-bin" 2>/dev/null || true; \
 	fi
-	@pkill -x "$(APP_NAME)-bin" 2>/dev/null || true
+	@pkill -x "windows-11-style-clipboard-history-manager-bin" 2>/dev/null || true
 	@# Remove from specified PREFIX path
 	rm -f $(DESTDIR)$(BINDIR)/$(APP_NAME)
 	rm -rf $(DESTDIR)$(LIBDIR)/$(APP_NAME)
@@ -305,31 +296,26 @@ uninstall:
 		rm -f $(DESTDIR)/usr/bin/$(APP_NAME) 2>/dev/null || true; \
 		rm -rf $(DESTDIR)/usr/lib/$(APP_NAME) 2>/dev/null || true; \
 	fi
-	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/$(APP_NAME).png
-	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/$(APP_NAME).png
-	rm -f $(DESTDIR)$(DATADIR)/applications/$(APP_NAME).desktop
+	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/128x128/apps/io.github.mahdi-arts.clipboard-history.png
+	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/256x256/apps/io.github.mahdi-arts.clipboard-history.png
+	rm -f $(DESTDIR)$(DATADIR)/applications/io.github.mahdi-arts.clipboard-history.desktop
 	@# Clean icons from all common share paths
-	rm -f $(DESTDIR)/usr/local/share/icons/hicolor/128x128/apps/$(APP_NAME).png 2>/dev/null || true
-	rm -f $(DESTDIR)/usr/local/share/icons/hicolor/256x256/apps/$(APP_NAME).png 2>/dev/null || true
-	rm -f $(DESTDIR)/usr/share/icons/hicolor/128x128/apps/$(APP_NAME).png 2>/dev/null || true
-	rm -f $(DESTDIR)/usr/share/icons/hicolor/256x256/apps/$(APP_NAME).png 2>/dev/null || true
+	rm -f $(DESTDIR)/usr/local/share/icons/hicolor/128x128/apps/io.github.mahdi-arts.clipboard-history.png 2>/dev/null || true
+	rm -f $(DESTDIR)/usr/local/share/icons/hicolor/256x256/apps/io.github.mahdi-arts.clipboard-history.png 2>/dev/null || true
+	rm -f $(DESTDIR)/usr/share/icons/hicolor/128x128/apps/io.github.mahdi-arts.clipboard-history.png 2>/dev/null || true
+	rm -f $(DESTDIR)/usr/share/icons/hicolor/256x256/apps/io.github.mahdi-arts.clipboard-history.png 2>/dev/null || true
 	@# Clean desktop entries from all common paths
-	rm -f $(DESTDIR)/usr/local/share/applications/$(APP_NAME).desktop 2>/dev/null || true
-	rm -f $(DESTDIR)/usr/share/applications/$(APP_NAME).desktop 2>/dev/null || true
-	rm -f $(DESTDIR)/etc/udev/rules.d/99-win11-clipboard-input.rules
+	rm -f $(DESTDIR)/usr/local/share/applications/io.github.mahdi-arts.clipboard-history.desktop 2>/dev/null || true
+	rm -f $(DESTDIR)/usr/share/applications/io.github.mahdi-arts.clipboard-history.desktop 2>/dev/null || true
+	rm -f $(DESTDIR)/etc/udev/rules.d/99-windows-11-style-clipboard-history-input.rules
 	rm -f $(DESTDIR)/etc/modules-load.d/uinput.conf
-	rm -f $(DESTDIR)/etc/modules-load.d/win11-clipboard.conf
+	rm -f $(DESTDIR)/etc/modules-load.d/windows-11-style-clipboard-history-manager.conf
 	@# Remove autostart entry for the user
 	@if [ -n "$$SUDO_USER" ]; then \
 		AUTOSTART_FILE=$$(getent passwd $$SUDO_USER | cut -d: -f6)/.config/autostart/$(APP_NAME).desktop; \
 		rm -f "$$AUTOSTART_FILE" 2>/dev/null || true; \
 	fi
-	@# Also remove for all users
-	@for user_home in /home/*; do \
-		if [ -d "$$user_home" ]; then \
-			rm -f "$$user_home/.config/autostart/$(APP_NAME).desktop" 2>/dev/null || true; \
-		fi; \
-	done
+	@# Do not walk /home/* — only remove autostart for the invoking user.
 	@update-desktop-database $(DESTDIR)$(DATADIR)/applications 2>/dev/null || true
 	@gtk-update-icon-cache -f -t $(DESTDIR)$(DATADIR)/icons/hicolor 2>/dev/null || true
 	@echo -e "$(GREEN)✓ Uninstalled successfully$(RESET)"
@@ -338,10 +324,34 @@ uninstall:
 # Code Quality
 # ============================================================================
 
+test:
+	@echo -e "$(CYAN)Running tests...$(RESET)"
+	npm test
+	cd src-tauri && cargo test
+
+test-coverage:
+	@echo -e "$(CYAN)Running frontend tests with coverage gate...$(RESET)"
+	npm run test:coverage
+
+audit:
+	@echo -e "$(CYAN)Auditing dependencies (cargo audit + cargo deny + npm audit)...$(RESET)"
+	cd src-tauri && cargo audit
+	cd src-tauri && cargo deny check advisories bans licenses sources
+	npm audit --audit-level=high
+
+packaging:
+	@echo -e "$(CYAN)Validating packaging contracts (names, versions, deb/rpm parity)...$(RESET)"
+	bash scripts/check-packaging.sh
+	@bash -n scripts/normalize-artifacts.sh && echo "normalize-artifacts.sh syntax OK"
+
+hooks:
+	@echo -e "$(CYAN)Installing git hooks (pre-commit, commit-msg)...$(RESET)"
+	./scripts/install-git-hooks.sh
+
 lint:
 	@echo -e "$(CYAN)Running linters...$(RESET)"
 	npm run lint
-	cd src-tauri && cargo clippy -- -D warnings
+	cd src-tauri && cargo clippy --all-targets -- -D warnings
 
 format:
 	@echo -e "$(CYAN)Formatting code...$(RESET)"
@@ -354,7 +364,7 @@ format:
 
 clean-first-run:
 	@echo -e "$(CYAN)Cleaning first-run config...$(RESET)"
-	@rm -f ~/.config/win11-clipboard-history/setup.json
+	@rm -f ~/.config/windows-11-style-clipboard-history-manager/setup.json
 	@echo -e "$(GREEN)✓ First-run config cleaned (Setup Wizard will show on next launch)$(RESET)"
 
 clean: clean-first-run

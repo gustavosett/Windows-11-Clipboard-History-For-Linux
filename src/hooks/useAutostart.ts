@@ -44,7 +44,7 @@ export function useAutostart() {
     }
 
     // On mount, try to migrate old autostart entries and check status
-    migrateAndCheck()
+    void migrateAndCheck()
   }, [checkStatus])
 
   const toggle = async (): Promise<boolean> => {

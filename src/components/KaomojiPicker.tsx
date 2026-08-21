@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { clsx } from 'clsx'
 import { invoke } from '@tauri-apps/api/core'
+import { useTranslation } from 'react-i18next'
 import { KAOMOJI_CATEGORIES, getKaomojis } from '../services/kaomojiService'
 import { SearchBar } from './common/SearchBar'
 import type { CustomKaomoji } from '../types/clipboard'
@@ -17,6 +18,7 @@ interface KaomojiPickerProps {
 }
 
 export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiPickerProps) {
+  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
@@ -64,7 +66,7 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
   const handleGridKeyDown = useKeyboardNavigation({
     items: kaomojis,
     columnCount,
-    onSelect: (item) => handlePaste(item.text),
+    onSelect: (item) => void handlePaste(item.text),
     setFocusedIndex: setGridFocusedIndex,
     containerRef: gridContainerRef,
     dataAttributeName: 'data-kaomoji-index',
@@ -80,7 +82,7 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
             setCategoryFocusedIndex(0)
             setGridFocusedIndex(0)
           }}
-          placeholder="Search kaomoji..."
+          placeholder={t('kaomoji.search_placeholder')}
           isDark={isDark}
           opacity={opacity}
         />
@@ -107,7 +109,7 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
           </>
         ) : (
           <span className="text-xs dark:text-win11-text-tertiary text-win11Light-text-secondary">
-            Click to paste kaomoji
+            {t('picker.click_kaomoji')}
           </span>
         )
       }
@@ -118,14 +120,14 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
           ref={gridContainerRef}
           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"
           role="grid"
-          aria-label="Kaomoji grid"
+          aria-label={t('picker.kaomoji_grid')}
         >
           {kaomojis.map((item, index) => (
             <button
               key={item.id}
               data-kaomoji-index={index}
               tabIndex={index === gridFocusedIndex ? 0 : -1}
-              onClick={() => handlePaste(item.text)}
+              onClick={() => void handlePaste(item.text)}
               onFocus={() => {
                 setGridFocusedIndex(index)
                 setHoveredKaomoji({ text: item.text, category: item.category })
@@ -151,7 +153,7 @@ export function KaomojiPicker({ isDark, opacity, customKaomojis = [] }: KaomojiP
           ))}
           {kaomojis.length === 0 && (
             <div className="col-span-full py-8 text-center text-sm opacity-60">
-              No kaomojis found
+              {t('common.no_results')}
             </div>
           )}
         </div>

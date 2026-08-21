@@ -50,7 +50,7 @@ impl EmojiManager {
         };
 
         if let Err(e) = manager.load_from_disk() {
-            eprintln!("[EmojiManager] Failed to load history: {}", e);
+            tracing::info!("[EmojiManager] Failed to load history: {}", e);
         }
 
         manager
@@ -84,7 +84,7 @@ impl EmojiManager {
 
         // Persist to disk
         if let Err(e) = self.save_to_disk() {
-            eprintln!("[EmojiManager] Failed to save history: {}", e);
+            tracing::info!("[EmojiManager] Failed to save history: {}", e);
         }
     }
 
@@ -129,7 +129,7 @@ impl EmojiManager {
             self.recent.truncate(MAX_RECENT_EMOJIS);
         }
 
-        eprintln!("[EmojiManager] Loaded {} recent emojis", self.recent.len());
+        tracing::info!("[EmojiManager] Loaded {} recent emojis", self.recent.len());
         Ok(())
     }
 
@@ -143,10 +143,8 @@ impl EmojiManager {
             emojis: self.recent.clone(),
         };
 
-        let content = serde_json::to_string_pretty(&wrapper)
-            .map_err(|e| format!("Serialize error: {}", e))?;
-
-        fs::write(self.history_path(), content).map_err(|e| format!("Write error: {}", e))?;
+        crate::fs_atomic::write_json_atomic(&self.history_path(), &wrapper)
+            .map_err(|e| format!("Write error: {}", e))?;
         Ok(())
     }
 }
@@ -163,7 +161,7 @@ impl Default for EmojiManager {
     fn default() -> Self {
         let data_dir = dirs::data_local_dir()
             .unwrap_or_else(|| PathBuf::from("."))
-            .join("win11-clipboard-history");
+            .join("windows-11-style-clipboard-history-manager");
         Self::new(data_dir)
     }
 }

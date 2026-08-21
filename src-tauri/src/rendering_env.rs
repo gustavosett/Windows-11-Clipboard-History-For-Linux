@@ -135,12 +135,12 @@ pub fn init() {
     // Set the WebKit env var *before* any WebView is created.
     if env.transparency_disabled {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
-        println!(
+        tracing::info!(
             "[RenderingEnv] WEBKIT_DISABLE_DMABUF_RENDERER=1 (NVIDIA={}, AppImage={})",
             env.is_nvidia, env.is_appimage
         );
     } else {
-        println!("[RenderingEnv] Transparency enabled (no NVIDIA/AppImage detected)");
+        tracing::info!("[RenderingEnv] Transparency enabled (no NVIDIA/AppImage detected)");
     }
 }
 

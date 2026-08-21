@@ -1,0 +1,29 @@
+{
+  "identifier": "settings",
+  "description": "Capability for the settings window — no paste / keystroke injection, no global-shortcut registration.\nقابلیت پنجرهٔ تنظیمات — بدون paste / تزریق کلید، بدون ثبت میانبر سراسری.",
+  "windows": ["settings"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:window:allow-close",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-center",
+    "core:window:allow-is-visible",
+    "core:window:allow-start-dragging",
+    "core:window:allow-inner-size",
+    "core:window:allow-outer-size",
+    "core:event:default",
+    "core:event:allow-emit",
+    "core:event:allow-listen",
+    "core:app:default",
+    "core:app:allow-version",
+    "core:tray:default",
+    "core:tray:allow-set-icon",
+    "core:tray:allow-set-tooltip",
+    "core:resources:default",
+    "core:webview:allow-set-webview-zoom"
+  ],
+  "platforms": ["linux"]
+}

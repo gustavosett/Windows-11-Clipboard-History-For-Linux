@@ -1,0 +1,131 @@
+#!/bin/bash
+# Pre-installation script for Debian/Ubuntu
+# اسکریپت پیش از نصب برای Debian/Ubuntu
+#
+# This script handles:
+# - Checking for running instances
+# - Backing up existing configuration (if upgrading)
+# - Verifying system requirements
+# 
+# این اسکریپت موارد زیر را انجام می‌دهد:
+# - بررسی نمونه‌های در حال اجرا
+# - پشتیبان‌گیری از پیکربندی موجود (در صورت ارتقا)
+# - تأیید نیازمندی‌های سیستم
+
+set -e
+
+APP_NAME="windows-11-style-clipboard-history-manager"
+APP_PROCESS="${APP_NAME}"
+
+# Function to stop running instances
+# تابع برای متوقف کردن نمونه‌های در حال اجرا
+stop_running_instances() {
+    echo "[preinst] Checking for running instances..."
+    
+    if pgrep -x "${APP_PROCESS}" > /dev/null 2>&1; then
+        echo "[preinst] Found running instance. Stopping..."
+        
+        # Try graceful shutdown first
+        pkill -x "${APP_PROCESS}" 2>/dev/null || true
+        
+        # Wait a moment
+        sleep 2
+        
+        # Force kill if still running
+        if pgrep -x "${APP_PROCESS}" > /dev/null 2>&1; then
+            echo "[preinst] Force killing remaining process..."
+            pkill -9 -x "${APP_PROCESS}" 2>/dev/null || true
+            sleep 1
+        fi
+        
+        echo "[preinst] Running instances stopped"
+    else
+        echo "[preinst] No running instances found"
+    fi
+}
+
+# Function to backup configuration
+# تابع برای پشتیبان‌گیری از پیکربندی
+backup_config() {
+    local config_dir="$HOME/.config/${APP_NAME}"
+    local backup_dir="${config_dir}.backup-$(date +%Y%m%d-%H%M%S)"
+    
+    if [ -d "${config_dir}" ] && [ "$1" = "upgrade" ]; then
+        echo "[preinst] Backing up configuration to: ${backup_dir}"
+        cp -a "${config_dir}" "${backup_dir}"
+        echo "[preinst] Configuration backed up successfully"
+        echo "[preinst] To restore: mv ${backup_dir} ${config_dir}"
+    fi
+}
+
+# Function to check system requirements
+# تابع برای بررسی نیازمندی‌های سیستم
+check_requirements() {
+    echo "[preinst] Checking system requirements..."
+    
+    # Check for required commands
+    local missing_deps=()
+    
+    for cmd in udevadm setfacl; do
+        if ! command -v "$cmd" > /dev/null 2>&1; then
+            missing_deps+=("$cmd")
+        fi
+    done
+    
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        echo "[preinst] Warning: Missing commands: ${missing_deps[*]}"
+        echo "[preinst] These may be needed for full functionality"
+    fi
+    
+    echo "[preinst] System requirements check complete"
+}
+
+# Function to verify architecture
+# تابع برای تأیید معماری
+check_architecture() {
+    local arch=$(dpkg --print-architecture)
+    
+    if [ "$arch" != "amd64" ]; then
+        echo "[preinst] Warning: This package is optimized for amd64"
+        echo "[preinst] Current architecture: $arch"
+    fi
+}
+
+# Main pre-installation tasks
+# وظایف اصلی پیش از نصب
+case "$1" in
+    install|upgrade)
+        echo "========================================"
+        echo "Pre-installation for ${APP_NAME}"
+        echo "========================================"
+        
+        # Step 1: Check requirements
+        check_requirements
+        
+        # Step 2: Check architecture
+        check_architecture
+        
+        # Step 3: Backup config (only on upgrade)
+        if [ "$1" = "upgrade" ]; then
+            backup_config upgrade
+        fi
+        
+        # Step 4: Stop running instances
+        stop_running_instances
+        
+        echo "========================================"
+        echo "Pre-installation complete!"
+        echo "========================================"
+        ;;
+    
+    abort-upgrade)
+        echo "[preinst] Aborting upgrade"
+        ;;
+    
+    *)
+        echo "[preinst] Called with unknown argument: $1"
+        exit 0
+        ;;
+esac
+
+exit 0

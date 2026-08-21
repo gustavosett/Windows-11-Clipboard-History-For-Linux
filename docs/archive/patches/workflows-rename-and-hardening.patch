@@ -1,0 +1,214 @@
+SUPERSEDED / اعمال‌شده — 2026-08-21
+====================================
+This patch has been APPLIED (and extended) directly to the live
+`.github/workflows/*` files; do NOT `git am` it again. The release
+pipeline additionally now uses `${{ github.repository }}` for
+self-referencing URLs, and `scripts/check-packaging.sh` guards against
+any regression. See CHANGELOG.md → [Unreleased] → Packaging and QA.
+
+این پچ مستقیماً روی فایل‌های زندهٔ `.github/workflows/*` اعمال (و تکمیل)
+شده است؛ دوباره آن را `git am` نکنید. خط لولهٔ انتشار اکنون برای URLهای
+خودارجاع از `${{ github.repository }}` استفاده می‌کند و
+`scripts/check-packaging.sh` از بازگشت این خطاها جلوگیری می‌کند.
+
+--- ORIGINAL PATCH FOLLOWS (historical) / متن اصلی پچ (تاریخچه) ---
+
+From: Mahdi Arts <mahdi-arts@users.noreply.github.com>
+Date: 2026-08-21
+Subject: [PATCH] ci: rename binary + harden release channels (SHA-pinned, fail-closed)
+
+Apply to the live workflow files with:
+
+    git am docs/patches/workflows-rename-and-hardening.patch
+
+or, to apply without committing:
+
+    git apply docs/patches/workflows-rename-and-hardening.patch
+
+This patch carries changes that a GitHub App without the `workflows`
+permission cannot push directly (see README). It:
+
+1. Renames the smoke-test binary to `windows-11-style-clipboard-history-manager-bin`.
+2. Makes the Cloudsmith / AUR distribution channels truly **fail-closed**
+   (`set -euo pipefail`, no `continue-on-error`).
+3. Pins `actions/stale` to a full commit SHA.
+
+این پچ تغییرات فایل‌های workflow را که GitHub App بدون مجوز `workflows`
+نمی‌تواند مستقیم push کند، منتقل می‌کند (نگاه کنید به README).
+
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 5361682..c05f15c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -174,7 +174,7 @@ jobs:
+ 
+       - name: CLI smoke (--version / --help)
+         run: |
+-          BIN=src-tauri/target/release/win11-clipboard-history-bin
++          BIN=src-tauri/target/release/windows-11-style-clipboard-history-manager-bin
+           test -x "$BIN"
+           "$BIN" --version
+           "$BIN" --help
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index e7a1085..0982aad 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -155,10 +155,10 @@ jobs:
+       # -----------------------------------------------------------------
+       # Optional GPG signature over SHA256SUMS (opt-in via secrets).
+       # When RELEASE_GPG_PRIVATE_KEY is set, SHA256SUMS.sig is published and
+-      # the installer can enforce it with WIN11_CLIPBOARD_TRUST_KEY.
++      # the installer can enforce it with WINDOWS_11_CLIPBOARD_TRUST_KEY.
+       # امضای اختیاری GPG روی SHA256SUMS (با secret فعال می‌شود). وقتی
+       # RELEASE_GPG_PRIVATE_KEY تنظیم باشد، SHA256SUMS.sig منتشر می‌شود و
+-      # نصاب می‌تواند آن را با WIN11_CLIPBOARD_TRUST_KEY الزام کند.
++      # نصاب می‌تواند آن را با WINDOWS_11_CLIPBOARD_TRUST_KEY الزام کند.
+       # -----------------------------------------------------------------
+       - name: Sign SHA256SUMS (optional GPG)
+         env:
+@@ -177,7 +177,7 @@ jobs:
+           fi
+           gpg --batch --yes "${passphrase_args[@]}" \
+             --armor --detach-sign --output dist/SHA256SUMS.sig dist/SHA256SUMS
+-          echo "::notice::SHA256SUMS.sig published; verify with WIN11_CLIPBOARD_TRUST_KEY"
++          echo "::notice::SHA256SUMS.sig published; verify with WINDOWS_11_CLIPBOARD_TRUST_KEY"
+ 
+       - name: Install syft (SBOM generator)
+         uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0
+@@ -242,21 +242,21 @@ jobs:
+             ### Debian / Ubuntu
+ 
+             ```bash
+-            sudo apt install ./win11-clipboard-history_${{ steps.get_version.outputs.VERSION }}_amd64.deb
++            sudo apt install ./windows-11-style-clipboard-history-manager_${{ steps.get_version.outputs.VERSION }}_amd64.deb
+             sudo setfacl -m u:$USER:rw /dev/uinput
+             ```
+ 
+             ### Fedora
+ 
+             ```bash
+-            sudo dnf install ./win11-clipboard-history-${{ steps.get_version.outputs.VERSION }}-1.x86_64.rpm
++            sudo dnf install ./windows-11-style-clipboard-history-manager-${{ steps.get_version.outputs.VERSION }}-1.x86_64.rpm
+             sudo setfacl -m u:$USER:rw /dev/uinput
+             ```
+ 
+             ### Arch Linux (AUR)
+ 
+             ```bash
+-            yay -S win11-clipboard-history-bin
++            yay -S windows-11-style-clipboard-history-manager-bin
+             ```
+ 
+             ### Convenience installer (review first / اول بازبینی کنید)
+@@ -285,10 +285,14 @@ jobs:
+       # -----------------------------------------------------------------
+       - name: Upload to Cloudsmith (stable releases only)
+         if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'dev') }}
+-        continue-on-error: true
++        # Fail closed: no `continue-on-error`. The step exits 0 ONLY when the
++        # secret is unset (skip). A real upload failure fails the job.
++        # fail-closed: بدون continue-on-error. این مرحله فقط وقتی بدون خطاست
++        # که secret تنظیم نشده باشد (skip). خطای واقعی upload، job را می‌شکند.
+         env:
+           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+         run: |
++          set -euo pipefail
+           if [ -z "$CLOUDSMITH_API_KEY" ]; then
+             echo "::notice::CLOUDSMITH_API_KEY not set, skipping Cloudsmith upload"
+             exit 0
+@@ -299,12 +303,12 @@ jobs:
+           for deb in dist/*.deb; do
+             [ -f "$deb" ] || continue
+             cloudsmith push deb mahdi-arts/clipboard-manager/any-distro/any-version \
+-              "$deb" --api-key "$CLOUDSMITH_API_KEY" || echo "::warning::Cloudsmith .deb upload failed for $deb"
++              "$deb" --api-key "$CLOUDSMITH_API_KEY"
+           done
+           for rpm in dist/*.rpm; do
+             [ -f "$rpm" ] || continue
+             cloudsmith push rpm mahdi-arts/clipboard-manager/any-distro/any-version \
+-              "$rpm" --api-key "$CLOUDSMITH_API_KEY" || echo "::warning::Cloudsmith .rpm upload failed for $rpm"
++              "$rpm" --api-key "$CLOUDSMITH_API_KEY"
+           done
+ 
+       # -----------------------------------------------------------------
+@@ -324,11 +328,15 @@ jobs:
+       # -----------------------------------------------------------------
+       - name: Update AUR Package
+         if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'dev') }}
+-        continue-on-error: true
++        # Fail closed: no `continue-on-error`. Skips safely only when the SSH
++        # secret is unset; any real AUR failure fails the job.
++        # fail-closed: بدون continue-on-error. فقط با نبود secret، skip امن
++        # اتفاق می‌افتد؛ هر خطای واقعی AUR، job را می‌شکند.
+         env:
+           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+           AUR_KNOWN_HOSTS: ${{ secrets.AUR_KNOWN_HOSTS }}
+         run: |
++          set -euo pipefail
+           if [ -z "$AUR_SSH_KEY" ]; then
+             echo "::notice::AUR_SSH_KEY not set, skipping AUR update"
+             exit 0
+@@ -367,11 +375,11 @@ jobs:
+             UserKnownHostsFile ~/.ssh/known_hosts" > ~/.ssh/config
+           chmod 600 ~/.ssh/config
+ 
+-          git clone ssh://aur@aur.archlinux.org/win11-clipboard-history-bin.git /tmp/aur-pkg
++          git clone ssh://aur@aur.archlinux.org/windows-11-style-clipboard-history-manager-bin.git /tmp/aur-pkg
+           cd /tmp/aur-pkg
+ 
+           cp "$GITHUB_WORKSPACE/aur/PKGBUILD" PKGBUILD
+-          cp "$GITHUB_WORKSPACE/aur/win11-clipboard-history-bin.install" . 2>/dev/null || true
++          cp "$GITHUB_WORKSPACE/aur/windows-11-style-clipboard-history-manager-bin.install" . 2>/dev/null || true
+ 
+           sed -i "s/^pkgver=.*/pkgver=$VERSION/" PKGBUILD
+           sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+@@ -396,12 +404,12 @@ jobs:
+             echo "::warning::Docker unavailable; writing .SRCINFO manually"
+             TAB=$'\t'
+             cat > .SRCINFO << SRCINFO_EOF
+-          pkgbase = win11-clipboard-history-bin
++          pkgbase = windows-11-style-clipboard-history-manager-bin
+           ${TAB}pkgdesc = Windows 11-style Clipboard History Manager for Linux
+           ${TAB}pkgver = $VERSION
+           ${TAB}pkgrel = 1
+           ${TAB}url = https://github.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager
+-          ${TAB}install = win11-clipboard-history-bin.install
++          ${TAB}install = windows-11-style-clipboard-history-manager-bin.install
+           ${TAB}arch = x86_64
+           ${TAB}arch = aarch64
+           ${TAB}license = MIT
+@@ -414,16 +422,16 @@ jobs:
+           ${TAB}depends = acl
+           ${TAB}depends = polkit
+           ${TAB}optdepends = libappindicator-gtk3: Legacy tray icon support
+-          ${TAB}provides = win11-clipboard-history
+-          ${TAB}conflicts = win11-clipboard-history
++          ${TAB}provides = windows-11-style-clipboard-history-manager
++          ${TAB}conflicts = windows-11-style-clipboard-history-manager
+           ${TAB}options = !strip
+           ${TAB}options = !debug
+-          ${TAB}source_x86_64 = https://github.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager/releases/download/v$VERSION/win11-clipboard-history_${VERSION}_amd64.deb
++          ${TAB}source_x86_64 = https://github.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager/releases/download/v$VERSION/windows-11-style-clipboard-history-manager_${VERSION}_amd64.deb
+           ${TAB}sha256sums_x86_64 = $SHA256_X86_64
+-          ${TAB}source_aarch64 = https://github.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager/releases/download/v$VERSION/win11-clipboard-history_${VERSION}_arm64.deb
++          ${TAB}source_aarch64 = https://github.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager/releases/download/v$VERSION/windows-11-style-clipboard-history-manager_${VERSION}_arm64.deb
+           ${TAB}sha256sums_aarch64 = ${SHA256_ARM64:-SKIP}
+ 
+-          pkgname = win11-clipboard-history-bin
++          pkgname = windows-11-style-clipboard-history-manager-bin
+           SRCINFO_EOF
+             sed -i 's/^          //' .SRCINFO
+           fi
+diff --git a/.github/workflows/stale.yml b/.github/workflows/stale.yml
+index 5d5780b..360f88b 100644
+--- a/.github/workflows/stale.yml
++++ b/.github/workflows/stale.yml
+@@ -13,7 +13,7 @@ jobs:
+   stale:
+     runs-on: ubuntu-latest
+     steps:
+-      - uses: actions/stale@v11
++      - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11
+         with:
+           stale-issue-message: |
+             This issue has been automatically marked as stale because it has not had recent activity. 

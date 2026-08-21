@@ -1,11 +1,11 @@
 #!/bin/bash
-# Post-removal script for win11-clipboard-history
+# Post-removal script for windows-11-style-clipboard-history-manager
 set -e
 
 case "$1" in
     purge)
         # Remove module configuration (handle both possible filenames for compatibility)
-        rm -f /etc/modules-load.d/win11-clipboard.conf
+        rm -f /etc/modules-load.d/windows-11-style-clipboard-history-manager.conf
         rm -f /etc/modules-load.d/uinput.conf
         
         # Update caches

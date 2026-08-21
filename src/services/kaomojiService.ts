@@ -31,7 +31,7 @@ export const KAOMOJI_CATEGORIES = [
 
 export type KaomojiCategory = (typeof KAOMOJI_CATEGORIES)[number]
 
-export const KAOMOJI_LIST: Kaomoji[] = kaomojisData as Kaomoji[]
+export const KAOMOJI_LIST: Kaomoji[] = kaomojisData
 
 export function getKaomojis(
   category?: string | null,

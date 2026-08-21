@@ -1,0 +1,46 @@
+Source: windows-11-style-clipboard-history-manager
+Section: utility
+Priority: optional
+Maintainer: Mahdi Arts <mahdi-arts@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13),
+               cargo,
+               libwebkit2gtk-4.1-dev | libwebkit2gtk-4.0-dev,
+               libssl-dev,
+               libayatana-appindicator3-dev,
+               librsvg2-dev,
+               libxdo-dev,
+               libgtk-3-dev,
+               libglib2.0-dev,
+               pkg-config,
+               nodejs,
+               npm
+Standards-Version: 4.6.0
+Homepage: https://www.MahdiArts.ir
+Vcs-Browser: https://github.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager
+Vcs-Git: https://github.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager.git
+
+Package: windows-11-style-clipboard-history-manager
+Architecture: amd64
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+         xclip,
+         xdotool,
+         wl-clipboard,
+         acl,
+         polkitd | polkit,
+         pkexec,
+         libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37,
+         libgtk-3-0,
+         libayatana-appindicator3-1 | libappindicator3-1
+Recommends: libsecret-tools
+Description: Windows 11-style clipboard history manager for Linux
+ A fast, beautiful clipboard history manager for Linux (Wayland & X11),
+ inspired by Windows 11 Win+V.
+ .
+ Features:
+  * Wayland and X11 clipboard monitoring
+  * Super+V / Ctrl+Alt+V global shortcuts
+  * Persian + English interface
+  * Encrypted local history (ChaCha20-Poly1305)
+  * Emoji, kaomoji, and symbol pickers
+  * Fully offline — bundled fonts

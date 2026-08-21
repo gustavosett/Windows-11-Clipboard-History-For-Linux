@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# pre-commit gate — fast, zero-dependency quality checks.
+# گیت پیش از commit — بررسی‌های کیفیت سریع و بدون وابستگی.
+#
+# Installed by `make hooks` (or scripts/install-git-hooks.sh).
+# Runs only on staged files so it stays fast.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+staged_ts() { git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' || true; }
+staged_rs() { git diff --cached --name-only --diff-filter=ACM | grep -E '\.rs$' || true; }
+
+ts_files="$(staged_ts)"
+rs_files="$(staged_rs)"
+
+if [ -n "$ts_files" ]; then
+  echo "▸ ESLint on staged TS/tsx files / اجرای ESLint روی فایل‌های stage شده"
+  # --no-warn-ignored keeps partial-directory arguments clean on ESLint 9.
+  npx eslint --no-warn-ignored $ts_files
+  echo "▸ TypeScript project check / بررسی پروژهٔ TypeScript"
+  npx tsc --noEmit
+fi
+
+if [ -n "$rs_files" ]; then
+  if command -v cargo >/dev/null 2>&1; then
+    echo "▸ cargo fmt --check / بررسی فرمت Rust"
+    cd src-tauri && cargo fmt --all -- --check && cd ..
+  else
+    # Without a Rust toolchain there is nothing meaningful to check — say so
+    # loudly instead of running a weaker substitute gate.
+    # / بدون toolchain ی Rust چیزی معنادار برای بررسی نیست — به‌جای گیت
+    # جایگزین ضعیف‌تر، این موضوع با صراحت اعلام می‌شود.
+    echo "▸ cargo not found — Rust format gate SKIPPED / گیت فرمت Rust رد شد" >&2
+    echo "  install Rust via rustup to enable it / برای فعال‌شدنش Rust را با rustup نصب کنید" >&2
+  fi
+fi
+
+echo "✓ pre-commit passed / گیت پیش از commit پاس شد"

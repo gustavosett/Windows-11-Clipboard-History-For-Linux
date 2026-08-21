@@ -1,17 +1,18 @@
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
 import { Switch } from './Switch'
 import type { UserSettings, BooleanSettingKey } from '../types/clipboard'
 
 const FEATURES = [
   {
     key: 'enable_smart_actions',
-    label: 'Smart Actions',
-    desc: 'Automatically detect links, colors, and emails.',
+    labelKey: 'features.smart_actions',
+    descKey: 'features.smart_actions_desc',
   },
   {
     key: 'enable_ui_polish',
-    label: 'UI Polish',
-    desc: 'Enable animations and compact mode support.',
+    labelKey: 'features.ui_polish',
+    descKey: 'features.ui_polish_desc',
   },
 ] as const
 
@@ -24,6 +25,8 @@ export function FeaturesSection({
   isDark: boolean
   onToggle: (key: BooleanSettingKey) => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <section
       className={clsx(
@@ -32,18 +35,18 @@ export function FeaturesSection({
       )}
     >
       <div className="p-6 border-b border-inherit">
-        <h2 className="text-base font-semibold mb-1">Features</h2>
+        <h2 className="text-base font-semibold mb-1">{t('features.title')}</h2>
         <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-          Customize the functionality of the application
+          {t('features.description')}
         </p>
       </div>
       <div className="p-6 space-y-6">
         {FEATURES.map((feature) => (
           <div key={feature.key} className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium">{feature.label}</div>
+              <div className="text-sm font-medium">{t(feature.labelKey)}</div>
               <div className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                {feature.desc}
+                {t(feature.descKey)}
               </div>
             </div>
             <Switch

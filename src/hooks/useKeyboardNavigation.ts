@@ -1,14 +1,42 @@
 import { useCallback } from 'react'
 
+/**
+ * Minimal structural types for the refs this hook touches.
+ *
+ * The consumers pass refs to their concrete elements (react-window `Grid`,
+ * plain DOM containers). Instead of `any`, the hook narrows the ref targets
+ * to these interfaces before use — so every member access below is typed.
+ *
+ * تایپ‌های ساختاری کمینه برای refهایی که این هوک لمس می‌کند.
+ *
+ * مصرف‌کنندگان ref به عناصر واقعی خودشان (react-window Grid، کانتینر DOM)
+ * پاس می‌دهند. به‌جای `any`، هوک هدف ref را پیش از استفاده به این
+ * interfaceها محدود می‌کند تا هر دسترسی عضو در پایین تایپ‌دار باشد.
+ */
+interface GridScrollTarget {
+  scrollToCell(options: {
+    rowIndex: number
+    columnIndex: number
+    rowAlign?: string
+    columnAlign?: string
+  }): void
+}
+
+interface DomContainerTarget {
+  querySelector(selector: string): HTMLElement | null
+}
+
 interface UseKeyboardNavigationProps<T> {
   items: T[]
   columnCount: number
   onSelect: (item: T) => void
   setFocusedIndex: (index: number) => void
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  gridRef?: React.RefObject<any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  containerRef?: React.RefObject<any>
+  // The concrete element types live in the consumers (react-window Grid /
+  // DOM containers); `unknown` keeps this hook decoupled from react-window.
+  // نوع عنصر واقعی نزد مصرف‌کننده است (react-window Grid / کانتینر DOM)؛
+  // `unknown` این هوک را از react-window جدا نگه می‌دارد.
+  gridRef?: React.RefObject<unknown>
+  containerRef?: React.RefObject<unknown>
   dataAttributeName?: string
 }
 
@@ -97,10 +125,15 @@ export function useKeyboardNavigation<T>({
         e.stopPropagation()
         setFocusedIndex(newIndex)
 
-        if (gridRef?.current?.scrollToCell) {
+        // Narrow `unknown` to the structural target before use; optional
+        // chaining keeps this a no-op for refs that do not provide the API.
+        // `unknown` را پیش از استفاده به هدف ساختاری محدود می‌کنیم؛ optional
+        // chaining برای refهایی که API را ندارند، عملیات را بی‌اثر می‌کند.
+        const grid = gridRef?.current as GridScrollTarget | null | undefined
+        if (grid?.scrollToCell) {
           const targetRow = Math.floor(newIndex / columnCount)
           const targetCol = newIndex % columnCount
-          gridRef.current.scrollToCell({
+          grid.scrollToCell({
             rowIndex: targetRow,
             columnIndex: targetCol,
             rowAlign: 'smart',
@@ -109,10 +142,11 @@ export function useKeyboardNavigation<T>({
         }
 
         if (containerRef?.current && dataAttributeName) {
+          const container = containerRef.current as DomContainerTarget
           setTimeout(() => {
-            const element = containerRef.current?.querySelector(
+            const element = container.querySelector(
               `[${dataAttributeName}="${newIndex}"]`
-            ) as HTMLElement
+            )
             element?.focus()
           }, 10)
         }

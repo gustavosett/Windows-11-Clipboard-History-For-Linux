@@ -1,10 +1,10 @@
-# Maintainer: Gustavo Sett <gustaavoribeeiro@hotmail.com>
-pkgname=win11-clipboard-history-bin
-pkgver=0.7.1
+# Maintainer: Mahdi Arts <mahdi-arts@users.noreply.github.com>
+pkgname=windows-11-style-clipboard-history-manager-bin
+pkgver=2.5.0
 pkgrel=1
 pkgdesc="Windows 11-style Clipboard History Manager for Linux"
 arch=('x86_64' 'aarch64')
-url="https://github.com/gustavosett/Windows-11-Clipboard-History-For-Linux"
+url="https://github.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager"
 license=('MIT')
 depends=(
     'webkit2gtk-4.1'
@@ -19,12 +19,12 @@ depends=(
 optdepends=(
     'libappindicator-gtk3: Legacy tray icon support'
 )
-provides=('win11-clipboard-history')
-conflicts=('win11-clipboard-history')
+provides=('windows-11-style-clipboard-history-manager')
+conflicts=('windows-11-style-clipboard-history-manager')
 options=('!strip' '!debug')
-source_x86_64=("${url}/releases/download/v${pkgver}/win11-clipboard-history_${pkgver}_amd64.deb")
-source_aarch64=("${url}/releases/download/v${pkgver}/win11-clipboard-history_${pkgver}_arm64.deb")
-sha256sums_x86_64=('SKIP')
+source_x86_64=("${url}/releases/download/v${pkgver}/windows-11-style-clipboard-history-manager_${pkgver}_amd64.deb")
+source_aarch64=("${url}/releases/download/v${pkgver}/windows-11-style-clipboard-history-manager_${pkgver}_arm64.deb")
+sha256sums_x86_64=('SKIP')  # Filled automatically by the release workflow from the published SHA256SUMS
 sha256sums_aarch64=('SKIP')
 install="${pkgname}.install"
 
@@ -34,8 +34,8 @@ package() {
     bsdtar -xf data.tar.* -C "$pkgdir/"
     
     # Fix permissions
-    chmod 755 "$pkgdir/usr/bin/win11-clipboard-history"
-    chmod 755 "$pkgdir/usr/bin/win11-clipboard-history-bin" 2>/dev/null || true
+    chmod 755 "$pkgdir/usr/bin/windows-11-style-clipboard-history-manager"
+    chmod 755 "$pkgdir/usr/bin/windows-11-style-clipboard-history-manager-bin" 2>/dev/null || true
     
     # Move udev rules to Arch location
     if [ -d "$pkgdir/etc/udev/rules.d" ]; then
@@ -48,7 +48,7 @@ package() {
     install -Dm644 /dev/stdin "$pkgdir/usr/share/licenses/$pkgname/LICENSE" << 'EOF'
 MIT License
 
-Copyright (c) 2024 Gustavo Sett
+Copyright (c) 2024-2026 Windows 11 Style Clipboard History Manager Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -1,4 +1,5 @@
 import { useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { CategoryPill } from '../CategoryPill'
 
@@ -23,6 +24,17 @@ export function CategoryStrip({
   opacity,
   hasCustom = false,
 }: CategoryStripProps) {
+  const { t } = useTranslation()
+  const categoryLabel = (category: string) =>
+    t(
+      `categories.${category
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '')}`,
+      {
+        defaultValue: category,
+      }
+    )
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const scroll = (direction: 'left' | 'right') => {
@@ -98,6 +110,7 @@ export function CategoryStrip({
         onClick={() => scroll('left')}
         className="p-1 rounded-full hover:bg-win11Light-bg-tertiary dark:hover:bg-win11-bg-card-hover text-win11Light-text-secondary dark:text-win11-text-secondary"
         tabIndex={-1}
+        aria-label={t('picker.scroll_left')}
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -109,7 +122,7 @@ export function CategoryStrip({
       >
         {/* All */}
         <CategoryPill
-          category="All"
+          category={t('picker.all')}
           isActive={selectedCategory === null}
           onClick={() => onSelectCategory(null)}
           tabIndex={focusedIndex === 0 ? 0 : -1}
@@ -123,7 +136,7 @@ export function CategoryStrip({
         {/* Custom (Kaomoji only) */}
         {hasCustom && (
           <CategoryPill
-            category="Custom"
+            category={t('picker.custom')}
             isActive={selectedCategory === 'Custom'}
             onClick={() => onSelectCategory('Custom')}
             tabIndex={focusedIndex === 1 ? 0 : -1}
@@ -141,7 +154,7 @@ export function CategoryStrip({
           return (
             <CategoryPill
               key={cat}
-              category={cat}
+              category={categoryLabel(cat)}
               isActive={selectedCategory === cat}
               onClick={() => onSelectCategory(cat)}
               tabIndex={focusedIndex === actualIndex ? 0 : -1}
@@ -159,6 +172,7 @@ export function CategoryStrip({
         onClick={() => scroll('right')}
         className="p-1 rounded-full hover:bg-win11Light-bg-tertiary dark:hover:bg-win11-bg-card-hover text-win11Light-text-secondary dark:text-win11-text-secondary"
         tabIndex={-1}
+        aria-label={t('picker.scroll_right')}
       >
         <ChevronRight className="w-4 h-4" />
       </button>

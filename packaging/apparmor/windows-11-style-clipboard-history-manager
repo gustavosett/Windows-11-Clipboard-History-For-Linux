@@ -1,0 +1,83 @@
+# AppArmor profile for windows-11-style-clipboard-history-manager
+#
+# NOTE: This profile ships in *complain* mode by default (see install.sh).
+# Enforce mode (`aa-enforce`) is a deliberate hardening step: it restricts
+# the binary to the file/socket access it needs. Test it on your desktop
+# environment before enforcing, especially for:
+#   - custom XDG data/config dirs
+#   - unusual tray implementations (the app uses libayatana-appindicator)
+#
+# The app needs:
+#   - read/write on its own XDG dirs (SQLite history, images, settings, logs)
+#   - /dev/uinput rw (paste injection) — same permission as the udev rule
+#   - history.key (ChaCha20-Poly1305) stays under the XDG data dir above
+#   - the ability to spawn helper binaries (xclip, wl-copy, xdotool,
+#     gsettings, xfconf-query, pkexec, i3-msg, swaymsg, ...)
+#   - access to the X11 / Wayland sockets
+
+#include <tunables/global>
+
+profile windows-11-style-clipboard-history-manager /usr/lib/windows-11-style-clipboard-history-manager/windows-11-style-clipboard-history-manager-bin flags=(complain) {
+  #include <abstractions/base>
+  #include <abstractions/dbus>
+  #include <abstractions/nameservice>
+
+  # Binary + libraries
+  /usr/lib/windows-11-style-clipboard-history-manager/windows-11-style-clipboard-history-manager-bin mr,
+  /usr/lib/windows-11-style-clipboard-history-manager/** mr,
+  /usr/lib/x86_64-linux-gnu/** mr,
+
+  # Own data & config
+  owner @{HOME}/.local/share/windows-11-style-clipboard-history-manager/** rwk,
+  owner @{HOME}/.config/windows-11-style-clipboard-history-manager/** rwk,
+  owner @{HOME}/.cache/windows-11-style-clipboard-history-manager/** rwk,
+  owner @{HOME}/.config/autostart/windows-11-style-clipboard-history-manager.desktop rw,
+
+  # Logs
+  owner @{HOME}/.local/share/windows-11-style-clipboard-history-manager/logs/* w,
+
+  # Input device (paste injection) — matches the udev rule
+  /dev/uinput rw,
+
+  # Display servers
+  /tmp/.X11-unix/* srw,
+  @{PROC}/@{pid}/fd/ r,
+  unix (send, receive) type=stream addr=none peer=(label=unconfined),
+
+  # Helper executables (spawned without a shell)
+  /usr/bin/xclip mr,
+  /usr/bin/xdotool mr,
+  /usr/bin/wl-copy mr,
+  /usr/bin/xdg-open mr,
+  /usr/bin/gsettings mr,
+  /usr/bin/xfconf-query mr,
+  /usr/bin/pkexec mr,
+  /usr/bin/pgrep mr,
+  /usr/bin/groups mr,
+  /usr/bin/which mr,
+  /usr/bin/i3-msg mr,
+  /usr/bin/swaymsg mr,
+  /usr/bin/qdbus mr,
+  /usr/bin/openbox mr,
+  /usr/bin/lspci mr,
+  /usr/bin/setfacl mr,
+  /usr/bin/secret-tool mr,
+
+  # Tiling WM config files the app may edit (opt-in)
+  owner @{HOME}/.config/i3/config rw,
+  owner @{HOME}/.i3/config rw,
+  owner @{HOME}/.config/sway/config rw,
+  owner @{HOME}/.sway/config rw,
+  owner @{HOME}/.config/hypr/hyprland.conf rw,
+  owner @{HOME}/.config/khotkeysrc rw,
+  owner @{HOME}/.config/lxqt/globalkeyshortcuts.conf rw,
+  owner @{HOME}/.config/openbox/*.xml rw,
+  owner @{HOME}/.config/cosmic/** rw,
+
+  # WebKit / GTK scratch (owner-only — never world-writable /tmp)
+  # فایل‌های موقت WebKit/GTK فقط متعلق به مالک نشست
+  owner /tmp/ rw,
+  owner /tmp/** rw,
+  owner @{HOME}/.cache/webkitgtk/** rwk,
+  owner @{HOME}/.cache/mesa_shader_cache/** rwk,
+}

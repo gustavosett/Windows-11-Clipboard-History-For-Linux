@@ -6,7 +6,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { getSymbols, getSymbolCategories, type SymbolItem } from '../services/symbolService'
 
-const RECENT_SYMBOLS_KEY = 'win11_clipboard_recent_symbols'
+const RECENT_SYMBOLS_KEY = 'windows_11_clipboard_recent_symbols'
 const MAX_RECENT_SYMBOLS = 24
 
 export function useSymbolPicker() {

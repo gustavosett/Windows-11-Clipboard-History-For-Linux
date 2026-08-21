@@ -1,65 +1,70 @@
-//! Shortcut setup commands for the frontend
-//! Provides Tauri commands to register/unregister shortcuts from the Setup Wizard
+//! Authorized shortcut discovery and registration for Setup/Settings.
+//! کشف و ثبت مجوزدار میانبر برای پنجره‌های راه‌اندازی/تنظیمات.
 
 use std::env;
 
+use tauri::WebviewWindow;
+
+use crate::error::AppError;
 use crate::shortcut_conflict_detector::{
     auto_resolve_conflicts, detect_shortcut_conflicts, ConflictDetectionResult,
 };
+use crate::window_policy;
 
-/// Get the current desktop environment name
-#[tauri::command]
-pub fn get_desktop_environment() -> String {
-    let xdg_current = env::var("XDG_CURRENT_DESKTOP")
+/// Detect the current desktop environment for native callers.
+/// تشخیص محیط دسکتاپ فعلی برای فراخوان‌های native.
+fn desktop_environment() -> String {
+    let current = env::var("XDG_CURRENT_DESKTOP")
         .unwrap_or_default()
         .to_lowercase();
-    let xdg_session = env::var("XDG_SESSION_DESKTOP")
+    let session = env::var("XDG_SESSION_DESKTOP")
         .unwrap_or_default()
         .to_lowercase();
-    let combined = format!("{} {}", xdg_current, xdg_session);
+    let combined = format!("{current} {session}");
 
-    // Check for Pop!_OS specifically (uses pop:GNOME)
     if combined.contains("pop") {
         return "Pop!_OS".to_string();
     }
-    if combined.contains("gnome") || combined.contains("unity") || combined.contains("pantheon") {
-        "GNOME".to_string()
-    } else if combined.contains("cinnamon") {
-        "Cinnamon".to_string()
-    } else if combined.contains("kde") || combined.contains("plasma") {
-        "KDE Plasma".to_string()
-    } else if combined.contains("xfce") {
-        "XFCE".to_string()
-    } else if combined.contains("mate") {
-        "MATE".to_string()
-    } else if combined.contains("lxde") {
-        "LXDE".to_string()
-    } else if combined.contains("lxqt") {
-        "LXQt".to_string()
-    } else if combined.contains("cosmic") {
-        "COSMIC".to_string()
-    } else if combined.contains("budgie") {
-        "Budgie".to_string()
-    } else if combined.contains("deepin") {
-        "Deepin".to_string()
-    } else if combined.contains("i3") {
-        "i3".to_string()
-    } else if combined.contains("sway") {
-        "Sway".to_string()
-    } else if combined.contains("hyprland") {
-        "Hyprland".to_string()
-    } else {
-        // Check for running tiling WMs
-        if is_process_running("i3") {
-            "i3".to_string()
-        } else if is_process_running("sway") {
-            "Sway".to_string()
-        } else if is_process_running("hyprland") || is_process_running("Hyprland") {
-            "Hyprland".to_string()
-        } else {
-            xdg_current.to_uppercase()
+
+    let known = [
+        (("gnome", "unity", "pantheon"), "GNOME"),
+        (("cinnamon", "", ""), "Cinnamon"),
+        (("kde", "plasma", ""), "KDE Plasma"),
+        (("xfce", "", ""), "XFCE"),
+        (("mate", "", ""), "MATE"),
+        (("lxde", "", ""), "LXDE"),
+        (("lxqt", "", ""), "LXQt"),
+        (("cosmic", "", ""), "COSMIC"),
+        (("budgie", "", ""), "Budgie"),
+        (("deepin", "", ""), "Deepin"),
+        (("i3", "", ""), "i3"),
+        (("sway", "", ""), "Sway"),
+        (("hyprland", "", ""), "Hyprland"),
+    ];
+    for ((first, second, third), label) in known {
+        if [first, second, third]
+            .iter()
+            .any(|needle| !needle.is_empty() && combined.contains(needle))
+        {
+            return label.to_string();
         }
     }
+
+    for (process, label) in [("i3", "i3"), ("sway", "Sway"), ("Hyprland", "Hyprland")] {
+        if is_process_running(process) {
+            return label.to_string();
+        }
+    }
+
+    current.to_uppercase()
+}
+
+/// Return the desktop environment to configuration windows only.
+/// بازگرداندن محیط دسکتاپ فقط به پنجره‌های پیکربندی.
+#[tauri::command]
+pub fn get_desktop_environment(window: WebviewWindow) -> Result<String, AppError> {
+    window_policy::require_configuration(&window)?;
+    Ok(desktop_environment())
 }
 
 fn is_process_running(name: &str) -> bool {
@@ -67,83 +72,76 @@ fn is_process_running(name: &str) -> bool {
         .arg("-x")
         .arg(name)
         .output()
-        .map(|o| o.status.success())
+        .map(|output| output.status.success())
         .unwrap_or(false)
 }
 
-/// Detect shortcut conflicts for Super+V
+/// Detect `Super+V` conflicts without modifying desktop configuration.
+/// تشخیص تداخل `Super+V` بدون تغییر پیکربندی دسکتاپ.
 #[tauri::command]
-pub fn detect_conflicts() -> ConflictDetectionResult {
-    detect_shortcut_conflicts()
+pub fn detect_conflicts(window: WebviewWindow) -> Result<ConflictDetectionResult, AppError> {
+    window_policy::require_configuration(&window)?;
+    Ok(detect_shortcut_conflicts())
 }
 
-/// Automatically resolve detected conflicts
+/// Resolve detected conflicts from first-run Setup only.
+/// رفع تداخل‌های شناسایی‌شده فقط از راه‌اندازی نخست.
 #[tauri::command]
-pub fn resolve_conflicts() -> Result<Vec<String>, String> {
-    auto_resolve_conflicts()
+pub fn resolve_conflicts(window: WebviewWindow) -> Result<Vec<String>, AppError> {
+    window_policy::require_setup(&window)?;
+    auto_resolve_conflicts().map_err(AppError::Other)
 }
 
-/// Register the global shortcut with the desktop environment
-/// This calls the existing linux_shortcut_manager
+/// Register application shortcuts after an explicit configuration action.
+/// ثبت میانبرهای برنامه پس از اقدام صریح در پنجرهٔ پیکربندی.
 #[tauri::command]
-pub fn register_de_shortcut() -> Result<String, String> {
-    {
-        // Run in a separate thread but wait for completion to avoid race conditions
-        let (tx, rx) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
-            crate::linux_shortcut_manager::register_global_shortcut();
-            let _ = tx.send(());
-        });
+pub fn register_de_shortcut(window: WebviewWindow) -> Result<String, AppError> {
+    window_policy::require_configuration(&window)?;
+    let (sender, receiver) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        crate::linux_shortcut_manager::register_global_shortcut();
+        let _ = sender.send(());
+    });
 
-        match rx.recv() {
-            Ok(()) => {
-                Ok("Shortcut registration completed. Check the app logs for details.".to_string())
-            }
-            Err(_) => Err("Shortcut registration thread failed unexpectedly.".to_string()),
+    receiver
+        .recv()
+        .map(|()| "shortcut_registration_completed".to_string())
+        .map_err(|_| AppError::Other("shortcut_registration_thread_failed".into()))
+}
+
+/// Report tools available for desktop shortcut registration.
+/// گزارش ابزارهای در دسترس برای ثبت میانبر دسکتاپ.
+#[tauri::command]
+pub fn check_shortcut_tools(window: WebviewWindow) -> Result<ShortcutToolsStatus, AppError> {
+    window_policy::require_configuration(&window)?;
+    let gsettings = command_exists("gsettings");
+    let kwriteconfig5 = command_exists("kwriteconfig5");
+    let kwriteconfig6 = command_exists("kwriteconfig6");
+    let xfconf_query = command_exists("xfconf-query");
+    let dconf = command_exists("dconf");
+    let desktop = desktop_environment();
+
+    let can_register = match desktop.as_str() {
+        "GNOME" | "Pop!_OS" | "Cinnamon" | "MATE" | "Budgie" | "Deepin" => {
+            gsettings || dconf
         }
-    }
-}
+        "KDE Plasma" => kwriteconfig5 || kwriteconfig6,
+        "XFCE" => xfconf_query,
+        "LXQt" | "LXDE" | "COSMIC" | "i3" | "Sway" | "Hyprland" => true,
+        _ => gsettings,
+    };
+    let conflicts = detect_shortcut_conflicts();
 
-/// Check if the DE shortcut manager has the tools needed
-#[tauri::command]
-pub fn check_shortcut_tools() -> ShortcutToolsStatus {
-    {
-        let gsettings = command_exists("gsettings");
-        let kwriteconfig5 = command_exists("kwriteconfig5");
-        let kwriteconfig6 = command_exists("kwriteconfig6");
-        let xfconf_query = command_exists("xfconf-query");
-        let dconf = command_exists("dconf");
-
-        let de = get_desktop_environment();
-
-        let can_register = match de.as_str() {
-            "GNOME" | "Pop!_OS" | "Cinnamon" | "MATE" | "Budgie" | "Deepin" => gsettings || dconf,
-            "KDE Plasma" => kwriteconfig5 || kwriteconfig6,
-            "XFCE" => xfconf_query,
-            "LXQt" => true,     // Uses config files
-            "LXDE" => true,     // Uses config files
-            "COSMIC" => true,   // Uses config files
-            "i3" => true,       // Uses config files
-            "Sway" => true,     // Uses config files
-            "Hyprland" => true, // Uses config files
-            _ => gsettings,     // Fallback to gsettings
-        };
-
-        // Check for conflicts
-        let conflicts = detect_shortcut_conflicts();
-
-        ShortcutToolsStatus {
-            desktop_environment: de.clone(),
-            gsettings_available: gsettings,
-            kde_tools_available: kwriteconfig5 || kwriteconfig6,
-            xfce_tools_available: xfconf_query,
-            can_register_automatically: can_register,
-            manual_instructions: get_manual_instructions(&de),
-            has_conflicts: !conflicts.conflicts.is_empty(),
-            conflict_count: conflicts.conflicts.len(),
-            can_auto_resolve_conflicts: conflicts.can_auto_resolve,
-        }
-    }
+    Ok(ShortcutToolsStatus {
+        desktop_environment: desktop,
+        gsettings_available: gsettings,
+        kde_tools_available: kwriteconfig5 || kwriteconfig6,
+        xfce_tools_available: xfconf_query,
+        can_register_automatically: can_register,
+        has_conflicts: !conflicts.conflicts.is_empty(),
+        conflict_count: conflicts.conflicts.len(),
+        can_auto_resolve_conflicts: conflicts.can_auto_resolve,
+    })
 }
 
 #[derive(serde::Serialize)]
@@ -153,168 +151,13 @@ pub struct ShortcutToolsStatus {
     pub kde_tools_available: bool,
     pub xfce_tools_available: bool,
     pub can_register_automatically: bool,
-    pub manual_instructions: String,
     pub has_conflicts: bool,
     pub conflict_count: usize,
     pub can_auto_resolve_conflicts: bool,
 }
 
-fn command_exists(cmd: &str) -> bool {
-    std::process::Command::new("which")
-        .arg(cmd)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-}
-
-fn get_manual_instructions(de: &str) -> String {
-    match de {
-        "GNOME" => r#"**GNOME Settings:**
-1. Open Settings → Keyboard → Keyboard Shortcuts → Custom Shortcuts
-2. Click "+" to add a new shortcut
-3. Name: "Clipboard History"
-4. Command: `win11-clipboard-history`
-5. Shortcut: Press Super+V
-
-**⚠️ Note:** GNOME uses Super+V for the Notification Center by default.
-To free up Super+V, run:
-```
-gsettings set org.gnome.shell.keybindings toggle-message-tray "['<Super><Shift>v']"
-```"#
-            .to_string(),
-
-        "Pop!_OS" => r#"**Pop!_OS / Pop Shell:**
-1. Open Settings → Keyboard → Keyboard Shortcuts → Custom Shortcuts
-2. Add a new shortcut with command: `win11-clipboard-history`
-3. Set the shortcut to Super+V
-
-**⚠️ Note:** Pop!_OS inherits GNOME's Super+V for Notification Center.
-To free up Super+V, run:
-```
-gsettings set org.gnome.shell.keybindings toggle-message-tray "['<Super><Shift>v']"
-```
-
-If Pop Shell uses Super+V for tiling, change it in:
-Settings → Keyboard → Customize Shortcuts → Pop Shell"#
-            .to_string(),
-
-        "KDE Plasma" => r#"**KDE System Settings:**
-1. Open System Settings → Shortcuts → Custom Shortcuts
-2. Click "Edit" → "New" → "Global Shortcut" → "Command/URL"
-3. Name: "Clipboard History"
-4. Trigger: Click and press Meta+V
-5. Action: `win11-clipboard-history`
-
-**⚠️ Note:** If Klipper (KDE's clipboard) uses Meta+V:
-1. Right-click Klipper in system tray → Configure
-2. Change or disable its shortcut"#
-            .to_string(),
-
-        "Cinnamon" => r#"**Cinnamon Settings:**
-1. Open System Settings → Keyboard → Shortcuts → Custom Shortcuts
-2. Click "Add custom shortcut"
-3. Name: "Clipboard History"
-4. Command: `win11-clipboard-history`
-5. Click on the shortcut area and press Super+V"#
-            .to_string(),
-
-        "XFCE" => r#"**XFCE Settings:**
-1. Open Settings → Keyboard → Application Shortcuts
-2. Click "Add"
-3. Command: `win11-clipboard-history`
-4. Press Super+V when prompted"#
-            .to_string(),
-
-        "MATE" => r#"**MATE Control Center:**
-1. Open Control Center → Keyboard Shortcuts
-2. Click "Add"
-3. Name: "Clipboard History"
-4. Command: `win11-clipboard-history`
-5. Click on the shortcut and press Super+V"#
-            .to_string(),
-
-        "LXQt" => r#"**LXQt Configuration:**
-1. Open LXQt Configuration → Shortcut Keys
-2. Click "Add"
-3. Description: "Clipboard History"
-4. Command: `win11-clipboard-history`
-5. Set shortcut to Meta+V"#
-            .to_string(),
-
-        "LXDE" => r#"**LXDE/Openbox:**
-1. Edit ~/.config/openbox/lxde-rc.xml
-2. Add in <keyboard> section:
-
-<keybind key="Super_L+v">
-  <action name="Execute">
-    <command>win11-clipboard-history</command>
-  </action>
-</keybind>
-
-3. Run: openbox --reconfigure"#
-            .to_string(),
-
-        "COSMIC" => r#"**COSMIC Settings:**
-1. Open Settings → Keyboard → Custom Shortcuts
-2. Add new shortcut
-3. Command: `win11-clipboard-history`
-4. Binding: Super+V
-
-**Note:** If there's a conflict, check System shortcuts for Super+V bindings."#
-            .to_string(),
-
-        "i3" => r#"**i3 Configuration:**
-1. Edit your i3 config: `~/.config/i3/config`
-2. Comment out or remove any existing `bindsym $mod+v` line
-3. Add this line:
-```
-bindsym $mod+v exec win11-clipboard-history
-```
-4. Reload i3: Press $mod+Shift+r
-
-**Alternative shortcut:**
-```
-bindsym Ctrl+Mod1+v exec win11-clipboard-history
-```"#
-            .to_string(),
-
-        "Sway" => r#"**Sway Configuration:**
-1. Edit your Sway config: `~/.config/sway/config`
-2. Comment out or remove any existing `bindsym $mod+v` line
-3. Add this line:
-```
-bindsym $mod+v exec win11-clipboard-history
-```
-4. Reload Sway: Press $mod+Shift+c
-
-**Alternative shortcut:**
-```
-bindsym Ctrl+Mod1+v exec win11-clipboard-history
-```"#
-            .to_string(),
-
-        "Hyprland" => r#"**Hyprland Configuration:**
-1. Edit your Hyprland config: `~/.config/hypr/hyprland.conf`
-2. Comment out or remove any existing `bind = SUPER, V, ...` line
-3. Add this line:
-```
-bind = SUPER, V, exec, win11-clipboard-history
-```
-4. Config auto-reloads (or press Super+M to reload manually)
-
-**Alternative shortcut:**
-```
-bind = CTRL ALT, V, exec, win11-clipboard-history
-```"#
-            .to_string(),
-
-        _ => r#"**Generic Instructions:**
-1. Open your desktop environment's keyboard shortcuts settings
-2. Add a new custom shortcut
-3. Command: `win11-clipboard-history`
-4. Shortcut: Super+V (or your preferred combination)
-
-**Alternative:** Use Ctrl+Alt+V if Super+V conflicts with your DE."#
-            .to_string(),
-    }
+/// In-process `PATH` probe — no `which` subprocess (see `crate::exec_lookup`).
+/// بررسی درون‌فرآیندی PATH — بدون subprocess ی `which` (`crate::exec_lookup`).
+fn command_exists(command: &str) -> bool {
+    crate::exec_lookup::command_exists(command)
 }

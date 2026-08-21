@@ -2,6 +2,7 @@ import { useState, useCallback, memo, useRef } from 'react'
 import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useSymbolPicker } from '../hooks/useSymbolPicker'
 import { SearchBar } from './common/SearchBar'
 import { SectionHeader } from './common/SectionHeader'
@@ -136,6 +137,7 @@ export interface SymbolPickerProps {
 }
 
 export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
+  const { t } = useTranslation()
   const {
     searchQuery,
     setSearchQuery,
@@ -182,7 +184,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
   // Handle symbol selection
   const handleSelect = useCallback(
     (symbol: SymbolItem) => {
-      pasteSymbol(symbol)
+      void pasteSymbol(symbol)
     },
     [pasteSymbol]
   )
@@ -220,7 +222,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
         <SearchBar
           value={searchQuery}
           onChange={handleSearchChange}
-          placeholder="Search symbols..."
+          placeholder={t('symbols.search_placeholder')}
           isDark={isDark}
           opacity={opacity}
         />
@@ -231,7 +233,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
           {!searchQuery && !selectedCategory && recentSymbols.length > 0 && (
             <div className="px-3 pb-2 flex-shrink-0">
               <div className="mb-1.5">
-                <SectionHeader icon={<Clock size={12} />} label="Recently used" />
+                <SectionHeader icon={<Clock size={12} />} label={t('picker.recently_used')} />
               </div>
               <div ref={recentGridRef} className="flex flex-wrap gap-1">
                 {recentSymbols.slice(0, 16).map((symbol, index) => (
@@ -276,7 +278,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
           </>
         ) : (
           <span className="text-xs dark:text-win11-text-tertiary text-win11Light-text-secondary">
-            Click to paste symbol
+            {t('symbols.click_to_copy')}
           </span>
         )
       }
@@ -286,7 +288,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
         {filteredSymbols.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-8">
             <p className="text-sm dark:text-win11-text-secondary text-win11Light-text-secondary">
-              No symbols found
+              {t('symbols.no_results')}
             </p>
           </div>
         ) : (
@@ -295,7 +297,7 @@ export function SymbolPicker({ isDark, opacity }: SymbolPickerProps) {
             <div
               ref={mainGridContainerRef}
               role="grid"
-              aria-label="Symbol grid"
+              aria-label={t('picker.symbol_grid')}
               style={{ height: dimensions.height }}
             >
               <Grid<SymbolGridData>

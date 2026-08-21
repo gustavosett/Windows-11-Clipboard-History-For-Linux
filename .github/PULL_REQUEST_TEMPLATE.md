@@ -1,46 +1,63 @@
-## 📝 Description
+# 📝 Pull Request Description / شرح درخواست
 
-<!-- Describe your changes in detail -->
+<div dir="rtl">
 
-## 🔗 Related Issue
+## شرح تغییرات
 
-<!-- Link to the issue this PR addresses (if any) -->
-- #
+<!-- تغییرات خود را به صورت کامل شرح دهید -->
 
-## 🧪 Type of Change
+## تغییرات مرتبط
 
-<!-- Mark the appropriate option with an 'x' -->
+<!-- به issue مرتبط لینک دهید (در صورت وجود) -->
+- Fixes #
+- Related #
 
-- [ ] 🐛 Bug fix (non-breaking change that fixes an issue)
-- [ ] ✨ New feature (non-breaking change that adds functionality)
-- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to change)
-- [ ] 📚 Documentation update
-- [ ] 🎨 Style/UI change
-- [ ] ♻️ Refactoring (no functional changes)
-- [ ] ⚡ Performance improvement
-- [ ] 🧹 Chore (build process, dependencies, etc.)
+## نوع تغییر
 
-## 📸 Screenshots (if applicable)
+- [ ] 🐛 **Bug fix** / رفع باگ
+- [ ] ✨ **New feature** / ویژگی جدید
+- [ ] 💥 **Breaking change** / تغییر بنیادین
+- [ ] 📚 **Documentation** / مستندات
+- [ ] 🌐 **i18n / Translation** / ترجمه
+- [ ] ⚡ **Performance** / بهبود کارایی
+- [ ] ♻️ **Refactoring** / بازنویسی
+- [ ] 🔒 **Security** / امنیت
 
-<!-- Add screenshots to show UI changes -->
+</div>
 
-## ✅ Checklist
+---
 
-<!-- Mark completed items with an 'x' -->
+## 📸 Screenshots / تصاویر (اختیاری)
 
-- [ ] My code follows the project's code style
-- [ ] I have run `make lint` and `make format`
-- [ ] I have tested my changes locally
-- [ ] I have added/updated documentation as needed
-- [ ] My changes don't introduce new warnings
-- [ ] I have tested on both X11 and Wayland (if applicable)
+<!-- اگر تغییرات UI دارید، تصاویر قبل و بعد را اضافه کنید -->
 
-## 🖥️ Testing Environment
+## ✅ Checklist / چک‌لیست
 
-- **OS**: 
-- **Desktop Environment**: 
-- **Display Server**: [X11 / Wayland]
+- [ ] کد از راهنمای سبک پروژه پیروی می‌کند
+- [ ] `make lint` و `make format` اجرا شده
+- [ ] تغییرات محلی تست شده‌اند
+- [ ] مستندات به‌روز شده (در صورت نیاز)
+- [ ] برای تغییرات i18n، هر دو فایل `fa.json` و `en.json` به‌روز شده‌اند
+- [ ] **RTL** برای زبان فارسی تست شده
+- [ ] روی X11 و/یا Wayland تست شده
 
-## 📋 Additional Notes
+- [ ] Code follows the project's style guidelines
+- [ ] `make lint` and `make format` have been run
+- [ ] Changes tested locally
+- [ ] Documentation updated if needed
+- [ ] i18n: both `fa.json` and `en.json` updated
+- [ ] **RTL** tested for Persian
+- [ ] Tested on X11 and/or Wayland
 
-<!-- Add any additional information for reviewers -->
+## 🖥️ Testing Environment / محیط تست
+
+| Item | Value |
+| --- | --- |
+| **OS** | |
+| **Desktop Environment** | |
+| **Display Server** | X11 / Wayland |
+| **Language** | English / فارسی |
+
+## 📋 Additional Notes / نکات اضافی
+
+<!-- اطلاعات اضافی برای reviewers -->

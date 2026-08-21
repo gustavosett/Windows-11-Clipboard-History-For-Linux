@@ -1,0 +1,112 @@
+#!/bin/bash
+# Post-removal script for Debian/Ubuntu
+# اسکریپت پس از حذف برای Debian/Ubuntu
+#
+# This script handles:
+# - Removing udev rules
+# - Cleaning up ACL permissions
+# - Disabling AppArmor profile
+# 
+# این اسکریپت موارد زیر را انجام می‌دهد:
+# - حذف قوانین udev
+# - پاک‌سازی مجوزهای ACL
+# - غیرفعال‌سازی پروفایل AppArmor
+
+set -e
+
+APP_NAME="windows-11-style-clipboard-history-manager"
+UDEV_RULES="/etc/udev/rules.d/99-windows-11-style-clipboard-history-input.rules"
+APPARMOR_PROFILE="/etc/apparmor.d/${APP_NAME}"
+
+# Function to reload udev after rule removal
+# تابع برای بارگذاری مجدد udev پس از حذف قانون
+reload_udev() {
+    echo "[postrm] Reloading udev rules..."
+    udevadm control --reload-rules 2>/dev/null || true
+    udevadm trigger --subsystem-match=input 2>/dev/null || true
+    echo "[postrm] udev rules reloaded"
+}
+
+# Function to disable AppArmor profile
+# تابع برای غیرفعال‌سازی پروفایل AppArmor
+disable_apparmor() {
+    if [ -f "${APPARMOR_PROFILE}" ]; then
+        echo "[postrm] Disabling AppArmor profile..."
+        aa-disable "${APPARMOR_PROFILE}" 2>/dev/null || true
+        echo "[postrm] AppArmor profile disabled"
+    fi
+}
+
+# Function to clean up user data (optional)
+# تابع برای پاک‌سازی داده‌های کاربر (اختیاری)
+cleanup_user_data() {
+    local user_home="$1"
+    local data_dir="${user_home}/.local/share/${APP_NAME}"
+    local config_dir="${user_home}/.config/${APP_NAME}"
+    
+    echo "[postrm] User data locations:"
+    echo "         Data:  ${data_dir}"
+    echo "         Config: ${config_dir}"
+    echo "[postrm] User data was NOT automatically removed."
+    echo "[postrm] To remove all user data, run:"
+    echo "         rm -rf ~/.local/share/${APP_NAME}"
+    echo "         rm -rf ~/.config/${APP_NAME}"
+}
+
+# Function to unregister desktop file
+# تابع برای لغو ثبت فایل desktop
+unregister_desktop_file() {
+    echo "[postrm] Updating desktop database..."
+    update-desktop-database /usr/share/applications 2>/dev/null || true
+}
+
+# Main post-removal tasks
+# وظایف اصلی پس از حذف
+case "$1" in
+    remove|purge)
+        echo "========================================"
+        echo "Post-removal for ${APP_NAME}"
+        echo "========================================"
+        
+        # Step 1: Reload udev
+        reload_udev
+        
+        # Step 2: Disable AppArmor
+        disable_apparmor
+        
+        # Step 3: Unregister desktop file
+        unregister_desktop_file
+        
+        # Step 4: Show user data info
+        if [ "$1" = "purge" ]; then
+            cleanup_user_data "$HOME"
+        else
+            echo ""
+            echo "========================================"
+            echo "${APP_NAME} removed successfully!"
+            echo "========================================"
+            echo ""
+            echo "To completely remove ${APP_NAME}:"
+            echo "  1. Remove user data:"
+            echo "     rm -rf ~/.local/share/${APP_NAME}"
+            echo "     rm -rf ~/.config/${APP_NAME}"
+            echo "  2. Remove udev rules (optional):"
+            echo "     sudo rm ${UDEV_RULES}"
+            echo "     sudo udevadm control --reload-rules"
+            echo ""
+        fi
+        ;;
+    
+    upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        echo "[postrm] No action needed for: $1"
+        ;;
+    
+    *)
+        echo "[postrm] Called with unknown argument: $1"
+        exit 0
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

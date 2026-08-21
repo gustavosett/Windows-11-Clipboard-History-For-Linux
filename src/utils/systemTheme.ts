@@ -39,7 +39,11 @@ export function useSystemThemePreference(): boolean {
     if (hasCheckedPortal.current) return
     hasCheckedPortal.current = true
 
-    getSystemThemeFromPortal().then((portalPrefersDark) => {
+    // The helper never rejects (it catches internally); `void` marks the
+    // deliberate fire-and-forget state update.
+    // helper هرگز reject نمی‌کند (خطا را داخلی می‌گیرد)؛ `void` نیت عمدیِ
+    // به‌روزرسانی حالت fire-and-forget را نشان می‌دهد.
+    void getSystemThemeFromPortal().then((portalPrefersDark) => {
       if (portalPrefersDark !== null) {
         setSystemPrefersDark(portalPrefersDark)
       }
@@ -64,7 +68,9 @@ export function useSystemThemePreference(): boolean {
     })
 
     return () => {
-      unlistenPromise.then((unlisten) => unlisten())
+      void unlistenPromise.then((unlisten) => {
+        unlisten()
+      })
     }
   }, [])
 
@@ -77,17 +83,21 @@ export function useSystemThemePreference(): boolean {
       const hasEventListener = await invoke<boolean>('is_theme_listener_active')
 
       if (!hasEventListener) {
-        // Event listener not available, use polling fallback
-        checkInterval = window.setInterval(async () => {
-          const portalPrefersDark = await getSystemThemeFromPortal()
-          if (portalPrefersDark !== null) {
-            setSystemPrefersDark(portalPrefersDark)
-          }
+        // Event listener not available, use polling fallback.
+        // The interval callback is sync; the async portal query runs inside.
+        // شنوندهٔ رویداد در دسترس نیست؛ polling پشتیبان. کال‌بک interval
+        // همگام است و پرس‌وجوی async داخل آن اجرا می‌شود.
+        checkInterval = window.setInterval(() => {
+          void getSystemThemeFromPortal().then((portalPrefersDark) => {
+            if (portalPrefersDark !== null) {
+              setSystemPrefersDark(portalPrefersDark)
+            }
+          })
         }, 10000) // Check every 10 seconds
       }
     }
 
-    setupPolling()
+    void setupPolling()
 
     return () => {
       if (checkInterval) clearInterval(checkInterval)

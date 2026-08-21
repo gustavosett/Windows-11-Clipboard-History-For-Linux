@@ -1,0 +1,77 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 5361682..273c38f 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -79,6 +79,9 @@ jobs:
+       - name: Fast Rust syntax gate (tree-sitter)
+         run: node scripts/check-rust-syntax.mjs
+ 
++      - name: Packaging contract validation
++        run: npm run qa:packaging
++
+       - name: Frontend tests with coverage gate
+         run: npm run test:coverage
+ 
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index e7a1085..73c2784 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -152,6 +152,16 @@ jobs:
+           sha256sum -- * > SHA256SUMS
+           cat SHA256SUMS
+ 
++      - name: Verify Debian package contents
++        run: |
++          set -euo pipefail
++          shopt -s nullglob
++          packages=(dist/*.deb)
++          ((${#packages[@]} > 0)) || { echo "::error::No Debian package found"; exit 1; }
++          for package in "${packages[@]}"; do
++            scripts/verify-deb.sh "$package"
++          done
++
+       # -----------------------------------------------------------------
+       # Optional GPG signature over SHA256SUMS (opt-in via secrets).
+       # When RELEASE_GPG_PRIVATE_KEY is set, SHA256SUMS.sig is published and
+@@ -285,7 +295,6 @@ jobs:
+       # -----------------------------------------------------------------
+       - name: Upload to Cloudsmith (stable releases only)
+         if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'dev') }}
+-        continue-on-error: true
+         env:
+           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+         run: |
+@@ -299,12 +308,12 @@ jobs:
+           for deb in dist/*.deb; do
+             [ -f "$deb" ] || continue
+             cloudsmith push deb mahdi-arts/clipboard-manager/any-distro/any-version \
+-              "$deb" --api-key "$CLOUDSMITH_API_KEY" || echo "::warning::Cloudsmith .deb upload failed for $deb"
++              "$deb" --api-key "$CLOUDSMITH_API_KEY"
+           done
+           for rpm in dist/*.rpm; do
+             [ -f "$rpm" ] || continue
+             cloudsmith push rpm mahdi-arts/clipboard-manager/any-distro/any-version \
+-              "$rpm" --api-key "$CLOUDSMITH_API_KEY" || echo "::warning::Cloudsmith .rpm upload failed for $rpm"
++              "$rpm" --api-key "$CLOUDSMITH_API_KEY"
+           done
+ 
+       # -----------------------------------------------------------------
+@@ -324,7 +333,6 @@ jobs:
+       # -----------------------------------------------------------------
+       - name: Update AUR Package
+         if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'dev') }}
+-        continue-on-error: true
+         env:
+           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+           AUR_KNOWN_HOSTS: ${{ secrets.AUR_KNOWN_HOSTS }}
+@@ -344,8 +352,8 @@ jobs:
+           DEB_ARM64=$(find dist -name "*_arm64.deb" | head -1)
+ 
+           if [ -z "$DEB_X86_64" ]; then
+-            echo "::error::x86_64 .deb not found, skipping AUR update"
+-            exit 0
++            echo "::error::x86_64 .deb not found; configured AUR publication cannot continue"
++            exit 1
+           fi
+ 
+           SHA256_X86_64=$(sha256sum "$DEB_X86_64" | cut -d' ' -f1)

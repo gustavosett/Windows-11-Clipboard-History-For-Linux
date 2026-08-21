@@ -1,0 +1,28 @@
+{
+  // Dedicated TypeScript project for the Playwright end-to-end tests.
+  // This keeps the type-aware ESLint graph (`tsconfig.json` covers `src`
+  // only) from trying to type-check E2E specs, which run against the real
+  // release binary in a Node context — not the browser bundle.
+  // پروژهٔ TypeScript اختصاصی برای تست‌های E2E با Playwright؛ این کار باعث
+  // می‌شود گراف لینتِ آگاه به نوع (`tsconfig.json` فقط `src` را پوشش می‌دهد)
+  // از نوع‌چک‌کردن specهای E2E صرف‌نظر کند — این تست‌ها در بافت Node و علیه
+  // باینری انتشار واقعی اجرا می‌شوند، نه bundle مرورگر.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["node"]
+  },
+  "include": [
+    "./playwright.config.ts",
+    "./playwright/**/*.ts",
+    "./e2e/**/*.ts"
+  ]
+}

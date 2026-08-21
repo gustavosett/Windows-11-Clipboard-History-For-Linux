@@ -2,6 +2,7 @@ import { useState, useCallback, memo, useRef } from 'react'
 import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useEmojiPicker } from '../hooks/useEmojiPicker'
 import { SearchBar } from './common/SearchBar'
 import { SectionHeader } from './common/SectionHeader'
@@ -138,6 +139,7 @@ export interface EmojiPickerProps {
 }
 
 export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
+  const { t } = useTranslation()
   const {
     searchQuery,
     setSearchQuery,
@@ -184,7 +186,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
   // Handle emoji selection
   const handleSelect = useCallback(
     (emoji: Emoji) => {
-      pasteEmoji(emoji)
+      void pasteEmoji(emoji)
     },
     [pasteEmoji]
   )
@@ -229,8 +231,8 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
         <SearchBar
           value={searchQuery}
           onChange={handleSearchChange}
-          placeholder="Search emojis..."
-          aria-label="Search emojis"
+          placeholder={t('emoji.search_placeholder')}
+          aria-label={t('emoji.search_placeholder')}
           isDark={isDark}
           opacity={opacity}
         />
@@ -241,13 +243,13 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
           {!searchQuery && recentEmojis.length > 0 && (
             <div className="px-3 pb-2 flex-shrink-0">
               <div className="mb-1.5">
-                <SectionHeader icon={<Clock size={12} />} label="Recently used" />
+                <SectionHeader icon={<Clock size={12} />} label={t('picker.recently_used')} />
               </div>
               <div
                 ref={recentGridRef}
                 className="flex flex-wrap gap-1"
                 role="grid"
-                aria-label="Recently used emojis"
+                aria-label={t('picker.recent_emojis')}
               >
                 {recentEmojis.slice(0, 16).map((emoji, index) => (
                   <div key={`recent-${emoji.char}`} className="w-8 h-8">
@@ -290,7 +292,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
           </>
         ) : (
           <span className="text-xs dark:text-win11-text-tertiary text-win11Light-text-secondary">
-            Click to paste emoji
+            {t('emoji.click_to_paste')}
           </span>
         )
       }
@@ -300,7 +302,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
         {filteredEmojis.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-8">
             <p className="text-sm dark:text-win11-text-secondary text-win11Light-text-secondary">
-              No emojis found
+              {t('emoji.no_results')}
             </p>
           </div>
         ) : (
@@ -309,7 +311,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
             <div
               ref={mainGridContainerRef}
               role="grid"
-              aria-label="Emoji grid"
+              aria-label={t('picker.emoji_grid')}
               style={{ height: dimensions.height }}
             >
               <Grid<EmojiGridData>

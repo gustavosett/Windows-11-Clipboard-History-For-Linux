@@ -1,32 +1,29 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow, Window } from '@tauri-apps/api/window'
-import { listen } from '@tauri-apps/api/event'
-import { emit } from '@tauri-apps/api/event'
+import { emit, listen } from '@tauri-apps/api/event'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
 
-import type { UserSettings, CustomKaomoji, BooleanSettingKey } from './types/clipboard'
+import type { BooleanSettingKey, CustomKaomoji, UserSettings } from './types/clipboard'
 import { FeaturesSection } from './components/FeaturesSection'
-import { Switch } from './components/Switch'
+import { AppearanceSection } from './components/settings/AppearanceSection'
+import { AutoDeleteSection } from './components/settings/AutoDeleteSection'
+import { HistorySettingsSection } from './components/settings/HistorySettingsSection'
+import { KaomojiSection } from './components/settings/KaomojiSection'
+import { KeyboardShortcutsSection } from './components/settings/KeyboardShortcutsSection'
+import { ResetSection } from './components/settings/ResetSection'
+import { TransparencySection } from './components/settings/TransparencySection'
+import { UiScaleSection } from './components/settings/UiScaleSection'
+import { PrivacySection } from './components/settings/PrivacySection'
 import { useSystemThemePreference } from './utils/systemTheme'
+import { useLanguageEffect } from './i18n/useLanguage'
+import { changeLanguage } from './i18n/config'
 import { useRenderingEnv } from './hooks/useRenderingEnv'
+import { DEFAULT_SETTINGS } from './utils/defaultSettings'
 
 const MIN_HISTORY_SIZE = 1
-const MAX_HISTORY_SIZE = 100_000
-
-const DEFAULT_SETTINGS: UserSettings = {
-  theme_mode: 'system',
-  dark_background_opacity: 0.7,
-  light_background_opacity: 0.7,
-  enable_smart_actions: true,
-  enable_ui_polish: true,
-  enable_dynamic_tray_icon: true,
-  max_history_size: 50,
-  custom_kaomojis: [],
-  ui_scale: 1,
-  auto_delete_interval: 0,
-  auto_delete_unit: 'hours',
-}
+const MAX_HISTORY_SIZE = 2_000
 
 type ThemeMode = 'system' | 'dark' | 'light'
 
@@ -42,246 +39,11 @@ function useThemeMode(themeMode: ThemeMode): boolean {
   return systemPrefersDark
 }
 
-// --- Icons Components ---
-const MonitorIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect width="20" height="14" x="2" y="3" rx="2" />
-    <line x1="8" x2="16" y1="21" y2="21" />
-    <line x1="12" x2="12" y1="17" y2="21" />
-  </svg>
-)
-
-const MoonIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-  </svg>
-)
-
-const SunIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="4" />
-    <path d="M12 2v2" />
-    <path d="M12 20v2" />
-    <path d="m4.93 4.93 1.41 1.41" />
-    <path d="m17.66 17.66 1.41 1.41" />
-    <path d="M2 12h2" />
-    <path d="M20 12h2" />
-    <path d="m6.34 17.66-1.41 1.41" />
-    <path d="m19.07 4.93-1.41 1.41" />
-  </svg>
-)
-
-const ResetIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-    <path d="M3 3v5h5" />
-  </svg>
-)
-
-// --- Keyboard Shortcuts Section ---
-
-interface KeyboardShortcutsSectionProps {
-  isDark: boolean
-}
-
-function KeyboardShortcutsSection({ isDark }: KeyboardShortcutsSectionProps) {
-  const [registering, setRegistering] = useState(false)
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  const handleRegister = async () => {
-    setRegistering(true)
-    setStatus('idle')
-    setErrorMessage(null)
-    try {
-      await invoke<string>('register_de_shortcut')
-      setStatus('success')
-    } catch (e) {
-      console.error('Failed to register shortcuts:', e)
-      setStatus('error')
-      setErrorMessage(String(e))
-    } finally {
-      setRegistering(false)
-    }
-  }
-
-  return (
-    <section
-      className={clsx(
-        'rounded-xl border shadow-sm overflow-hidden',
-        isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
-      )}
-    >
-      <div className="p-6 border-b border-inherit">
-        <div className="flex items-center gap-3 mb-1">
-          <div className={clsx('p-2 rounded-lg', isDark ? 'bg-white/5' : 'bg-gray-100')}>
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="2" y="4" width="20" height="16" rx="2" />
-              <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" />
-            </svg>
-          </div>
-          <h2 className="text-base font-semibold">Keyboard Shortcuts</h2>
-        </div>
-        <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-          Register the application shortcuts in your desktop environment
-        </p>
-      </div>
-
-      <div className="p-6 space-y-4">
-        {/* Shortcut list */}
-        <div
-          className={clsx(
-            'rounded-lg border divide-y text-sm font-mono',
-            isDark
-              ? 'border-white/10 divide-white/10 bg-black/20'
-              : 'border-gray-200 divide-gray-100 bg-gray-50'
-          )}
-        >
-          {[
-            { keys: 'Super + V', desc: 'Open Clipboard History' },
-            { keys: 'Ctrl + Alt + V', desc: 'Alternative shortcut' },
-            { keys: 'Super + .', desc: 'Open Emoji Picker' },
-          ].map(({ keys, desc }) => (
-            <div key={keys} className="flex items-center justify-between px-4 py-2.5">
-              <span
-                className={clsx(
-                  'px-2 py-0.5 rounded text-xs font-semibold',
-                  isDark ? 'bg-white/10 text-gray-200' : 'bg-gray-200 text-gray-700'
-                )}
-              >
-                {keys}
-              </span>
-              <span
-                className={clsx('text-xs font-sans', isDark ? 'text-gray-400' : 'text-gray-500')}
-              >
-                {desc}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <p className={clsx('text-xs leading-relaxed', isDark ? 'text-gray-500' : 'text-gray-400')}>
-          Shortcuts are only registered when you explicitly request it. If you removed a shortcut
-          from your system settings and it was re-added, use this button to re-register only the
-          ones you want.
-        </p>
-
-        {/* Status feedback */}
-        {status === 'success' && (
-          <div className="flex items-center gap-2 text-sm text-green-500">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
-            Shortcuts registered successfully!
-          </div>
-        )}
-        {status === 'error' && (
-          <div
-            className={clsx(
-              'text-xs rounded-lg p-3',
-              isDark ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-600'
-            )}
-          >
-            <p className="font-medium">Registration failed</p>
-            {errorMessage && <p className="mt-1 opacity-80">{errorMessage}</p>}
-          </div>
-        )}
-
-        {/* Action button */}
-        <button
-          id="register-shortkeys-btn"
-          onClick={handleRegister}
-          disabled={registering}
-          className={clsx(
-            'flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all',
-            'bg-win11-bg-accent text-white hover:opacity-90 active:scale-95',
-            'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100'
-          )}
-        >
-          {registering ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Registering...
-            </>
-          ) : (
-            <>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Register Shortkeys in System
-            </>
-          )}
-        </button>
-      </div>
-    </section>
-  )
-}
-
 /**
- * Settings App Component - Configuration UI for Win11 Clipboard History
+ * Settings App Component - Configuration UI for Windows 11 Style Clipboard History Manager.
+ *
+ * Owns the settings state and delegates each visual section to a dedicated
+ * component under `components/settings/` (single-responsibility sections).
  */
 function SettingsApp() {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS)
@@ -294,6 +56,10 @@ function SettingsApp() {
 
   // Rendering environment (NVIDIA / AppImage detection)
   const renderingEnv = useRenderingEnv()
+
+  const { t, i18n } = useTranslation()
+  // i18n
+  useLanguageEffect(i18n)
 
   // Apply theme to settings window itself
   const isDark = useThemeMode(settings.theme_mode)
@@ -310,7 +76,7 @@ function SettingsApp() {
   useEffect(() => {
     invoke<UserSettings>('get_user_settings')
       .then((loadedSettings) => {
-        setSettings(loadedSettings)
+        setSettings({ ...DEFAULT_SETTINGS, ...loadedSettings })
         setIsLoading(false)
       })
       .catch((err) => {
@@ -336,9 +102,13 @@ function SettingsApp() {
 
     // Hide main window when settings window closes
     return () => {
-      mainWindow.hide().catch(console.error)
-      unlistenClosePromise.then((unlisten) => unlisten())
-      unlistenSettingsPromise.then((unlisten) => unlisten())
+      void mainWindow.hide().catch(console.error)
+      void unlistenClosePromise.then((unlisten) => {
+        unlisten()
+      })
+      void unlistenSettingsPromise.then((unlisten) => {
+        unlisten()
+      })
     }
   }, [])
 
@@ -349,24 +119,33 @@ function SettingsApp() {
 
     try {
       await invoke('set_user_settings', { newSettings })
-      setSaveMessage('Saved')
+      setSaveMessage(t('settings_page.saved'))
       setTimeout(() => setSaveMessage(null), 2000)
     } catch (err) {
       console.error('Failed to save settings:', err)
-      setSaveMessage('Error saving')
+      setSaveMessage(t('settings_page.save_error'))
     } finally {
       setIsSaving(false)
     }
-  }, [])
+  }, [t])
 
-  // Centralized settings update helper
+  // Centralized settings update helper.
+  // The merged snapshot is computed outside the state updater (updaters must
+  // stay pure); a ref mirrors the latest state so rapid toggles never save a
+  // stale snapshot.
+  // به‌روزرسان متمرکز تنظیمات. تصویر ادغام‌شده خارج از updater محاسبه
+  // می‌شود (updater باید خالص بماند)؛ یک ref آخرین state را آینه می‌کند تا
+  // تغییرات سریع هرگز تصویر کهنه‌ای ذخیره نکنند.
+  const settingsRef = useRef(settings)
+  useEffect(() => {
+    settingsRef.current = settings
+  }, [settings])
+
   const updateSettings = useCallback(
     (partial: Partial<UserSettings>) => {
-      setSettings((prev) => {
-        const next = { ...prev, ...partial }
-        saveSettings(next)
-        return next
-      })
+      const next = { ...settingsRef.current, ...partial }
+      setSettings(next)
+      void saveSettings(next)
     },
     [saveSettings]
   )
@@ -381,6 +160,16 @@ function SettingsApp() {
     setSettings((prev) => ({ ...prev, dark_background_opacity: value }))
   }
 
+  // Handle light opacity change (visual only, no disk I/O)
+  const handleLightOpacityChange = (value: number) => {
+    setSettings((prev) => ({ ...prev, light_background_opacity: value }))
+  }
+
+  // Commit opacity changes to disk (called on mouseUp/touchEnd/keyUp)
+  const commitOpacityChange = () => {
+    void saveSettings(settings)
+  }
+
   const handleAutoDeleteValueChange = (value: string) => {
     // Only allow positive integers or 0
     const num = Number.parseInt(value)
@@ -388,30 +177,34 @@ function SettingsApp() {
       const interval = value === '' ? 0 : num
       const newSettings = { ...settings, auto_delete_interval: interval }
       setSettings(newSettings)
-      saveSettings(newSettings)
+      void saveSettings(newSettings)
     }
   }
 
   const handleAutoDeleteUnitChange = (unit: UserSettings['auto_delete_unit']) => {
     const newSettings = { ...settings, auto_delete_unit: unit }
     setSettings(newSettings)
-    saveSettings(newSettings)
+    void saveSettings(newSettings)
   }
 
-  // Handle light opacity change (visual only, no disk I/O)
-  const handleLightOpacityChange = (value: number) => {
-    setSettings((prev) => ({ ...prev, light_background_opacity: value }))
+  const handleUiScaleChange = (value: number) => {
+    setSettings((prev) => ({ ...prev, ui_scale: value }))
   }
 
-  // Commit opacity changes to disk (called on mouseUp/touchEnd)
-  const commitOpacityChange = () => {
-    saveSettings(settings)
+  const handleMaxHistoryChange = (value: number) => {
+    updateSettings({ max_history_size: value })
   }
 
   // Handle Feature Toggles
   const handleToggle = (key: BooleanSettingKey) => {
     // Type safe toggle
-    updateSettings({ [key]: !settings[key] } as Partial<UserSettings>)
+    updateSettings({ [key]: !settings[key] })
+  }
+
+  const handleLanguageChange = (lang: 'en' | 'fa') => {
+    updateSettings({ language: lang })
+    void changeLanguage(lang)
+    invoke('set_app_language', { lang }).catch(console.error)
   }
 
   // Custom Kaomoji Handlers
@@ -437,6 +230,15 @@ function SettingsApp() {
     [settings.custom_kaomojis, updateSettings]
   )
 
+  const handleReset = useCallback(async () => {
+    setSettings(DEFAULT_SETTINGS)
+    await saveSettings(DEFAULT_SETTINGS)
+    // Reset first run state to show setup wizard
+    await invoke('reset_first_run')
+    // Emit event to show wizard in main window
+    await emit('show-setup-wizard')
+  }, [saveSettings])
+
   // Handle window close
   const handleClose = async () => {
     try {
@@ -458,7 +260,7 @@ function SettingsApp() {
       >
         <div className="flex flex-col items-center gap-3">
           <div className="w-6 h-6 border-2 border-win11-bg-accent border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs opacity-60 font-medium">Loading preferences...</span>
+          <span className="text-xs opacity-60 font-medium">{t('settings_page.loading_prefs')}</span>
         </div>
       </div>
     )
@@ -467,7 +269,7 @@ function SettingsApp() {
   return (
     <div
       className={clsx(
-        'h-screen w-screen flex flex-col font-sans select-none',
+        'h-screen w-screen flex flex-col font-sans select-none animate-window-in',
         isDark
           ? 'bg-win11-bg-primary text-win11-text-primary'
           : 'bg-[#f0f3f9] text-win11Light-text-primary' // Slightly better light gray background
@@ -481,9 +283,9 @@ function SettingsApp() {
         )}
       >
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Personalization</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('settings_page.personalization')}</h1>
           <p className={clsx('text-sm mt-1', isDark ? 'text-gray-400' : 'text-gray-500')}>
-            Customize the look and feel of your clipboard history
+            {t('settings_page.personalization_desc')}
           </p>
         </div>
 
@@ -493,7 +295,7 @@ function SettingsApp() {
             <div
               className={clsx(
                 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium',
-                saveMessage?.includes('Error')
+                saveMessage === t('settings_page.save_error')
                   ? 'bg-red-500/10 text-red-500'
                   : isDark
                     ? 'bg-white/10 text-white'
@@ -503,7 +305,7 @@ function SettingsApp() {
               {isSaving && (
                 <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
               )}
-              {saveMessage || 'Saving...'}
+              {saveMessage || t('settings_page.saving')}
             </div>
           )}
         </div>
@@ -511,522 +313,55 @@ function SettingsApp() {
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto px-8 pb-8 space-y-6 custom-scrollbar">
-        {/* Theme Selection Card */}
-        <section
-          className={clsx(
-            'rounded-xl p-6 border shadow-sm transition-all',
-            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
-          )}
-        >
-          <div className="flex items-center gap-3 mb-5">
-            <div className={clsx('p-2 rounded-lg', isDark ? 'bg-white/5' : 'bg-gray-100')}>
-              {settings.theme_mode === 'dark' ? (
-                <MoonIcon />
-              ) : settings.theme_mode === 'light' ? (
-                <SunIcon />
-              ) : (
-                <MonitorIcon />
-              )}
-            </div>
-            <h2 className="text-base font-semibold">Appearance</h2>
-          </div>
+        <AppearanceSection
+          settings={settings}
+          isDark={isDark}
+          onThemeModeChange={handleThemeModeChange}
+          onToggle={handleToggle}
+          onLanguageChange={handleLanguageChange}
+        />
 
-          <div className="grid grid-cols-3 gap-4">
-            {(['system', 'light', 'dark'] as ThemeMode[]).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => handleThemeModeChange(mode)}
-                className={clsx(
-                  'group relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 outline-none focus:ring-2 focus:ring-win11-bg-accent/50',
-                  settings.theme_mode === mode
-                    ? 'border-win11-bg-accent bg-win11-bg-accent/5'
-                    : isDark
-                      ? 'border-transparent hover:bg-white/5 hover:border-white/10'
-                      : 'border-transparent hover:bg-gray-50 hover:border-gray-200'
-                )}
-              >
-                {/* Visual Representation of Theme */}
-                <div
-                  className={clsx(
-                    'w-full aspect-[16/10] rounded-lg shadow-sm flex overflow-hidden border',
-                    isDark ? 'border-white/10' : 'border-gray-200'
-                  )}
-                >
-                  {mode === 'system' && (
-                    <>
-                      <div className="flex-1 bg-[#f3f3f3]" />
-                      <div className="flex-1 bg-[#202020]" />
-                    </>
-                  )}
-                  {mode === 'light' && <div className="flex-1 bg-[#f3f3f3]" />}
-                  {mode === 'dark' && <div className="flex-1 bg-[#202020]" />}
-                </div>
+        <AutoDeleteSection
+          settings={settings}
+          isDark={isDark}
+          onIntervalChange={handleAutoDeleteValueChange}
+          onUnitChange={handleAutoDeleteUnitChange}
+        />
 
-                <div className="flex items-center gap-2">
-                  <span
-                    className={clsx(
-                      'text-sm font-medium capitalize',
-                      settings.theme_mode === mode
-                        ? 'text-win11-bg-accent'
-                        : isDark
-                          ? 'text-gray-300'
-                          : 'text-gray-700'
-                    )}
-                  >
-                    {mode === 'system' ? 'System' : mode}
-                  </span>
-                </div>
+        <TransparencySection
+          settings={settings}
+          isDark={isDark}
+          renderingEnv={renderingEnv}
+          onDarkOpacityChange={handleDarkOpacityChange}
+          onLightOpacityChange={handleLightOpacityChange}
+          onCommit={commitOpacityChange}
+        />
 
-                {/* Radio Circle Indicator */}
-                <div
-                  className={clsx(
-                    'absolute top-3 right-3 w-4 h-4 rounded-full border flex items-center justify-center transition-colors',
-                    settings.theme_mode === mode
-                      ? 'border-win11-bg-accent bg-win11-bg-accent'
-                      : isDark
-                        ? 'border-gray-600'
-                        : 'border-gray-300'
-                  )}
-                >
-                  {settings.theme_mode === mode && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
+        <UiScaleSection
+          settings={settings}
+          isDark={isDark}
+          onScaleChange={handleUiScaleChange}
+          onCommit={commitOpacityChange}
+        />
 
-          <div
-            className={clsx('mt-6 pt-6 border-t', isDark ? 'border-white/5' : 'border-gray-100')}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium">Dynamic Tray Icon</div>
-                <div className={clsx('text-xs mt-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                  Adapt tray icon color to system theme.
-                </div>
-              </div>
-              <Switch
-                checked={settings.enable_dynamic_tray_icon}
-                onChange={() => handleToggle('enable_dynamic_tray_icon')}
-                isDark={isDark}
-              />
-            </div>
-          </div>
-        </section>
+        <HistorySettingsSection
+          settings={settings}
+          isDark={isDark}
+          min={MIN_HISTORY_SIZE}
+          max={MAX_HISTORY_SIZE}
+          onMaxHistoryChange={handleMaxHistoryChange}
+        />
 
-        {/* Auto Delete Section */}
-        <section
-          className={clsx(
-            'rounded-xl p-6 border shadow-sm transition-all',
-            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
-          )}
-        >
-          <div className="flex items-center gap-3 mb-5">
-            <div className={clsx('p-2 rounded-lg', isDark ? 'bg-white/5' : 'bg-gray-100')}>
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                <line x1="10" x2="10" y1="11" y2="17" />
-                <line x1="14" x2="14" y1="11" y2="17" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-base font-semibold">Auto-delete History</h2>
-              <p className={clsx('text-xs mt-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                Automatically clear old clipboard items (except pinned)
-              </p>
-            </div>
-          </div>
+        <KaomojiSection
+          settings={settings}
+          isDark={isDark}
+          newKaomoji={newKaomoji}
+          onNewKaomojiChange={setNewKaomoji}
+          onAdd={addCustomKaomoji}
+          onRemove={removeCustomKaomojiAt}
+        />
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 flex flex-col gap-2">
-              <label className="text-xs font-medium opacity-60 ml-1">Time value</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  min="0"
-                  value={settings.auto_delete_interval || ''}
-                  placeholder="0 (Disabled)"
-                  onChange={(e) => handleAutoDeleteValueChange(e.target.value)}
-                  className={clsx(
-                    'w-full px-4 py-2.5 rounded-lg border outline-none transition-all font-medium',
-                    isDark
-                      ? 'bg-white/5 border-white/10 focus:border-win11-bg-accent text-white'
-                      : 'bg-gray-50 border-gray-200 focus:border-win11-bg-accent text-gray-800'
-                  )}
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 flex flex-col gap-2">
-              <label className="text-xs font-medium opacity-60 ml-1">Time unit</label>
-              <div className="flex gap-2">
-                {(['minutes', 'hours', 'days', 'weeks'] as const).map((unit) => (
-                  <button
-                    key={unit}
-                    onClick={() => handleAutoDeleteUnitChange(unit)}
-                    className={clsx(
-                      'flex-1 py-2.5 rounded-lg border transition-all text-xs font-semibold capitalize',
-                      settings.auto_delete_unit === unit
-                        ? 'bg-win11-bg-accent text-white border-win11-bg-accent'
-                        : isDark
-                          ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                    )}
-                  >
-                    {unit}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 p-3 rounded-lg bg-win11-bg-accent/5 border border-win11-bg-accent/10">
-            <p className="text-[11px] leading-relaxed opacity-70">
-              {settings.auto_delete_interval === 0 ? (
-                <span className="font-medium">Auto-delete is currently disabled.</span>
-              ) : (
-                <>
-                  Clipboard history items will be deleted after{' '}
-                  <span className="font-bold text-win11-bg-accent">
-                    {settings.auto_delete_interval} {settings.auto_delete_unit}
-                  </span>
-                  . Pinned items are never deleted.
-                </>
-              )}
-            </p>
-          </div>
-        </section>
-
-        {/* Transparency Section */}
-        <section
-          className={clsx(
-            'rounded-xl border shadow-sm overflow-hidden',
-            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60',
-            renderingEnv.transparency_disabled && 'opacity-60'
-          )}
-        >
-          <div className="p-6 border-b border-inherit">
-            <h2 className="text-base font-semibold mb-1">Window Transparency</h2>
-            <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-              Control the backdrop opacity intensity
-            </p>
-          </div>
-
-          {renderingEnv.transparency_disabled && (
-            <div
-              className={clsx(
-                'mx-6 mt-6 p-3 rounded-lg flex items-start gap-3 text-sm',
-                isDark ? 'bg-yellow-500/10 text-yellow-300' : 'bg-yellow-50 text-yellow-800'
-              )}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="flex-shrink-0 mt-0.5"
-              >
-                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
-                <path d="M12 9v4" />
-                <path d="M12 17h.01" />
-              </svg>
-              <div>
-                <p className="font-medium text-xs">{renderingEnv.reason}</p>
-                <p
-                  className={clsx(
-                    'text-[11px] mt-1',
-                    isDark ? 'text-yellow-400/70' : 'text-yellow-700'
-                  )}
-                >
-                  Transparency and rounded window corners have been automatically disabled to
-                  prevent rendering artefacts.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="p-6 space-y-8">
-            {/* Dark Mode Slider */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <label htmlFor="dark-opacity" className="text-sm font-medium">
-                  Dark Mode Opacity
-                </label>
-                <div
-                  className={clsx(
-                    'px-2 py-1 rounded text-xs font-mono font-medium',
-                    isDark ? 'bg-black/20' : 'bg-gray-100'
-                  )}
-                >
-                  {renderingEnv.transparency_disabled
-                    ? '100%'
-                    : `${Math.round(settings.dark_background_opacity * 100)}%`}
-                </div>
-              </div>
-              <input
-                id="dark-opacity"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={renderingEnv.transparency_disabled ? 1 : settings.dark_background_opacity}
-                onChange={(e) => handleDarkOpacityChange(Number.parseFloat(e.target.value))}
-                onMouseUp={commitOpacityChange}
-                onTouchEnd={commitOpacityChange}
-                disabled={renderingEnv.transparency_disabled}
-                className={clsx(
-                  'w-full h-1.5 bg-gray-200 rounded-lg appearance-none dark:bg-gray-700 accent-win11-bg-accent',
-                  renderingEnv.transparency_disabled ? 'cursor-not-allowed' : 'cursor-pointer'
-                )}
-              />
-            </div>
-
-            {/* Light Mode Slider */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <label htmlFor="light-opacity" className="text-sm font-medium">
-                  Light Mode Opacity
-                </label>
-                <div
-                  className={clsx(
-                    'px-2 py-1 rounded text-xs font-mono font-medium',
-                    isDark ? 'bg-black/20' : 'bg-gray-100'
-                  )}
-                >
-                  {renderingEnv.transparency_disabled
-                    ? '100%'
-                    : `${Math.round(settings.light_background_opacity * 100)}%`}
-                </div>
-              </div>
-              <input
-                id="light-opacity"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={renderingEnv.transparency_disabled ? 1 : settings.light_background_opacity}
-                onChange={(e) => handleLightOpacityChange(Number.parseFloat(e.target.value))}
-                onMouseUp={commitOpacityChange}
-                onTouchEnd={commitOpacityChange}
-                disabled={renderingEnv.transparency_disabled}
-                className={clsx(
-                  'w-full h-1.5 bg-gray-200 rounded-lg appearance-none dark:bg-gray-700 accent-win11-bg-accent',
-                  renderingEnv.transparency_disabled ? 'cursor-not-allowed' : 'cursor-pointer'
-                )}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* UI Scale Section */}
-        <section
-          className={clsx(
-            'rounded-xl border shadow-sm overflow-hidden',
-            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
-          )}
-        >
-          <div className="p-6 border-b border-inherit">
-            <h2 className="text-base font-semibold mb-1">UI Scale</h2>
-            <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-              Adjust the clipboard window size for your display
-            </p>
-          </div>
-
-          <div className="p-6 space-y-4">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <label htmlFor="ui-scale" className="text-sm font-medium">
-                  Clipboard Window Scale
-                </label>
-                <div
-                  className={clsx(
-                    'px-2 py-1 rounded text-xs font-mono font-medium',
-                    isDark ? 'bg-black/20' : 'bg-gray-100'
-                  )}
-                >
-                  {Math.round(settings.ui_scale * 100)}%
-                </div>
-              </div>
-              <input
-                id="ui-scale"
-                type="range"
-                min="0.5"
-                max="2"
-                step="0.1"
-                value={settings.ui_scale}
-                onChange={(e) => {
-                  const value = Number.parseFloat(e.target.value)
-                  setSettings((prev) => ({ ...prev, ui_scale: value }))
-                }}
-                onMouseUp={commitOpacityChange}
-                onTouchEnd={commitOpacityChange}
-                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-win11-bg-accent"
-              />
-              <p className={clsx('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-                This setting only affects the clipboard popup, not this settings window
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* History Settings Section */}
-        <section
-          className={clsx(
-            'rounded-xl border shadow-sm overflow-hidden',
-            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
-          )}
-        >
-          <div className="p-6 border-b border-inherit">
-            <h2 className="text-base font-semibold mb-1">History Settings</h2>
-            <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-              Configure clipboard history behavior
-            </p>
-          </div>
-
-          <div className="p-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <label htmlFor="max-history" className="text-sm font-medium">
-                  Maximum History Size
-                </label>
-                <p className={clsx('text-xs mt-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                  Number of clipboard items to keep ({MIN_HISTORY_SIZE} -{' '}
-                  {MAX_HISTORY_SIZE.toLocaleString()})
-                </p>
-              </div>
-              <input
-                id="max-history"
-                type="number"
-                min={MIN_HISTORY_SIZE}
-                max={MAX_HISTORY_SIZE}
-                value={settings.max_history_size}
-                onChange={(e) => {
-                  const raw = e.target.value
-                  const parsed = Number.parseInt(raw, 10)
-                  // If parsing fails (e.g. empty input), preserve the current setting
-                  // instead of jumping to the maximum value.
-                  const safe = Number.isNaN(parsed) ? settings.max_history_size : parsed
-                  const value = Math.max(MIN_HISTORY_SIZE, Math.min(MAX_HISTORY_SIZE, safe))
-                  updateSettings({ max_history_size: value })
-                }}
-                className={clsx(
-                  'w-28 text-right font-mono border rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-win11-bg-accent/50',
-                  'input-number-compact no-number-spinner',
-                  isDark
-                    ? 'bg-white/5 border-white/10 text-white'
-                    : 'bg-gray-50 border-gray-200 text-gray-900'
-                )}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Custom Kaomoji Section */}
-        <section
-          className={clsx(
-            'rounded-xl border shadow-sm overflow-hidden',
-            isDark ? 'bg-win11-bg-secondary border-white/5' : 'bg-white border-gray-200/60'
-          )}
-        >
-          <div className="p-6 border-b border-inherit">
-            <h2 className="text-base font-semibold mb-1">Custom Kaomoji</h2>
-            <p className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-              Add your own personal kaomojis to the collection
-            </p>
-          </div>
-
-          <div className="p-6 space-y-6">
-            {/* Add New */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newKaomoji}
-                onChange={(e) => setNewKaomoji(e.target.value)}
-                placeholder="( ˘ ³˘)♥"
-                className={clsx(
-                  'flex-1 px-3 py-2 rounded-md border text-sm focus:outline-none focus:ring-2 focus:ring-win11-bg-accent/50 transition-all',
-                  isDark
-                    ? 'bg-white/5 border-white/10 text-white placeholder-gray-500'
-                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                )}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    addCustomKaomoji()
-                  }
-                }}
-              />
-              <button
-                onClick={addCustomKaomoji}
-                className="px-4 py-2 bg-win11-bg-accent text-white rounded-md text-sm font-medium hover:opacity-90 active:scale-95 transition-all"
-              >
-                Add
-              </button>
-            </div>
-
-            {/* List */}
-            {settings.custom_kaomojis.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                {settings.custom_kaomojis.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className={clsx(
-                      'group flex items-center justify-between px-3 py-2 rounded-md border transition-colors',
-                      isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
-                    )}
-                  >
-                    <span className="font-mono text-sm truncate mr-2" title={item.text}>
-                      {item.text}
-                    </span>
-                    <button
-                      onClick={() => removeCustomKaomojiAt(idx)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:bg-red-500/10 rounded transition-all"
-                      title="Delete"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M18 6 6 18" />
-                        <path d="m6 6 12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div
-                className={clsx(
-                  'text-center py-4 text-sm italic opacity-60',
-                  isDark ? 'text-gray-500' : 'text-gray-400'
-                )}
-              >
-                No custom kaomojis yet
-              </div>
-            )}
-          </div>
-        </section>
+        <PrivacySection settings={settings} isDark={isDark} onToggle={handleToggle} />
 
         {/* Features Section */}
         <FeaturesSection settings={settings} isDark={isDark} onToggle={handleToggle} />
@@ -1035,26 +370,7 @@ function SettingsApp() {
         <KeyboardShortcutsSection isDark={isDark} />
 
         {/* Reset Section */}
-        <div className="flex justify-end pt-2">
-          <button
-            onClick={async () => {
-              setSettings(DEFAULT_SETTINGS)
-              await saveSettings(DEFAULT_SETTINGS)
-              // Reset first run state to show setup wizard
-              await invoke('reset_first_run')
-              // Emit event to show wizard in main window
-              await emit('show-setup-wizard')
-            }}
-            className={clsx(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all',
-              'hover:bg-red-50 hover:text-red-600',
-              isDark ? 'text-gray-400 hover:bg-red-500/10 hover:text-red-400' : 'text-gray-500'
-            )}
-          >
-            <ResetIcon />
-            Reset to defaults
-          </button>
-        </div>
+        <ResetSection isDark={isDark} onReset={() => void handleReset()} />
       </main>
 
       {/* Footer */}
@@ -1065,10 +381,10 @@ function SettingsApp() {
         )}
       >
         <button
-          onClick={handleClose}
+          onClick={() => void handleClose()}
           className="px-8 py-2.5 bg-win11-bg-accent hover:opacity-90 active:scale-95 text-white rounded-lg text-sm font-semibold shadow-sm transition-all"
         >
-          Done
+          {i18n.t('settings_page.done')}
         </button>
       </footer>
     </div>

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# commit-msg gate — enforce Conventional Commits.
+# گیت پیام commit — اعمال Conventional Commits.
+#
+# Format: type[!(scope)]: subject   (e.g. "feat(paste): add ticket TTL")
+set -euo pipefail
+
+commit_file="$1"
+first="$(head -n1 "$commit_file")"
+
+# Merge commits and release chores are exempt.
+# کامیت‌های merge و release exempt هستند.
+if [[ "$first" =~ ^Merge\  ]] || [[ "$first" =~ ^Release\  ]] || [[ "$first" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+  exit 0
+fi
+
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .{1,100}($|\.?$)'
+
+if ! [[ "$first" =~ $pattern ]]; then
+  cat >&2 <<'MSG'
+✗ Invalid commit message / پیام commit نامعتبر است:
+    $first
+
+Expected / مورد انتظار:
+    <type>(<scope>)?: <subject>
+    types: feat fix docs style refactor perf test build ci chore revert
+Examples / نمونه‌ها:
+    feat(paste): add one-shot paste tickets
+    fix: clamp history page size (ADR-0007)
+    docs(readme): sync supply-chain claims with CI
+MSG
+  exit 1
+fi

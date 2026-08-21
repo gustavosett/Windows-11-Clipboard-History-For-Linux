@@ -48,7 +48,7 @@ export function useEmojiPicker() {
         setRecentEmojis([])
       }
     }
-    loadRecent()
+    void loadRecent()
   }, [allEmojis])
 
   // Filtered emojis based on search or category

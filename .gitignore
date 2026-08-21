@@ -9,6 +9,7 @@ src-tauri/target/
 # IDE
 .vscode/
 .idea/
+.kilo/
 *.swp
 *.swo
 *~
@@ -33,7 +34,7 @@ coverage/
 
 # Tauri
 src-tauri/WixTools/
-src-tauri/Cargo.lock
 src-tauri/gen/
 
 temp/*
+.flatpak-builder

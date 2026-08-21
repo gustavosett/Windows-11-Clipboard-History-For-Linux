@@ -1,115 +1,36 @@
-import { invoke } from '@tauri-apps/api/core'
 import { useState, useEffect } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
+import { useLanguageEffect } from '../i18n/useLanguage'
 import { useAutostart } from '../hooks/useAutostart'
-import { getTertiaryBackgroundStyle } from '../utils/themeUtils'
 import { useSystemThemePreference } from '../utils/systemTheme'
-import {
-  CheckCircle,
-  AlertTriangle,
-  Shield,
-  Rocket,
-  Keyboard,
-  Settings,
-  Copy,
-  AlertCircle,
-  Zap,
-} from 'lucide-react'
-
-interface PermissionStatus {
-  uinput_accessible: boolean
-  uinput_path: string
-  user_in_input_group: boolean
-  suggestion: string
-}
-
-interface ShortcutToolsStatus {
-  desktop_environment: string
-  gsettings_available: boolean
-  kde_tools_available: boolean
-  xfce_tools_available: boolean
-  can_register_automatically: boolean
-  manual_instructions: string
-  has_conflicts: boolean
-  conflict_count: number
-  can_auto_resolve_conflicts: boolean
-}
-
-interface ShortcutConflict {
-  binding: string
-  current_action: string
-  owner: string
-  resolution_command: string | null
-  resolution_steps: string
-}
-
-interface ConflictDetectionResult {
-  desktop_environment: string
-  conflicts: ShortcutConflict[]
-  can_auto_resolve: boolean
-  message: string
-}
+import { LanguageSwitcher } from './setup/LanguageSwitcher'
+import { WelcomeStep } from './setup/WelcomeStep'
+import { PermissionsStep } from './setup/PermissionsStep'
+import { ShortcutStep } from './setup/ShortcutStep'
+import { AutostartStep } from './setup/AutostartStep'
+import { DoneStep } from './setup/DoneStep'
+import { useSetupChecks } from './setup/useSetupChecks'
 
 interface SetupWizardProps {
   readonly onComplete: () => void
 }
 
-interface WizardButtonProps {
-  id: string
-  onClick: () => void
-  children: React.ReactNode
-  disabled?: boolean
-  primary?: boolean
-  hoveredButton: string | null
-  setHoveredButton: (id: string | null) => void
-  isDark: boolean
-  tertiaryOpacity: number
-}
+const TOTAL_STEPS = 5
 
-const WizardButton = ({
-  id,
-  onClick,
-  children,
-  disabled = false,
-  primary = false,
-  hoveredButton,
-  setHoveredButton,
-  isDark,
-  tertiaryOpacity,
-}: WizardButtonProps) => {
-  const isHovered = hoveredButton === id
-
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => setHoveredButton(id)}
-      onMouseLeave={() => setHoveredButton(null)}
-      className={clsx(
-        'px-5 py-2.5 rounded-win11 font-medium transition-all duration-150',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
-        'active:scale-[0.98]',
-        primary
-          ? 'text-win11-bg-accent'
-          : isDark
-            ? 'text-win11-text-secondary'
-            : 'text-win11Light-text-secondary'
-      )}
-      style={
-        isHovered && !disabled ? getTertiaryBackgroundStyle(isDark, tertiaryOpacity) : undefined
-      }
-    >
-      {children}
-    </button>
-  )
-}
-
+/**
+ * First-run setup wizard orchestrator. Each step renders itself
+ * (see `./setup/*`); this component owns navigation, the shared theme
+ * context, and the long-running actions (permission fix, shortcut
+ * registration, conflict resolution, autostart).
+ * / هماهنگ‌کنندهٔ جادوگر راه‌اندازی اولیه؛ هر گام خودش را رسم می‌کند و
+ * این مؤلفه مالک ناوبری، زمینهٔ تم و عملیات طولانی است.
+ */
 export function SetupWizard({ onComplete }: SetupWizardProps) {
+  const { t, i18n } = useTranslation()
+  useLanguageEffect(i18n)
   const [step, setStep] = useState(0)
-  const [permissions, setPermissions] = useState<PermissionStatus | null>(null)
-  const [shortcutTools, setShortcutTools] = useState<ShortcutToolsStatus | null>(null)
-  const [conflicts, setConflicts] = useState<ConflictDetectionResult | null>(null)
   const [fixing, setFixing] = useState(false)
   const [fixError, setFixError] = useState<string | null>(null)
   const [registeringShortcut, setRegisteringShortcut] = useState(false)
@@ -123,24 +44,12 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   const { enableAutostart } = useAutostart()
   const isDark = useSystemThemePreference()
 
+  const { permissions, shortcutTools, conflicts, checkPermissions, checkShortcutTools, checkConflicts } =
+    useSetupChecks()
+
   // Fixed opacity for the wizard (similar to main app default)
   const tertiaryOpacity = 0.85
-
-  // Local wrapper to reduce prop drilling on every WizardButton usage
-  const Button = (
-    props: Omit<
-      WizardButtonProps,
-      'hoveredButton' | 'setHoveredButton' | 'isDark' | 'tertiaryOpacity'
-    >
-  ) => (
-    <WizardButton
-      {...props}
-      hoveredButton={hoveredButton}
-      setHoveredButton={setHoveredButton}
-      isDark={isDark}
-      tertiaryOpacity={tertiaryOpacity}
-    />
-  )
+  const buttonProps = { hoveredButton, setHoveredButton, isDark, tertiaryOpacity }
 
   useEffect(() => {
     if (isDark) {
@@ -150,37 +59,12 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     }
   }, [isDark])
 
-  useEffect(() => {
-    checkPermissions()
-    checkShortcutTools()
-    checkConflicts()
-  }, [])
-
-  const checkPermissions = async () => {
-    try {
-      const status = await invoke<PermissionStatus>('check_permissions')
-      setPermissions(status)
-    } catch (e) {
-      console.error('Failed to check permissions:', e)
-    }
-  }
-
-  const checkShortcutTools = async () => {
-    try {
-      const status = await invoke<ShortcutToolsStatus>('check_shortcut_tools')
-      setShortcutTools(status)
-    } catch (e) {
-      console.error('Failed to check shortcut tools:', e)
-    }
-  }
-
-  const checkConflicts = async () => {
-    try {
-      const result = await invoke<ConflictDetectionResult>('detect_conflicts')
-      setConflicts(result)
-    } catch (e) {
-      console.error('Failed to check conflicts:', e)
-    }
+  const localizedPermissionError = (error: unknown) => {
+    const raw = String(error)
+    const code = ['pkexec_missing', 'setfacl_missing', 'permission_fix_failed'].find((candidate) =>
+      raw.includes(candidate)
+    )
+    return code ? t(`setup.${code}`) : t('setup.permission_fix_failed')
   }
 
   const handleResolveConflicts = async () => {
@@ -194,7 +78,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
       await checkShortcutTools()
     } catch (e) {
       console.error('Failed to resolve conflicts:', e)
-      setConflictError(String(e))
+      setConflictError(t('setup.conflicts_failed_detail'))
     } finally {
       setResolvingConflicts(false)
     }
@@ -208,7 +92,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
       await checkPermissions()
     } catch (e) {
       console.error('Failed to fix permissions:', e)
-      setFixError(String(e))
+      setFixError(localizedPermissionError(e))
     } finally {
       setFixing(false)
     }
@@ -233,425 +117,17 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     setStep(4)
   }
 
-  const handleComplete = async () => {
-    try {
-      await invoke('mark_first_run_complete')
-    } catch (e) {
-      console.error('Failed to mark first run complete:', e)
-    }
+  const handleComplete = () => {
+    // The setup-only `finish_setup` command atomically persists completion.
+    // فرمان setup-only با نام `finish_setup` تکمیل را اتمیک ذخیره می‌کند.
     onComplete()
   }
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+    void navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
-
-  // Status message styles
-  const statusCardClass = (type: 'success' | 'warning' | 'error') =>
-    clsx(
-      'p-4 rounded-win11 flex items-start gap-3 text-sm',
-      type === 'success' &&
-        (isDark
-          ? 'bg-win11-success/15 text-win11-success border border-win11-success/20'
-          : 'bg-green-50 text-green-700 border border-green-200'),
-      type === 'warning' &&
-        (isDark
-          ? 'bg-win11-warning/15 text-win11-warning border border-win11-warning/20'
-          : 'bg-amber-50 text-amber-700 border border-amber-200'),
-      type === 'error' &&
-        (isDark
-          ? 'bg-win11-error/15 text-win11-error border border-win11-error/20'
-          : 'bg-red-50 text-red-700 border border-red-200')
-    )
-
-  const infoCardClass = clsx(
-    'p-3 rounded-win11',
-    isDark
-      ? 'bg-win11-bg-tertiary/50 border border-win11-border-subtle'
-      : 'bg-win11Light-bg-tertiary/50 border border-win11Light-border'
-  )
-
-  const steps = [
-    // Step 0: Welcome
-    <div key="welcome" className="text-center">
-      <div className="mb-6">
-        <div
-          className={clsx(
-            'w-16 h-16 mx-auto rounded-full flex items-center justify-center',
-            isDark ? 'bg-win11-bg-tertiary' : 'bg-win11Light-bg-tertiary'
-          )}
-        >
-          <Rocket
-            className={clsx(
-              'w-8 h-8',
-              isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-            )}
-          />
-        </div>
-      </div>
-      <h2
-        className={clsx(
-          'text-xl font-semibold mb-2',
-          isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
-        )}
-      >
-        Welcome to Clipboard History
-      </h2>
-      <p
-        className={clsx(
-          'text-sm mb-8',
-          isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-        )}
-      >
-        A Windows 11-style clipboard manager for Linux.
-        <br />
-        Let's set up a few things to get you started.
-      </p>
-      <Button id="start" onClick={() => setStep(1)} primary>
-        Get Started
-      </Button>
-    </div>,
-
-    // Step 1: Permissions
-    <div key="permissions">
-      <div className="text-center mb-6">
-        <div
-          className={clsx(
-            'w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-4',
-            isDark ? 'bg-win11-bg-tertiary' : 'bg-win11Light-bg-tertiary'
-          )}
-        >
-          <Shield
-            className={clsx(
-              'w-7 h-7',
-              isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-            )}
-          />
-        </div>
-        <h2
-          className={clsx(
-            'text-lg font-semibold mb-1',
-            isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
-          )}
-        >
-          Input Permissions
-        </h2>
-        <p
-          className={clsx(
-            'text-sm',
-            isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-          )}
-        >
-          Required to simulate Ctrl+V for pasting.
-        </p>
-      </div>
-
-      {permissions && (
-        <div
-          className={clsx(
-            'mb-4',
-            statusCardClass(permissions.uinput_accessible ? 'success' : 'warning')
-          )}
-        >
-          {permissions.uinput_accessible ? (
-            <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          ) : (
-            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          )}
-          <span>{permissions.suggestion}</span>
-        </div>
-      )}
-
-      {fixError && <div className={clsx('mb-4', statusCardClass('error'))}>{fixError}</div>}
-
-      <div className="flex gap-3 justify-center">
-        {!permissions?.uinput_accessible && (
-          <Button id="fix" onClick={handleFixPermissions} disabled={fixing}>
-            {fixing ? 'Fixing...' : 'Fix Now'}
-          </Button>
-        )}
-        <Button id="perm-continue" onClick={() => setStep(2)} primary>
-          {permissions?.uinput_accessible ? 'Continue' : 'Skip'}
-        </Button>
-      </div>
-    </div>,
-
-    // Step 2: Shortcut Configuration
-    <div key="shortcut">
-      <div className="text-center mb-6">
-        <div
-          className={clsx(
-            'w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-4',
-            isDark ? 'bg-win11-bg-tertiary' : 'bg-win11Light-bg-tertiary'
-          )}
-        >
-          <Keyboard
-            className={clsx(
-              'w-7 h-7',
-              isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-            )}
-          />
-        </div>
-        <h2
-          className={clsx(
-            'text-lg font-semibold mb-1',
-            isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
-          )}
-        >
-          Keyboard Shortcut
-        </h2>
-        <p
-          className={clsx(
-            'text-sm',
-            isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-          )}
-        >
-          Set up{' '}
-          <kbd
-            className={clsx(
-              'px-2 py-0.5 rounded text-xs font-mono',
-              isDark ? 'bg-win11-bg-tertiary' : 'bg-win11Light-bg-tertiary'
-            )}
-          >
-            Super + V
-          </kbd>{' '}
-          to open clipboard.
-        </p>
-      </div>
-
-      {shortcutTools && (
-        <div className={clsx('mb-4', infoCardClass)}>
-          <div
-            className={clsx(
-              'flex items-center gap-2 text-sm',
-              isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-            )}
-          >
-            <Settings className="w-4 h-4" />
-            <span>
-              Detected:{' '}
-              <strong
-                className={isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'}
-              >
-                {shortcutTools.desktop_environment}
-              </strong>
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Conflict Warning */}
-      {conflicts && conflicts.conflicts.length > 0 && !conflictsResolved && (
-        <div className={clsx('mb-4', statusCardClass('warning'))}>
-          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="font-medium mb-1">
-              {conflicts.conflicts.length} shortcut conflict
-              {conflicts.conflicts.length > 1 ? 's' : ''} detected
-            </p>
-            <p className="text-xs opacity-90 mb-2">
-              Super+V is already used by {conflicts.conflicts[0].owner} for "
-              {conflicts.conflicts[0].current_action}"
-            </p>
-            {conflicts.can_auto_resolve && (
-              <div className="space-y-1">
-                <Button
-                  id="resolve-conflicts"
-                  onClick={handleResolveConflicts}
-                  disabled={resolvingConflicts}
-                >
-                  <span className="flex items-center gap-2">
-                    <Zap className="w-4 h-4" />
-                    {resolvingConflicts ? 'Resolving...' : 'Auto-Fix Conflicts'}
-                  </span>
-                </Button>
-                <p className="text-xs opacity-60">
-                  This will comment out conflicting lines in your config. A backup will be created.
-                </p>
-              </div>
-            )}
-            {!conflicts.can_auto_resolve && (
-              <p className="text-xs opacity-75 mt-1">
-                Manual resolution required. See instructions below.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {conflictsResolved && (
-        <div className={clsx('mb-4', statusCardClass('success'))}>
-          <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <span>Conflicts resolved! Super+V is now available.</span>
-        </div>
-      )}
-
-      {conflictError && (
-        <div className={clsx('mb-4', statusCardClass('error'))}>
-          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">Failed to resolve conflicts</p>
-            <p className="text-xs opacity-90">{conflictError}</p>
-          </div>
-        </div>
-      )}
-
-      {shortcutRegistered && (
-        <div className={clsx('mb-4', statusCardClass('success'))}>
-          <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <span>Shortcut registered successfully!</span>
-        </div>
-      )}
-
-      {showManualInstructions && shortcutTools && (
-        <div className="mb-4 space-y-3">
-          <div className={statusCardClass('warning')}>
-            <div>
-              <p className="font-medium mb-2">Manual Setup Required:</p>
-              <p className="whitespace-pre-line opacity-90 text-xs">
-                {shortcutTools.manual_instructions}
-              </p>
-            </div>
-          </div>
-          <Button
-            id="copy-path"
-            onClick={() => copyToClipboard('/usr/bin/win11-clipboard-history')}
-          >
-            <span className="flex items-center justify-center gap-2">
-              <Copy className="w-4 h-4" />
-              {copied ? 'Copied!' : 'Copy command path'}
-            </span>
-          </Button>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-2 items-center">
-        {shortcutTools?.can_register_automatically &&
-          !shortcutRegistered &&
-          !showManualInstructions && (
-            <Button
-              id="register"
-              onClick={handleRegisterShortcut}
-              disabled={registeringShortcut}
-              primary
-            >
-              {registeringShortcut ? 'Registering...' : 'Register Automatically'}
-            </Button>
-          )}
-
-        {!shortcutTools?.can_register_automatically && !showManualInstructions && (
-          <Button id="show-manual" onClick={() => setShowManualInstructions(true)}>
-            Show Manual Instructions
-          </Button>
-        )}
-
-        <Button
-          id="shortcut-continue"
-          onClick={() => setStep(3)}
-          primary={shortcutRegistered || showManualInstructions}
-        >
-          {shortcutRegistered || showManualInstructions ? 'Continue' : 'Skip'}
-        </Button>
-      </div>
-    </div>,
-
-    // Step 3: Autostart
-    <div key="autostart">
-      <div className="text-center mb-6">
-        <div
-          className={clsx(
-            'w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-4',
-            isDark ? 'bg-win11-bg-tertiary' : 'bg-win11Light-bg-tertiary'
-          )}
-        >
-          <Rocket
-            className={clsx(
-              'w-7 h-7',
-              isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-            )}
-          />
-        </div>
-        <h2
-          className={clsx(
-            'text-lg font-semibold mb-1',
-            isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
-          )}
-        >
-          Start on Login?
-        </h2>
-        <p
-          className={clsx(
-            'text-sm',
-            isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-          )}
-        >
-          Start automatically when you log in?
-        </p>
-      </div>
-
-      <div className="flex gap-3 justify-center">
-        <Button id="enable-autostart" onClick={handleEnableAutostart} primary>
-          Yes, enable
-        </Button>
-        <Button id="skip-autostart" onClick={() => setStep(4)}>
-          No thanks
-        </Button>
-      </div>
-    </div>,
-
-    // Step 4: Done
-    <div key="done" className="text-center">
-      <div className="mb-6">
-        <div
-          className={clsx(
-            'w-16 h-16 mx-auto rounded-full flex items-center justify-center',
-            isDark ? 'bg-win11-success/20' : 'bg-green-100'
-          )}
-        >
-          <CheckCircle className="w-8 h-8 text-win11-success" />
-        </div>
-      </div>
-      <h2
-        className={clsx(
-          'text-xl font-semibold mb-2',
-          isDark ? 'text-win11-text-primary' : 'text-win11Light-text-primary'
-        )}
-      >
-        You're all set!
-      </h2>
-      <p
-        className={clsx(
-          'text-sm mb-4',
-          isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
-        )}
-      >
-        Press the shortcut anytime to open clipboard history.
-      </p>
-      <div className="flex items-center justify-center gap-2 mb-6">
-        <Keyboard
-          className={clsx(
-            'w-4 h-4',
-            isDark ? 'text-win11-text-tertiary' : 'text-win11Light-text-secondary'
-          )}
-        />
-        <kbd
-          className={clsx(
-            'px-3 py-1.5 rounded-win11 font-mono text-sm',
-            isDark
-              ? 'bg-win11-bg-tertiary text-win11-text-primary border border-win11-border-subtle'
-              : 'bg-win11Light-bg-tertiary text-win11Light-text-primary border border-win11Light-border'
-          )}
-        >
-          Super + V
-        </kbd>
-      </div>
-      <Button id="finish" onClick={handleComplete} primary>
-        Start Using
-      </Button>
-    </div>,
-  ]
 
   const getProgressDotClass = (i: number) => {
     if (i === step) return 'bg-win11-bg-accent w-5'
@@ -668,23 +144,65 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   return (
     <div
       className={clsx(
-        'h-full w-full flex flex-col items-center justify-center p-6',
+        'relative h-full w-full flex flex-col items-center justify-center p-6 animate-window-in',
         isDark
           ? 'bg-win11-bg-primary text-win11-text-primary'
           : 'bg-win11Light-bg-primary text-win11Light-text-primary'
       )}
     >
-      <div className="w-full max-w-sm">
-        {steps[step]}
+      <LanguageSwitcher isDark={isDark} />
 
-        {/* Progress dots */}
+      <div className="w-full max-w-sm">
+        {step === 0 && <WelcomeStep {...buttonProps} onStart={() => setStep(1)} />}
+        {step === 1 && (
+          <PermissionsStep
+            {...buttonProps}
+            permissions={permissions}
+            fixError={fixError}
+            fixing={fixing}
+            onFix={() => void handleFixPermissions()}
+            onContinue={() => setStep(2)}
+          />
+        )}
+        {step === 2 && (
+          <ShortcutStep
+            {...buttonProps}
+            shortcutTools={shortcutTools}
+            conflicts={conflicts}
+            conflictsResolved={conflictsResolved}
+            conflictError={conflictError}
+            resolvingConflicts={resolvingConflicts}
+            registeringShortcut={registeringShortcut}
+            shortcutRegistered={shortcutRegistered}
+            showManualInstructions={showManualInstructions}
+            copied={copied}
+            onResolveConflicts={() => void handleResolveConflicts()}
+            onRegisterShortcut={() => void handleRegisterShortcut()}
+            onShowManualInstructions={() => setShowManualInstructions(true)}
+            onCopyCommand={() =>
+              copyToClipboard('/usr/bin/windows-11-style-clipboard-history-manager')
+            }
+            onContinue={() => setStep(3)}
+          />
+        )}
+        {step === 3 && (
+          <AutostartStep
+            {...buttonProps}
+            onEnable={() => void handleEnableAutostart()}
+            onSkip={() => setStep(4)}
+          />
+        )}
+        {step === 4 && <DoneStep {...buttonProps} onFinish={handleComplete} />}
+
+        {/* Progress dots / نقطه‌های پیشرفت */}
         <div className="flex justify-center gap-2 mt-8">
-          {steps.map((_, i) => (
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
             <button
               key={`dot-${i}`}
               onClick={() => i < step && setStep(i)}
               disabled={i >= step}
-              aria-label={`Step ${i + 1}`}
+              aria-label={t('setup.step_label', { step: i + 1 })}
+              aria-current={i === step ? 'step' : undefined}
               className={clsx(
                 'h-1.5 w-1.5 rounded-full transition-all duration-200',
                 getProgressDotClass(i)

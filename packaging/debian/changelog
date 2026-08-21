@@ -1,0 +1,59 @@
+windows-11-style-clipboard-history-manager (2.5.0-1) unstable; urgency=medium
+
+  * Activate live blocking CI/release (audit, deny, coverage, cargo test, SHA256SUMS, SPDX, SLSA).
+  * Default build compiles without gif-search/reqwest; GIF commands stubbed.
+  * Paste injection gated to the main window; paste ticket no longer a no-op.
+  * Encrypted image files at rest; shared net_policy; expanded secret filter.
+  * Per-window Tauri capabilities; tighter AppArmor /tmp rules.
+
+ -- Mahdi Arts <mahdi-arts@users.noreply.github.com>  Fri, 21 Aug 2026 18:00:00 +0330
+
+windows-11-style-clipboard-history-manager (2.4.0-1) unstable; urgency=medium
+
+  * Fail-closed key load (no ephemeral re-key) and AEAD decrypt errors.
+  * Default IPC pagination (get_history_page) wired into the UI.
+  * GIF/Tenor HTTP client behind --features gif-search.
+  * Hardened CI/release: blocking audits, SHA256SUMS, SPDX, SLSA, Mahdi-Arts URLs.
+  * Per-DE shortcut backends (KDE/XFCE/COSMIC/LXQt/LXDE) split out.
+
+ -- Mahdi Arts <mahdi-arts@users.noreply.github.com>  Fri, 21 Aug 2026 12:00:00 +0330
+
+windows-11-style-clipboard-history-manager (2.3.0-1) unstable; urgency=medium
+
+  * Fail-closed history encryption; paste tickets on all paste paths.
+  * Blocking CI quality + audit gates; SHA256SUMS + SPDX + SLSA on release.
+  * Split shortcut conflict detectors; i18n Settings chrome.
+  * AppArmor allows xdg-open; autostart Exec= no longer uses a shell.
+
+ -- Mahdi Arts <mahdi-arts@users.noreply.github.com>  Thu, 20 Aug 2026 23:45:00 +0330
+
+windows-11-style-clipboard-history-manager (2.2.0-1) unstable; urgency=medium
+
+  * Field-level ChaCha20-Poly1305 encryption for SQLite history text.
+  * Split history_store / history_crypto from clipboard_manager.
+  * Blocking cargo/npm audit in CI; SHA256SUMS on GitHub Releases.
+  * Production hardening: paste tickets, Rust URL opener (no shell plugin),
+    IPC payload truncation, SQLite WAL 0600 + secure_delete.
+  * Installer verifies GitHub artifacts by default (no curl|sudo bash).
+
+ -- Mahdi Arts <mahdi-arts@users.noreply.github.com>  Thu, 20 Aug 2026 23:00:00 +0330
+
+windows-11-style-clipboard-history-manager (2.1.0-1) unstable; urgency=medium
+
+  * Enterprise hardening release: offline fonts (CSP tightened), hardened
+    URL sanitizer, mandatory SHA256SUMS verification in the installer,
+    blocking dependency audits in CI, SLSA provenance + SPDX SBOM per
+    release, AppArmor profile shipped, app-id migrated to
+    io.github.mahdi-arts.clipboard-history.
+
+ -- Mahdi Arts <mahdi-arts@users.noreply.github.com>  Thu, 20 Aug 2026 19:30:00 +0330
+
+windows-11-style-clipboard-history-manager (2.0.0-1) unstable; urgency=medium
+
+  * Incremental SQLite persistence (upsert / delete / meta updates).
+  * Enforce tiling WM config rewrite as an opt-in setting.
+  * Pin outbound HTTPS DNS to validated public addresses (SSRF).
+  * Cap clipboard history at 2000 items.
+  * Run frontend and Rust tests in CI; publish SHA256SUMS on release.
+
+ -- Mahdi Arts <mahdi-arts@users.noreply.github.com>  Thu, 20 Aug 2026 12:00:00 +0000

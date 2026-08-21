@@ -1,87 +1,59 @@
 name: CI
 
+# Hardened quality gate — every check in this file is BLOCKING.
+# گیت کیفیت سخت‌گیرانه — تمام بررسی‌های این فایل «مسدودکننده» هستند.
+#
+# Contract (mirrored in docs/CI.md and README.md — keep all three in sync):
+#   - ESLint (type-aware) + tsc, zero warnings
+#   - Frontend unit tests WITH coverage thresholds
+#   - cargo fmt + clippy -D warnings
+#   - cargo test (default features, no HTTP) AND cargo test --all-features
+#   - cargo audit / npm audit --audit-level=high / cargo-deny (no continue-on-error)
+#   - Release build + CLI smoke (--version / --help) under Xvfb
+#
+# Supply chain: every action is pinned to a full commit SHA (OpenSSF
+# recommendation) — tags are listed in comments for review, not used.
+# زنجیرهٔ تأمین: هر action به SHA کامل کامیت پین شده است (توصیهٔ OpenSSF) —
+# تگ‌ها فقط در کامنت برای بازبینی آمده‌اند، نه برای اجرا.
+
 on:
   push:
     branches: [master, main, develop]
   pull_request:
     branches: [master, main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
 
 jobs:
-  # Lint and format check
-  lint:
-    name: Lint & Format
+  quality:
+    name: Lint, Test & Coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
+      - name: Install Rust (from rust-toolchain.toml)
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
 
       - name: Cache Cargo
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            src-tauri/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
-            libssl-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev \
-            libgtk-3-dev libglib2.0-dev
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Check TypeScript
-        run: npm run build
-
-      - name: Check Rust formatting
-        run: cd src-tauri && cargo fmt --all -- --check
-
-      - name: Run Clippy
-        run: cd src-tauri && cargo clippy -- -D warnings
-
-  # Build for Linux
-  build-linux:
-    name: Build Linux
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ~/.cargo/bin/
@@ -101,39 +73,52 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build Tauri app
-        run: npm run tauri:build
+      - name: ESLint (type-aware) + TypeScript
+        run: npm run lint
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: linux-artifacts
-          path: |
-            src-tauri/target/release/bundle/deb/*.deb
-            src-tauri/target/release/bundle/appimage/*.AppImage
-            src-tauri/target/release/bundle/rpm/*.rpm
-          if-no-files-found: warn
+      - name: Fast Rust syntax gate (tree-sitter)
+        run: node scripts/check-rust-syntax.mjs
 
-  # Security audit
+      - name: Frontend tests with coverage gate
+        run: npm run test:coverage
+
+      - name: Rust format
+        run: cd src-tauri && cargo fmt --all -- --check
+
+      - name: Clippy (deny warnings)
+        run: cd src-tauri && cargo clippy --all-targets -- -D warnings
+
+      - name: Rust unit tests (default features — no HTTP client)
+        run: cd src-tauri && cargo test
+
+      - name: Rust unit tests (all features)
+        run: cd src-tauri && cargo test --all-features
+
   security:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
 
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
+      - name: Install cargo-audit + cargo-deny
+        uses: taiki-e/install-action@a2a5f6e99e1a31540baa0468acfa302cff0f359f # v2
+        with:
+          tool: cargo-audit,cargo-deny
 
-      - name: Run security audit
+      - name: cargo audit (RustSec advisories — blocking)
         run: cd src-tauri && cargo audit
-        continue-on-error: true
+
+      - name: cargo deny (licenses, bans, sources — blocking)
+        run: cd src-tauri && cargo deny check advisories bans licenses sources
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -141,6 +126,66 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Run npm audit
+      - name: npm audit (blocking, high+)
         run: npm audit --audit-level=high
-        continue-on-error: true
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    needs: [quality, security]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Rust (from rust-toolchain.toml)
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+
+      - name: Cache Cargo
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libssl-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev \
+            libgtk-3-dev libglib2.0-dev xvfb
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri:build
+
+      - name: CLI smoke (--version / --help)
+        run: |
+          BIN=src-tauri/target/release/win11-clipboard-history-bin
+          test -x "$BIN"
+          "$BIN" --version
+          "$BIN" --help
+          xvfb-run --auto-servernum "$BIN" --version
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: linux-artifacts
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/rpm/*.rpm
+          if-no-files-found: warn

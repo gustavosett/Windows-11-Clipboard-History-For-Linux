@@ -1,140 +1,152 @@
-//! Permission checker module for Windows 11 Clipboard History
-//! Handles uinput permission verification and fixing
+//! `/dev/uinput` permission checks and first-run state management.
+//! بررسی مجوز `/dev/uinput` و مدیریت وضعیت اجرای نخست.
 
+use crate::error::AppError;
+use crate::window_policy;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
 use std::process::Command;
+use tauri::WebviewWindow;
 
 #[derive(serde::Serialize, Clone)]
 pub struct PermissionStatus {
     pub uinput_accessible: bool,
     pub uinput_path: String,
     pub user_in_input_group: bool,
-    pub suggestion: String,
+    /// Stable UI translation key; never expose a localized backend string.
+    /// کلید پایدار ترجمهٔ رابط؛ متن محلی‌سازی‌شده از backend ارسال نمی‌شود.
+    pub status_code: String,
 }
 
-/// Get the config directory path following XDG spec
+/// Return the setup-state directory under the XDG config home.
+/// بازگرداندن پوشهٔ وضعیت راه‌اندازی در مسیر تنظیمات XDG.
 fn get_config_dir() -> PathBuf {
     dirs::config_dir()
         .unwrap_or_else(|| {
             PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string())).join(".config")
         })
-        .join("win11-clipboard-history")
+        .join("windows-11-style-clipboard-history-manager")
 }
 
-/// Get the config file path
+/// Return the first-run marker path.
+/// بازگرداندن مسیر نشانگر اجرای نخست.
 fn get_config_path() -> PathBuf {
     get_config_dir().join("setup.json")
 }
 
-/// Verify if the user has access to /dev/uinput
-#[tauri::command]
-pub fn check_permissions() -> PermissionStatus {
+/// Read permission state without exposing a Tauri command boundary.
+/// خواندن وضعیت مجوز بدون در معرض قراردادن مرز فرمان Tauri.
+fn permission_status() -> PermissionStatus {
     let uinput_path = "/dev/uinput";
-
-    // Try to open for writing
     let uinput_accessible = OpenOptions::new().write(true).open(uinput_path).is_ok();
-
-    // Check if user is in input group
     let user_in_input_group = Command::new("groups")
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).contains("input"))
+        .map(|output| String::from_utf8_lossy(&output.stdout).contains("input"))
         .unwrap_or(false);
 
-    let suggestion = if uinput_accessible {
-        "Permissions OK! Paste simulation will work.".to_string()
+    let status_code = if uinput_accessible {
+        "permissions_ok"
     } else if user_in_input_group {
-        "You're in the 'input' group but /dev/uinput is not accessible. Try logging out and back in.".to_string()
+        "relogin_required"
     } else {
-        "Missing permissions. Click 'Fix Permissions' or run: sudo usermod -aG input $USER && logout".to_string()
+        "permissions_missing"
     };
 
     PermissionStatus {
         uinput_accessible,
         uinput_path: uinput_path.to_string(),
         user_in_input_group,
-        suggestion,
+        status_code: status_code.to_string(),
     }
 }
 
-/// Check if a command exists in PATH
-fn command_exists(cmd: &str) -> bool {
-    Command::new("which")
-        .arg(cmd)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+/// Verify `/dev/uinput` access for setup/settings callers only.
+/// بررسی دسترسی `/dev/uinput` فقط برای فراخوان تنظیمات/راه‌اندازی.
+#[tauri::command]
+pub fn check_permissions(window: WebviewWindow) -> Result<PermissionStatus, AppError> {
+    window_policy::require_configuration(&window)?;
+    Ok(permission_status())
 }
 
-/// Apply ACL for immediate access (requires pkexec/sudo)
+/// Test whether a trusted executable is available through `PATH`.
+/// بررسی وجود ابزار مورد اعتماد در `PATH`.
+///
+/// Delegates to the in-process `PATH` probe — no `which` subprocess.
+/// به بررسی درون‌فرآیندی PATH واگذار می‌شود — بدون subprocess ی `which`.
+fn command_exists(command: &str) -> bool {
+    crate::exec_lookup::command_exists(command)
+}
+
+/// Apply a user-specific ACL through Polkit after explicit UI action.
+/// اعمال ACL مختص کاربر از طریق Polkit پس از اقدام صریح رابط.
 #[tauri::command]
-pub fn fix_permissions_now() -> Result<String, String> {
-    // Check required commands exist
+pub fn fix_permissions_now(window: WebviewWindow) -> Result<String, AppError> {
+    window_policy::require_configuration(&window)?;
+
     if !command_exists("pkexec") {
-        return Err("pkexec not found. Install polkit or run manually: sudo setfacl -m u:$USER:rw /dev/uinput".to_string());
+        return Err(AppError::PermissionDenied("pkexec_missing".into()));
     }
     if !command_exists("setfacl") {
-        return Err("setfacl not found. Install acl package (e.g., 'sudo apt install acl') or add yourself to the input group: sudo usermod -aG input $USER".to_string());
+        return Err(AppError::PermissionDenied("setfacl_missing".into()));
     }
 
-    let username = whoami::username().map_err(|e| format!("Failed to get username: {}", e))?;
-
-    // Use pkexec for graphical password prompt
+    let username =
+        whoami::username().map_err(|error| AppError::Other(format!("username_lookup:{error}")))?;
+    let acl = format!("u:{username}:rw");
     let status = Command::new("pkexec")
-        .args([
-            "setfacl",
-            "-m",
-            &format!("u:{}:rw", username),
-            "/dev/uinput",
-        ])
+        .args(["setfacl", "-m", &acl, "/dev/uinput"])
         .status()
-        .map_err(|e| format!("Failed to run pkexec: {}", e))?;
+        .map_err(|error| AppError::Other(format!("pkexec_launch:{error}")))?;
 
     if status.success() {
-        Ok("Permission granted! Paste should work now.".to_string())
+        Ok("permission_granted".to_string())
     } else {
-        Err("Failed to set permissions. Try running manually: sudo setfacl -m u:$USER:rw /dev/uinput".to_string())
+        Err(AppError::PermissionDenied("permission_fix_failed".into()))
     }
 }
 
-/// Check if this is the first run of the application
-#[tauri::command]
-pub fn is_first_run() -> bool {
+/// Internal first-run query used by native startup code.
+/// پرس‌وجوی داخلی اجرای نخست برای کد native آغاز برنامه.
+pub fn first_run_pending() -> bool {
     !get_config_path().exists()
 }
 
-/// Mark the first run as complete
+/// Query first-run state from the main or setup window.
+/// پرس‌وجوی وضعیت اجرای نخست از پنجرهٔ اصلی یا راه‌اندازی.
 #[tauri::command]
-pub fn mark_first_run_complete() -> Result<(), String> {
+pub fn is_first_run(window: WebviewWindow) -> Result<bool, AppError> {
+    window_policy::require(
+        &window,
+        &[
+            window_policy::WindowRole::Main,
+            window_policy::WindowRole::Setup,
+        ],
+    )?;
+    Ok(first_run_pending())
+}
+
+/// Persist the first-run completion marker (native/internal API).
+/// ذخیرهٔ نشانگر تکمیل اجرای نخست (API داخلی/native).
+pub fn complete_first_run() -> Result<(), AppError> {
     let config_path = get_config_path();
+    crate::fs_atomic::ensure_parent(&config_path)?;
 
-    // Create directory if it doesn't exist
-    if let Some(parent) = config_path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create config dir: {}", e))?;
-    }
-
-    // Create initial setup config file
-    let config_content = serde_json::json!({
+    let marker = serde_json::json!({
         "setupComplete": true,
         "setupDate": chrono::Utc::now().to_rfc3339()
     });
-
-    std::fs::write(&config_path, config_content.to_string())
-        .map_err(|e| format!("Failed to write config: {}", e))?;
-
+    crate::fs_atomic::write_json_atomic(&config_path, &marker)?;
     Ok(())
 }
 
-/// Reset the first run state - will show the setup wizard again
+/// Reset onboarding from the settings window only.
+/// بازنشانی راه‌اندازی فقط از پنجرهٔ تنظیمات.
 #[tauri::command]
-pub fn reset_first_run() -> Result<(), String> {
+pub fn reset_first_run(window: WebviewWindow) -> Result<(), AppError> {
+    window_policy::require_settings(&window)?;
     let config_path = get_config_path();
-
     if config_path.exists() {
-        std::fs::remove_file(&config_path)
-            .map_err(|e| format!("Failed to remove config: {}", e))?;
+        std::fs::remove_file(&config_path)?;
     }
-
     Ok(())
 }

@@ -2,6 +2,7 @@ import { useState, memo, useRef, useCallback } from 'react'
 import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Search, RefreshCw, TrendingUp } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useGifPicker } from '../hooks/useGifPicker'
 import { SearchBar } from './common/SearchBar'
 import { SectionHeader } from './common/SectionHeader'
@@ -191,6 +192,7 @@ export interface GifPickerProps {
 }
 
 export function GifPicker({ isDark, opacity }: GifPickerProps) {
+  const { t } = useTranslation()
   const {
     searchQuery,
     setSearchQuery,
@@ -213,7 +215,7 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
   // Handle GIF selection
   const handleSelect = useCallback(
     (gif: Gif) => {
-      pasteGif(gif)
+      void pasteGif(gif)
     },
     [pasteGif]
   )
@@ -253,7 +255,7 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
     }
 
     if (gifs.length === 0) {
-      return <EmptyState message="No GIFs found. Try a different search!" />
+      return <EmptyState message={t('gif.no_results_detail')} />
     }
 
     if (dimensions.width > 0 && dimensions.height > 0) {
@@ -261,7 +263,7 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
         <div
           ref={gridContainerRef}
           role="grid"
-          aria-label="GIF grid"
+          aria-label={t('gif.grid')}
           style={{ height: gridHeight }}
         >
           <Grid<GifGridData>
@@ -298,8 +300,8 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
           value={searchQuery}
           onChange={(val: string) => setSearchQuery(val)}
           onClear={handleClearSearch}
-          placeholder="Search Tenor GIFs..."
-          aria-label="Search Tenor GIFs"
+          placeholder={t('gif.search_tenor')}
+          aria-label={t('gif.search_tenor')}
           isDark={isDark}
           opacity={opacity}
           rightActions={
@@ -312,7 +314,7 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
                 'hover:dark:bg-win11-bg-card-hover hover:bg-win11Light-bg-card-hover',
                 'transition-colors duration-150'
               )}
-              title="Show trending"
+              title={t('gif.show_trending')}
               style={getTertiaryBackgroundStyle(isDark, opacity)}
             >
               <TrendingUp size={14} />
@@ -325,13 +327,13 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
           {searchQuery ? (
             <SectionHeader
               icon={<Search size={12} />}
-              label={`Results for "${searchQuery}"`}
+              label={t('gif.results_for', { query: searchQuery })}
               rightContent={isLoading && <RefreshCw size={12} className="animate-spin" />}
             />
           ) : (
             <SectionHeader
               icon={<TrendingUp size={12} />}
-              label="Trending GIFs"
+              label={t('gif.trending')}
               rightContent={isLoading && <RefreshCw size={12} className="animate-spin" />}
             />
           )}
@@ -340,7 +342,7 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
       footer={
         <div className="w-full text-center">
           <span className="text-[10px] dark:text-win11-text-disabled text-win11Light-text-disabled">
-            Powered by Tenor
+            {t('gif.powered_by')}
           </span>
         </div>
       }
@@ -351,7 +353,7 @@ export function GifPicker({ isDark, opacity }: GifPickerProps) {
           <div className="bg-win11Light-bg-card dark:bg-win11-bg-card p-4 rounded-xl shadow-lg flex flex-col items-center gap-3 border border-win11Light-border-subtle dark:border-win11-border-subtle">
             <div className="w-8 h-8 border-4 border-win11-bg-accent border-t-transparent rounded-full animate-spin" />
             <span className="text-sm font-medium text-win11Light-text-primary dark:text-win11-text-primary">
-              Pasting GIF...
+              {t('gif.pasting')}
             </span>
           </div>
         </div>

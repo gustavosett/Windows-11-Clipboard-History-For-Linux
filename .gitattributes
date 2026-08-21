@@ -1,5 +1,18 @@
-package-lock.json linguist-generated
-package.json linguist-generated
-*.json linguist-generated
+# Linguist hints — keep hand-edited files visible in GitHub stats/blame while
+# marking truly generated/vendored ones.
+# راهنماهای Linguist — فایل‌های دست‌نویس در آمار/blame گیت‌هاب دیده می‌شوند
+# و فقط فایل‌های واقعاً تولیدشده/ثالث علامت می‌خورند.
 
-src/data/* linguist-vendored
+# Lockfiles are machine-generated / فایل‌های قفل به‌صورت ماشینی تولید می‌شوند.
+package-lock.json linguist-generated
+src-tauri/Cargo.lock linguist-generated
+
+# Bundled emoji/kaomoji/symbol datasets are vendored data, not our source.
+# داده‌های همراه ایموجی/کائوموجی/نماد، دادهٔ ثالث هستند نه کد ما.
+src/data/*.json linguist-vendored
+
+# Keep binary assets out of text diffs / دارایی‌های باینری بیرون از diff متنی.
+*.png binary
+*.webp binary
+*.gif binary
+*.woff2 binary

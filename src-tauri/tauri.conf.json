@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "win11-clipboard-history",
-  "version": "0.7.1",
-  "identifier": "dev.gustavosett.clipboard-history",
+  "productName": "Windows-11-Style-Clipboard-History-Manager",
+  "version": "2.5.0",
+  "identifier": "io.github.mahdi-arts.clipboard-history",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -10,7 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "trayIcon": {
       "iconPath": "icons/icon.png",
       "iconAsTemplate": false
@@ -63,16 +63,12 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:"
     }
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "deb",
-      "rpm",
-      "appimage"
-    ],
+    "targets": ["deb", "rpm", "appimage"],
     "icon": [
       "icons/32x32.png",
       "icons/64x64.png",
@@ -98,12 +94,13 @@
           "libayatana-appindicator3-1 | libappindicator3-1"
         ],
         "files": {
-          "/usr/bin/win11-clipboard-history": "bundle/linux/wrapper.sh",
-          "/etc/udev/rules.d/99-win11-clipboard-input.rules": "bundle/linux/99-win11-clipboard-input.rules",
-          "/usr/share/applications/win11-clipboard-history.desktop": "bundle/linux/win11-clipboard-history.desktop",
-          "/usr/share/icons/hicolor/128x128/apps/win11-clipboard-history.png": "icons/128x128.png",
-          "/usr/share/icons/hicolor/256x256/apps/win11-clipboard-history.png": "icons/icon.png",
-          "/usr/share/icons/hicolor/scalable/apps/win11-clipboard-history.svg": "icons/icon.svg"
+          "/usr/bin/windows-11-style-clipboard-history-manager": "bundle/linux/wrapper.sh",
+          "/etc/udev/rules.d/99-windows-11-style-clipboard-history-input.rules": "bundle/linux/99-windows-11-style-clipboard-history-input.rules",
+          "/usr/share/applications/io.github.mahdi-arts.clipboard-history.desktop": "bundle/linux/windows-11-style-clipboard-history-manager.desktop",
+          "/usr/share/icons/hicolor/128x128/apps/io.github.mahdi-arts.clipboard-history.png": "icons/128x128.png",
+          "/usr/share/icons/hicolor/256x256/apps/io.github.mahdi-arts.clipboard-history.png": "icons/icon.png",
+          "/usr/share/icons/hicolor/scalable/apps/io.github.mahdi-arts.clipboard-history.svg": "icons/icon.svg",
+          "/usr/share/doc/windows-11-style-clipboard-history-manager/apparmor/windows-11-style-clipboard-history-manager": "apparmor/windows-11-style-clipboard-history-manager"
         },
         "postInstallScript": "bundle/linux/postinst.sh",
         "preRemoveScript": "bundle/linux/postrm.sh"
@@ -119,12 +116,19 @@
           "gtk3",
           "libayatana-appindicator-gtk3"
         ],
+        "files": {
+          "/usr/bin/windows-11-style-clipboard-history-manager": "bundle/linux/wrapper.sh",
+          "/etc/udev/rules.d/99-windows-11-style-clipboard-history-input.rules": "bundle/linux/99-windows-11-style-clipboard-history-input.rules",
+          "/usr/share/applications/io.github.mahdi-arts.clipboard-history.desktop": "bundle/linux/windows-11-style-clipboard-history-manager.desktop",
+          "/usr/share/icons/hicolor/128x128/apps/io.github.mahdi-arts.clipboard-history.png": "icons/128x128.png",
+          "/usr/share/icons/hicolor/256x256/apps/io.github.mahdi-arts.clipboard-history.png": "icons/icon.png",
+          "/usr/share/icons/hicolor/scalable/apps/io.github.mahdi-arts.clipboard-history.svg": "icons/icon.svg",
+          "/usr/share/doc/windows-11-style-clipboard-history-manager/apparmor/windows-11-style-clipboard-history-manager": "apparmor/windows-11-style-clipboard-history-manager"
+        },
         "postInstallScript": "bundle/linux/postinst.sh",
         "preRemoveScript": "bundle/linux/postrm.sh"
       }
     },
-    "resources": [
-      "bundle/linux/99-win11-clipboard-input.rules"
-    ]
+    "resources": ["bundle/linux/99-windows-11-style-clipboard-history-input.rules"]
   }
 }

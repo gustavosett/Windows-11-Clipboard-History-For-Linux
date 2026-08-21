@@ -1,0 +1,75 @@
+# cargo-deny configuration — supply-chain policy for the Rust core.
+# پیکربندی cargo-deny — سیاست زنجیرهٔ تأمین هستهٔ Rust.
+#
+# Run locally:  cargo deny check
+# Enforced in CI (`.github/workflows/ci.yml`, security job, blocking).
+
+[graph]
+# Analyse the full dependency graph including dev/build deps.
+# تحلیل کامل گراف وابستگی‌ها شامل وابستگی‌های توسعه/ساخت.
+all-features = true
+
+# ---------------------------------------------------------------------------
+# advisories — RustSec deny-by-default
+# ---------------------------------------------------------------------------
+[advisories]
+version = 2
+# Known vulnerabilities must fail the build.
+# آسیب‌پذیری‌های شناخته‌شده باید بیلد را متوقف کنند.
+vulnerability = "deny"
+# Yanked crate versions must fail the build.
+yanked = "deny"
+# Unmaintained crates warn (informational) instead of breaking releases.
+unmaintained = "warn"
+ignore = [
+  # Each entry needs a review comment with an expiry and a tracking issue.
+  # هیچ استثنایی فعلاً پذیرفته نشده است.
+]
+
+# ---------------------------------------------------------------------------
+# licenses — OSI-approved set used by the Tauri/GTK ecosystem
+# ---------------------------------------------------------------------------
+[licenses]
+version = 2
+allow = [
+  "MIT",
+  "MIT-0",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "0BSD",
+  "Zlib",
+  "MPL-2.0",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "CDLA-Permissive-1.0",
+  "CC0-1.0",
+  "EPL-2.0",
+  "OFL-1.1",
+]
+# Copyleft licences (GPL/LGPL/AGPL) are denied unless listed above.
+copyleft = "deny"
+confidence-threshold = 0.93
+unused-allowed-license = "warn"
+
+# ---------------------------------------------------------------------------
+# bans — duplicate versions and crate bans
+# ---------------------------------------------------------------------------
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+highlight = "all"
+deny = []
+skip = []
+skip-tree = []
+
+# ---------------------------------------------------------------------------
+# sources — only crates.io and the vendored registry are allowed
+# ---------------------------------------------------------------------------
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

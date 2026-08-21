@@ -1,0 +1,69 @@
+app-id: io.github.mahdi-arts.clipboard-history
+runtime: org.gnome.Platform
+runtime-version: '48'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.node20
+command: windows-11-style-clipboard-history-manager
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.portal.Settings
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --filesystem=xdg-data/windows-11-style-clipboard-history-manager:create
+  - --filesystem=xdg-config/windows-11-style-clipboard-history-manager:create
+  - --env=NO_AT_BRIDGE=1
+  # Paste via /dev/uinput is unavailable under Flathub's device policy.
+  # For full paste simulation, use the native .deb/.rpm package.
+  # تزریق paste در سیاست Flathub ممکن نیست؛ برای عملکرد کامل از deb/rpm استفاده کنید.
+  # Optional GIF search:
+  #   flatpak override --user --share=network io.github.mahdi-arts.clipboard-history
+
+modules:
+  - name: xclip
+    buildsystem: autotools
+    sources:
+      - type: git
+        url: https://github.com/astrand/xclip.git
+        tag: 0.13
+
+  - name: wl-clipboard
+    buildsystem: meson
+    sources:
+      - type: git
+        url: https://github.com/bugaevc/wl-clipboard.git
+        tag: v2.2.1
+
+  - name: windows-11-style-clipboard-history-manager
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node20/bin
+      env:
+        CARGO_HOME: /run/build/windows-11-style-clipboard-history-manager/cargo
+        npm_config_cache: /run/build/windows-11-style-clipboard-history-manager/npm-cache
+    build-commands:
+      - npm ci --no-audit --no-fund
+      - npm run build
+      - cd src-tauri && cargo build --release --features custom-protocol
+      - install -Dm755 src-tauri/target/release/windows-11-style-clipboard-history-manager-bin
+        ${FLATPAK_DEST}/lib/windows-11-style-clipboard-history-manager/windows-11-style-clipboard-history-manager-bin
+      - install -Dm755 src-tauri/bundle/linux/wrapper.sh
+        ${FLATPAK_DEST}/bin/windows-11-style-clipboard-history-manager
+      - install -Dm644 src-tauri/bundle/linux/windows-11-style-clipboard-history-manager.desktop
+        ${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop
+      - sed -i "s/^Exec=.*/Exec=${FLATPAK_ID}/" ${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm644 src-tauri/icons/128x128.png
+        ${FLATPAK_DEST}/share/icons/hicolor/128x128/apps/${FLATPAK_ID}.png
+      - install -Dm644 src-tauri/icons/icon.png
+        ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/${FLATPAK_ID}.png
+      - install -Dm644 src-tauri/icons/icon.svg
+        ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
+      - install -Dm644 packaging/flatpak/${FLATPAK_ID}.metainfo.xml
+        ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
+    sources:
+      - type: dir
+        path: ../..

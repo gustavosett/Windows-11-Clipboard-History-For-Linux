@@ -1,19 +1,34 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { clsx } from 'clsx'
-import { Pin, History, ChevronDown } from 'lucide-react'
+import { List, ListImperativeAPI } from 'react-window'
 
 import type { ClipboardItem, UserSettings } from '../types/clipboard'
 import type { TabBarRef } from './TabBar'
 import { Header } from './Header'
 import { SearchBar } from './common/SearchBar'
 import { EmptyState } from './EmptyState'
-import { HistoryItem } from './HistoryItem'
+import { HistoryRow, PinnedSection, RecentSectionLabel, LoadMoreButton, type RowData } from './HistoryList'
 import { useHistoryKeyboardNavigation } from '../hooks/useHistoryKeyboardNavigation'
+import { filterHistory } from '../utils/historySearch'
+import { useTranslation } from 'react-i18next'
 
+/**
+ * The "Clipboard" tab: owns search/section/keyboard state and orchestrates
+ * the virtualized history list, the inline pinned section and pagination.
+ * Rendering components live in `./HistoryList/`.
+ *
+ * تب «کلیپ‌بورد»: مالک وضعیت جستجو/بخش‌ها/کیبورد و هماهنگ‌کنندهٔ فهرست
+ * مجازی‌شدهٔ تاریخچه، بخش درون‌خطی سنجاق‌شده‌ها و صفحه‌بندی است.
+ * اجزای رندر در `./HistoryList/` قرار دارند.
+ */
 export function ClipboardTab(props: {
   history: ClipboardItem[]
   isLoading: boolean
+  isLoadingMore?: boolean
+  total?: number | null
+  hasMore?: boolean
+  onLoadMore?: () => void
   isDark: boolean
   tertiaryOpacity: number
   secondaryOpacity: number
@@ -27,6 +42,10 @@ export function ClipboardTab(props: {
   const {
     history,
     isLoading,
+    isLoadingMore = false,
+    total = null,
+    hasMore = false,
+    onLoadMore,
     isDark,
     tertiaryOpacity,
     secondaryOpacity,
@@ -37,10 +56,17 @@ export function ClipboardTab(props: {
     settings,
     tabBarRef,
   } = props
+  const { t } = useTranslation()
 
+  // --- Search state (Ctrl+F or simply start typing) ---
+  // --- وضعیت جستجو (Ctrl+F یا شروع تایپ) ---
   const [searchQuery, setSearchQuery] = useState('')
   const [isRegexMode, setIsRegexMode] = useState(false)
+  const [isSearchVisible, setIsSearchVisible] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
+  // --- Layout preferences (persisted locally) ---
+  // --- ترجیحات چیدمان (به‌صورت محلی ذخیره می‌شود) ---
   const [isCompact, setIsCompact] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('clipboard-history-compact-mode') === 'true'
@@ -53,15 +79,7 @@ export function ClipboardTab(props: {
       localStorage.setItem('clipboard-history-compact-mode', String(isCompact))
     }
   }, [isCompact])
-  const [isSearchVisible, setIsSearchVisible] = useState(false)
-  const searchInputRef = useRef<HTMLInputElement>(null)
 
-  const [focusedIndex, setFocusedIndex] = useState(0)
-
-  // Refs
-  const historyItemRefs = useRef<(HTMLDivElement | null)[]>([])
-
-  // Pinned section collapsible state (persisted)
   const [pinnedExpanded, setPinnedExpanded] = useState(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('clipboard-pinned-expanded')
@@ -76,12 +94,35 @@ export function ClipboardTab(props: {
     }
   }, [pinnedExpanded])
 
-  // Check if a key is a printable character that should trigger search
-  const isPrintableKey = useCallback((e: KeyboardEvent): boolean => {
-    // Skip if any modifier key is pressed (except Shift for uppercase/symbols)
-    if (e.ctrlKey || e.altKey || e.metaKey) return false
+  // --- Focus & virtualizer plumbing ---
+  // --- زیرساخت فوکوس و مجازی‌ساز ---
+  const [focusedIndex, setFocusedIndex] = useState(0)
+  const historyItemRefs = useRef<(HTMLDivElement | null)[]>([])
+  const setHistoryItemRef = useCallback((index: number, element: HTMLDivElement | null) => {
+    historyItemRefs.current[index] = element
+  }, [])
+  const listRef = useRef<ListImperativeAPI | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerHeight, setContainerHeight] = useState(300)
 
-    // Skip special keys that are handled elsewhere
+  // Measure container height for the virtualized list
+  // اندازه‌گیری ارتفاع ظرف برای فهرست مجازی‌شده
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerHeight(entry.contentRect.height)
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // Check if a key is a printable character that should trigger search
+  // بررسی اینکه آیا کلید، نویسهٔ چاپی است و باید جستجو را فعال کند
+  const isPrintableKey = useCallback((e: KeyboardEvent): boolean => {
+    if (e.ctrlKey || e.altKey || e.metaKey) return false
     const specialKeys = [
       'Tab',
       'Enter',
@@ -121,42 +162,31 @@ export function ClipboardTab(props: {
       'Meta',
     ]
     if (specialKeys.includes(e.key)) return false
-
     return e.key.length === 1
   }, [])
 
   // Toggle search visibility with Ctrl+F or start typing to filter
+  // فعال/غیرفعال‌کردن جستجو با Ctrl+F یا شروع تایپ برای فیلتر
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const activeElement = document.activeElement
-
-      // Global shortcuts that should work regardless of focus
       if (e.ctrlKey && e.key.toLowerCase() === 'f') {
         e.preventDefault()
         setIsSearchVisible((prev) => {
-          const newValue = !prev
-          if (!newValue) {
-            // Clear search when hiding
-            setSearchQuery('')
-          }
-          return newValue
+          if (!prev) return true
+          setSearchQuery('')
+          return false
         })
         return
       }
-
-      // Close search with Escape - should work even when search input is focused
       if (e.key.toLowerCase() === 'escape' && isSearchVisible) {
         e.preventDefault()
         setIsSearchVisible(false)
         setSearchQuery('')
         return
       }
-
-      // Skip if focus is on an input or tab (those have their own handlers)
       if (activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA') return
       if (activeElement?.getAttribute('role') === 'tab') return
-
-      // Instant filtering: start typing to activate search
       if (isPrintableKey(e)) {
         e.preventDefault()
         if (!isSearchVisible) {
@@ -168,23 +198,22 @@ export function ClipboardTab(props: {
         }
       }
     },
-    [isSearchVisible, isPrintableKey, searchInputRef]
+    [isSearchVisible, isPrintableKey]
   )
 
-  // Listen for Ctrl+F keybinding
   useEffect(() => {
     globalThis.addEventListener('keydown', handleKeyDown)
     return () => globalThis.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
-  // Focus search input when it becomes visible
   useEffect(() => {
     if (isSearchVisible && searchInputRef.current) {
       searchInputRef.current.focus()
     }
   }, [isSearchVisible])
 
-  // Reset search when window is shown (reopened)
+  // Reset search whenever the popup window is shown again
+  // بازنشانی جستجو هر بار که پنجره دوباره نمایش داده می‌شود
   useEffect(() => {
     const resetSearch = () => {
       setIsSearchVisible(false)
@@ -192,112 +221,144 @@ export function ClipboardTab(props: {
     }
     const unlistenWindowShown = listen('window-shown', resetSearch)
     return () => {
-      unlistenWindowShown.then((u) => u())
+      void unlistenWindowShown.then((u) => {
+        u()
+      })
     }
   }, [])
 
-  // Filter history by search query
-  const filteredHistory = useMemo(() => {
-    if (!searchQuery) return history
+  // --- Derived data ---
+  // --- داده‌های مشتق‌شده ---
+  const filteredHistory = useMemo(
+    () => filterHistory(history, searchQuery, isRegexMode),
+    [history, searchQuery, isRegexMode]
+  )
 
-    let regex: RegExp | null = null
-    if (isRegexMode) {
-      try {
-        regex = new RegExp(searchQuery, 'i')
-      } catch (err) {
-        console.error('Invalid regex pattern in clipboard search query:', searchQuery, err)
-        return []
-      }
-    }
-
-    return history.filter((item) => {
-      let searchableText = ''
-      if (item.content.type === 'Text') {
-        searchableText = item.content.data
-      } else if (item.content.type === 'RichText') {
-        searchableText = item.content.data.plain
-      } else {
-        return false
-      }
-
-      if (isRegexMode && regex) {
-        return regex.test(searchableText)
-      } else if (!isRegexMode) {
-        return searchableText.toLowerCase().includes(searchQuery.toLowerCase())
-      }
-      return false
-    })
-  }, [history, searchQuery, isRegexMode])
-
-  // Split into pinned / unpinned sections
   const pinnedItems = useMemo(() => filteredHistory.filter((i) => i.pinned), [filteredHistory])
   const unpinnedItems = useMemo(() => filteredHistory.filter((i) => !i.pinned), [filteredHistory])
-
   const showSections = !searchQuery && pinnedItems.length > 0
 
-  // Flat item array for keyboard navigation
-  const visibleItems = showSections && !pinnedExpanded ? unpinnedItems : filteredHistory
+  // Visible items for the virtualizer. When the pinned section is rendered
+  // inline above, only unpinned items belong in the list (avoids duplicates).
+  // آیتم‌های قابل‌رؤیت مجازی‌ساز. وقتی بخش سنجاق‌شده درون‌خطی بالای
+  // فهرست رسم می‌شود، فقط آیتم‌های غیرسنجاق در فهرست می‌مانند (بدون تکرار).
+  const visibleItems = useMemo(() => {
+    if (showSections) return unpinnedItems
+    return filteredHistory
+  }, [filteredHistory, showSections, unpinnedItems])
 
-  // Keyboard navigation callbacks for section collapse/expand
+  const ITEM_HEIGHT = isCompact ? 44 : 64
+  const GAP_HEIGHT = 8 // gap-2 between items / فاصلهٔ gap-2 بین آیتم‌ها
+
+  // Keyboard navigation across sections
+  // ناوبری کیبورد میان بخش‌ها
   const onUpFromFirstItem = useCallback(() => {
     if (showSections && !pinnedExpanded) {
       setPinnedExpanded(true)
       const lastIdx = pinnedItems.length - 1
       setFocusedIndex(lastIdx)
-      setTimeout(() => historyItemRefs.current[lastIdx]?.focus(), 0)
+      listRef.current?.scrollToRow({ index: lastIdx, align: 'smart' })
+      setTimeout(() => historyItemRefs.current[lastIdx]?.focus(), 50)
       return true
     }
     return false
-  }, [showSections, pinnedExpanded, pinnedItems.length])
+  }, [showSections, pinnedExpanded, pinnedItems.length, listRef])
 
   const onLeftArrow = useCallback(() => {
     if (showSections && pinnedExpanded && focusedIndex < pinnedItems.length) {
       setPinnedExpanded(false)
       setFocusedIndex(0)
-      setTimeout(() => historyItemRefs.current[0]?.focus(), 0)
+      listRef.current?.scrollToRow({ index: 0, align: 'smart' })
+      setTimeout(() => historyItemRefs.current[0]?.focus(), 50)
     }
-  }, [showSections, pinnedExpanded, focusedIndex, pinnedItems.length])
+  }, [showSections, pinnedExpanded, focusedIndex, pinnedItems.length, listRef])
 
-  // Keyboard navigation
   useHistoryKeyboardNavigation({
     activeTab: 'clipboard',
     itemsLength: visibleItems.length,
     focusedIndex,
     setFocusedIndex,
-    historyItemRefs,
+    historyItemRefs: historyItemRefs,
     tabBarRef,
     searchInputRef,
     onUpFromFirstItem,
     onLeftArrow,
   })
 
-  // Reset focused index when filtered results change
+  // Reset focus to the top whenever the filtered set changes identity
+  // بازنشانی فوکوس به ابتدا هر بار که هویت مجموعهٔ فیلترشده عوض می‌شود
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFocusedIndex(0)
+    const timer = globalThis.setTimeout(() => {
+      setFocusedIndex(0)
+      listRef.current?.scrollToRow({ index: 0, align: 'smart' })
+    }, 0)
+    return () => globalThis.clearTimeout(timer)
   }, [filteredHistory])
 
-  // Ref for stable access to filtered history in event listener
   const filteredHistoryRef = useRef(filteredHistory)
   useEffect(() => {
     filteredHistoryRef.current = filteredHistory
   }, [filteredHistory])
 
+  // Focus the first item when the popup window is shown
+  // فوکوس روی نخستین آیتم هنگام نمایش پنجره
   useEffect(() => {
     const focusFirstItem = () => {
       setTimeout(() => {
         if (filteredHistoryRef.current.length > 0) {
           setFocusedIndex(0)
-          historyItemRefs.current[0]?.focus()
+          listRef.current?.scrollToRow({ index: 0, align: 'smart' })
+          setTimeout(() => historyItemRefs.current[0]?.focus(), 100)
         }
       }, 100)
     }
     const unlistenWindowShown = listen('window-shown', focusFirstItem)
     return () => {
-      unlistenWindowShown.then((u) => u())
+      void unlistenWindowShown.then((u) => {
+        u()
+      })
     }
+  }, [listRef])
+
+  // Track which ref slot is the actual focused item for the virtualizer
+  // ردیابی اینکه کدام جایگاه مرجع، آیتم فوکوس‌شدهٔ مجازی‌ساز است
+  const handleItemFocus = useCallback((idx: number) => {
+    setFocusedIndex(idx)
   }, [])
 
+  // Row data for react-window
+  // دادهٔ ردیف برای react-window
+  const rowData: RowData = useMemo(
+    () => ({
+      items: visibleItems,
+      onPaste,
+      onDelete: deleteItem,
+      onTogglePin: togglePin,
+      onFocus: handleItemFocus,
+      focusedIndex,
+      isDark,
+      isCompact,
+      secondaryOpacity,
+      enableSmartActions: settings.enable_smart_actions,
+      enableUiPolish: settings.enable_ui_polish,
+      setItemRef: setHistoryItemRef,
+    }),
+    [
+      visibleItems,
+      onPaste,
+      deleteItem,
+      togglePin,
+      handleItemFocus,
+      focusedIndex,
+      isDark,
+      isCompact,
+      secondaryOpacity,
+      settings,
+      setHistoryItemRef,
+    ]
+  )
+
+  // --- Render ---
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full select-none">
@@ -315,6 +376,7 @@ export function ClipboardTab(props: {
       <Header
         onClearHistory={clearHistory}
         itemCount={filteredHistory.length}
+        totalCount={searchQuery ? filteredHistory.length : (total ?? filteredHistory.length)}
         isDark={isDark}
         tertiaryOpacity={tertiaryOpacity}
         isCompact={isCompact}
@@ -328,7 +390,7 @@ export function ClipboardTab(props: {
             onChange={setSearchQuery}
             isDark={isDark}
             opacity={secondaryOpacity}
-            placeholder="Search history..."
+            placeholder={t('clipboard.search_placeholder')}
             isRegex={isRegexMode}
             onToggleRegex={() => setIsRegexMode(!isRegexMode)}
             onClear={() => {
@@ -347,115 +409,69 @@ export function ClipboardTab(props: {
               isDark ? 'text-win11-text-secondary' : 'text-win11Light-text-secondary'
             )}
           >
-            {searchQuery ? 'No items found' : 'No clipboard history yet'}
+            {searchQuery ? t('clipboard.no_items_found') : t('clipboard.empty_state')}
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 p-3" role="listbox" aria-label="Clipboard history">
-          {showSections ? (
-            <>
-              <button
-                onClick={() => {
-                  const willCollapse = pinnedExpanded
-                  setPinnedExpanded(!pinnedExpanded)
-                  if (willCollapse) {
-                    setFocusedIndex(0)
-                    setTimeout(() => historyItemRefs.current[0]?.focus(), 0)
-                  }
-                }}
-                className={clsx(
-                  'flex items-center gap-1.5 px-1 py-1 text-xs font-medium',
-                  'dark:text-win11-text-tertiary text-win11Light-text-tertiary',
-                  'hover:dark:text-win11-text-secondary hover:text-win11Light-text-secondary',
-                  'rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
-                )}
-                aria-expanded={pinnedExpanded}
-              >
-                <Pin size={12} />
-                <span>Pinned</span>
-                <span className="ml-auto opacity-60">{pinnedItems.length}</span>
-                <ChevronDown
-                  size={12}
-                  className={clsx(
-                    'transition-transform duration-150',
-                    !pinnedExpanded && '-rotate-90'
-                  )}
-                />
-              </button>
-              {pinnedExpanded &&
-                pinnedItems.map((item, offset) => (
-                  <HistoryItem
-                    key={item.id}
-                    ref={(el) => {
-                      historyItemRefs.current[offset] = el
-                    }}
-                    item={item}
-                    index={offset}
-                    isFocused={offset === focusedIndex}
-                    onPaste={onPaste}
-                    onDelete={deleteItem}
-                    onTogglePin={togglePin}
-                    onFocus={() => setFocusedIndex(offset)}
-                    isDark={isDark}
-                    secondaryOpacity={secondaryOpacity}
-                    isCompact={isCompact}
-                    enableSmartActions={settings.enable_smart_actions}
-                    enableUiPolish={settings.enable_ui_polish}
-                  />
-                ))}
-              {unpinnedItems.length > 0 && (
-                <div className="flex items-center gap-1.5 px-1 py-1 text-xs dark:text-win11-text-tertiary text-win11Light-text-tertiary">
-                  <History size={12} />
-                  <span>Recent</span>
-                  <span className="ml-auto opacity-60">{unpinnedItems.length}</span>
-                </div>
-              )}
-              {unpinnedItems.map((item, offset) => {
-                const idx = pinnedItems.length + offset
-                return (
-                  <HistoryItem
-                    key={item.id}
-                    ref={(el) => {
-                      historyItemRefs.current[idx] = el
-                    }}
-                    item={item}
-                    index={idx}
-                    isFocused={idx === focusedIndex}
-                    onPaste={onPaste}
-                    onDelete={deleteItem}
-                    onTogglePin={togglePin}
-                    onFocus={() => setFocusedIndex(idx)}
-                    isDark={isDark}
-                    secondaryOpacity={secondaryOpacity}
-                    isCompact={isCompact}
-                    enableSmartActions={settings.enable_smart_actions}
-                    enableUiPolish={settings.enable_ui_polish}
-                  />
-                )
-              })}
-            </>
-          ) : (
-            filteredHistory.map((item, idx) => (
-              <HistoryItem
-                key={item.id}
-                ref={(el) => {
-                  historyItemRefs.current[idx] = el
-                }}
-                item={item}
-                index={idx}
-                isFocused={idx === focusedIndex}
-                onPaste={onPaste}
-                onDelete={deleteItem}
-                onTogglePin={togglePin}
-                onFocus={() => setFocusedIndex(idx)}
-                isDark={isDark}
-                secondaryOpacity={secondaryOpacity}
-                isCompact={isCompact}
-                enableSmartActions={settings.enable_smart_actions}
-                enableUiPolish={settings.enable_ui_polish}
-              />
-            ))
+        <div className="flex flex-col flex-1 min-h-0">
+          {showSections && (
+            <PinnedSection
+              items={pinnedItems}
+              expanded={pinnedExpanded}
+              onToggleExpanded={() => {
+                const willCollapse = pinnedExpanded
+                setPinnedExpanded(!pinnedExpanded)
+                if (willCollapse) {
+                  setFocusedIndex(0)
+                  setTimeout(() => historyItemRefs.current[0]?.focus(), 50)
+                }
+              }}
+              focusedIndex={focusedIndex}
+              onPaste={onPaste}
+              onDelete={deleteItem}
+              onTogglePin={togglePin}
+              onFocus={setFocusedIndex}
+              isDark={isDark}
+              isCompact={isCompact}
+              secondaryOpacity={secondaryOpacity}
+              enableSmartActions={settings.enable_smart_actions}
+              enableUiPolish={settings.enable_ui_polish}
+              setItemRef={setHistoryItemRef}
+            />
           )}
+
+          {showSections && unpinnedItems.length > 0 && <RecentSectionLabel count={unpinnedItems.length} />}
+
+          {/* Virtualized list / فهرست مجازی‌شده */}
+          <div ref={containerRef} className="flex-1 min-h-0 px-3 pb-3">
+            {visibleItems.length > 0 && (
+              <List<RowData>
+                listRef={listRef}
+                defaultHeight={containerHeight}
+                rowCount={visibleItems.length}
+                rowHeight={ITEM_HEIGHT + GAP_HEIGHT}
+                rowComponent={HistoryRow}
+                rowProps={rowData}
+                overscanCount={5}
+                className="scrollbar-win11"
+                style={{
+                  height: containerHeight,
+                  width: '100%',
+                  overflowX: 'hidden',
+                  overflowY: 'auto',
+                }}
+              />
+            )}
+            {hasMore && (
+              <div className="flex items-center justify-center py-3" aria-live="polite">
+                <LoadMoreButton
+                  onClick={() => onLoadMore?.()}
+                  isLoading={isLoadingMore}
+                  isDark={isDark}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </>

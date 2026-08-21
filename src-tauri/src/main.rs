@@ -1,856 +1,121 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+//! # Windows 11 Clipboard History — Application Entry Point
+//!
+//! This file is intentionally thin. All domain logic lives in the library
+//! crates under `src-tauri/src/`. The `main()` function:
+//!
+//! 1. Initialises tracing and the rendering environment.
+//! 2. Builds the Tauri application with plugins and shared state.
+//! 3. Registers all Tauri commands (from `commands.rs`).
+//! 4. Starts the clipboard watcher and theme listener.
+
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, Monitor, PhysicalPosition, PhysicalSize, State, WebviewWindow,
-    WindowEvent,
+    AppHandle, Emitter, Manager,
 };
-use win11_clipboard_history_lib::autostart_manager;
-use win11_clipboard_history_lib::clipboard_manager::{ClipboardItem, ClipboardManager};
-use win11_clipboard_history_lib::config_manager::{resolve_window_position, ConfigManager};
-use win11_clipboard_history_lib::emoji_manager::{EmojiManager, EmojiUsage};
-use win11_clipboard_history_lib::focus_manager::x11_robust_activate;
-use win11_clipboard_history_lib::focus_manager::{restore_focused_window, save_focused_window};
-use win11_clipboard_history_lib::input_simulator::simulate_paste_keystroke;
-use win11_clipboard_history_lib::permission_checker;
-use win11_clipboard_history_lib::rendering_env;
-use win11_clipboard_history_lib::session::is_wayland;
-use win11_clipboard_history_lib::shortcut_setup;
-use win11_clipboard_history_lib::theme_manager::{self, ThemeInfo};
-use win11_clipboard_history_lib::user_settings::{UserSettings, UserSettingsManager};
 
-/// Global flag to track if we started in background mode
-/// This is used to block the initial window show
-static STARTED_IN_BACKGROUND: AtomicBool = AtomicBool::new(false);
-
-/// Global flag indicating whether the initial show is allowed
-/// While false, background mode will still hide the window on focus
-/// After the first user toggle, this is set to true to allow normal show/hide behavior
-static INITIAL_SHOW_ALLOWED: AtomicBool = AtomicBool::new(false);
-
-/// Application state shared across all handlers
-pub struct AppState {
-    clipboard_manager: Arc<Mutex<ClipboardManager>>,
-    emoji_manager: Arc<Mutex<EmojiManager>>,
-    config_manager: Arc<Mutex<ConfigManager>>,
-    is_mouse_inside: Arc<AtomicBool>,
-    /// Serializes the complete clipboard/focus/input transaction. Locking only
-    /// the virtual device still allows two commands to swap clipboard content
-    /// before either chord is emitted.
-    paste_gate: tokio::sync::Mutex<()>,
-}
-
-// --- Commands ---
-
-#[tauri::command]
-fn get_history(state: State<AppState>) -> Vec<ClipboardItem> {
-    state.clipboard_manager.lock().get_history()
-}
-
-#[tauri::command]
-fn clear_history(state: State<AppState>) {
-    state.clipboard_manager.lock().clear();
-}
-
-#[tauri::command]
-fn delete_item(state: State<AppState>, id: String) {
-    state.clipboard_manager.lock().remove_item(&id);
-}
-
-#[tauri::command]
-fn toggle_pin(state: State<AppState>, id: String) -> Option<ClipboardItem> {
-    let result = state.clipboard_manager.lock().toggle_pin(&id);
-    if result.is_none() {
-        eprintln!("[toggle_pin] Item with id '{}' not found in history.", id);
-    }
-    result
-}
-
-#[tauri::command]
-fn get_recent_emojis(state: State<AppState>) -> Vec<EmojiUsage> {
-    state.emoji_manager.lock().get_recent()
-}
-
-#[tauri::command]
-fn set_mouse_state(state: State<AppState>, inside: bool) {
-    state.is_mouse_inside.store(inside, Ordering::Relaxed);
-}
-
-// --- User Settings Commands ---
-
-#[tauri::command]
-fn get_user_settings() -> Result<UserSettings, String> {
-    let manager = UserSettingsManager::new();
-    Ok(manager.load())
-}
-
-#[tauri::command]
-fn set_user_settings(
-    app: AppHandle,
-    state: State<AppState>,
-    new_settings: UserSettings,
-) -> Result<(), String> {
-    let manager = UserSettingsManager::new();
-    manager.save(&new_settings)?;
-
-    // Update clipboard manager's max history size if it changed
-    {
-        let mut clipboard_manager = state.clipboard_manager.lock();
-        if clipboard_manager.get_max_history_size() != new_settings.max_history_size {
-            clipboard_manager.set_max_history_size(new_settings.max_history_size);
-        }
-    }
-
-    // Emit event to notify all windows that settings have changed
-    app.emit("app-settings-changed", &new_settings)
-        .map_err(|e| format!("Failed to emit settings changed event: {}", e))?;
-
-    // Refresh tray icon immediately to reflect possible dynamic setting change
-    theme_manager::update_dynamic_tray_flag(new_settings.enable_dynamic_tray_icon);
-
-    let app_for_tray = app.clone();
-    let settings_for_tray = new_settings.clone();
-    tauri::async_runtime::spawn(async move {
-        theme_manager::refresh_tray_icon(&app_for_tray, &settings_for_tray).await;
-    });
-
-    Ok(())
-}
-
-#[tauri::command]
-fn is_settings_window_visible(app: AppHandle) -> bool {
-    app.get_webview_window("settings")
-        .map(|w| w.is_visible().unwrap_or(false))
-        .unwrap_or(false)
-}
-
-// --- Theme Detection Commands ---
-
-/// Get system color scheme from XDG Desktop Portal (supports COSMIC and other modern DEs)
-#[tauri::command]
-async fn get_system_theme() -> ThemeInfo {
-    theme_manager::get_system_color_scheme().await
-}
-
-/// Clear the cached theme value (useful when system theme might have changed)
-#[tauri::command]
-async fn refresh_system_theme() -> ThemeInfo {
-    theme_manager::clear_theme_cache().await;
-    theme_manager::get_system_color_scheme().await
-}
-
-/// Check if the D-Bus event listener is running for theme changes
-#[tauri::command]
-fn is_theme_listener_active() -> bool {
-    theme_manager::is_event_listener_running()
-}
-
-#[tauri::command]
-async fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> Result<(), String> {
-    let _paste_guard = state.paste_gate.lock().await;
-
-    // 1. Get Item (Scope lock tightly)
-    let item = {
-        let manager = state.clipboard_manager.lock();
-        manager.get_item(&id).cloned()
-    };
-
-    match item {
-        Some(item) => {
-            // 2. Prepare Environment (Hide Window -> Restore Focus)
-            WindowController::hide(&app);
-            PasteHelper::prepare_target_window(&app).await?;
-
-            // 3. Perform Paste
-            let mut manager = state.clipboard_manager.lock();
-            manager.paste_item(&item).map_err(|e| e.to_string())?;
-
-            // 4. Notify frontend of history change (item moved to top)
-            let history = manager.get_history();
-            drop(manager); // Release lock before emitting
-            let _ = app.emit("history-sync", &history);
-        }
-        None => {
-            eprintln!(
-                "[paste_item] Item with id '{}' not found in history. Syncing frontend...",
-                id
-            );
-            // Emit event to trigger frontend refresh
-            let history = state.clipboard_manager.lock().get_history();
-            let _ = app.emit("history-sync", &history);
-            return Err(format!("Item '{}' not found. History has been synced.", id));
-        }
-    }
-    Ok(())
-}
-
-#[tauri::command]
-async fn paste_text(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    text: String,
-    item_type: Option<String>,
-) -> Result<(), String> {
-    let _paste_guard = state.paste_gate.lock().await;
-
-    // 0. Record usage if applicable
-    if let Some(t) = item_type.as_deref() {
-        if t == "emoji" {
-            state.emoji_manager.lock().record_usage(&text);
-        }
-    }
-
-    // 1. Prepare Environment
-    WindowController::hide(&app);
-    PasteHelper::prepare_target_window(&app).await?;
-
-    // 2. Set Clipboard & Mark
-    {
-        let mut manager = state.clipboard_manager.lock();
-        manager.mark_text_as_pasted(&text);
-        manager.set_text_robust(&text)?;
-    }
-
-    // 3. Simulate Paste
-    simulate_paste_keystroke().map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-#[tauri::command]
-async fn paste_gif_from_url(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    url: String,
-) -> Result<(), String> {
-    let _paste_guard = state.paste_gate.lock().await;
-
-    // 1. Download (Blocking) - Window stays open to show loading if UI supports it
-    let url_clone = url.clone();
-    let file_uri = tokio::task::spawn_blocking(move || {
-        win11_clipboard_history_lib::gif_manager::paste_gif_to_clipboard_with_uri(&url_clone)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())?;
-
-    // 2. Mark as pasted
-    if let Some(uri) = file_uri {
-        let mut manager = state.clipboard_manager.lock();
-        manager.mark_text_as_pasted(&uri);
-        if let Some(trimmed) = uri.strip_suffix('\n') {
-            manager.mark_text_as_pasted(trimmed);
-        }
-    }
-
-    // 3. Prepare Environment & Paste
-    WindowController::hide(&app);
-    PasteHelper::prepare_target_window(&app).await?;
-
-    // The clipboard is already set by paste_gif_to_clipboard_with_uri, we just need to paste
-    simulate_paste_keystroke().map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-#[tauri::command]
-async fn finish_paste(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    let _paste_guard = state.paste_gate.lock().await;
-    WindowController::hide(&app);
-    PasteHelper::prepare_target_window(&app).await?;
-    simulate_paste_keystroke().map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-async fn copy_text_to_clipboard(_state: State<'_, AppState>, text: String) -> Result<(), String> {
-    // 1. Update Internal Manager (for history consistency, optional but good)
-    // Only write to the system clipboard; the history manager is updated by the clipboard watcher if enabled.
-
-    use arboard::Clipboard;
-    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard.set_text(text).map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-#[tauri::command]
-async fn finish_setup(app: AppHandle) -> Result<(), String> {
-    // 1. Mark first run as complete (redundant but safe)
-    win11_clipboard_history_lib::permission_checker::mark_first_run_complete()
-        .map_err(|e| e.to_string())?;
-
-    // 2. Close setup window
-    if let Some(setup_window) = app.get_webview_window("setup") {
-        let _ = setup_window.close();
-    }
-
-    // 3. Show main window
-    if let Some(main_window) = app.get_webview_window("main") {
-        // Ensure it's ready to be shown
-        WindowController::position_and_show(&main_window, &app);
-    }
-
-    // 4. Emit event to main window to update its state (stop waiting)
-    // We emit to all just in case, or specifically to main
-    let _ = app.emit("setup_complete", ());
-
-    Ok(())
-}
-
-// --- Helper for Paste Logic ---
-
-struct PasteHelper;
-
-impl PasteHelper {
-    const TARGET_READY_TIMEOUT: Duration = Duration::from_millis(750);
-    const TARGET_READY_POLL_INTERVAL: Duration = Duration::from_millis(2);
-    const TARGET_STABLE_SAMPLES: u8 = 2;
-
-    /// Restores focus to the previous window and waits for it to settle.
-    /// This ensures keystrokes are sent to the correct application.
-    async fn prepare_target_window(app: &AppHandle) -> Result<(), String> {
-        // `hide()` is dispatched to Tauri's event loop when commands run off
-        // the main thread. Observe its completion before asking X11 to restore
-        // focus, otherwise a pending UnmapNotify can steal focus back after an
-        // apparently stable X11 sample.
-        Self::wait_for_popup_to_release_focus(app).await?;
-
-        if is_wayland() {
-            return Ok(());
-        }
-
-        match restore_focused_window() {
-            Ok(true) => {
-                // Focus was *verified* on the target window by the poller;
-                // no extra settle time is needed.
-            }
-            Ok(false) => {
-                return Err("Target window did not acquire stable focus".to_string());
-            }
-            Err(e) => {
-                return Err(format!("Focus restoration failed: {}", e));
-            }
-        }
-        Ok(())
-    }
-
-    /// Waits for Tauri's asynchronous hide/focus events to settle. On Wayland
-    /// this is the strongest target-readiness signal available; on X11 it is
-    /// the prerequisite for explicitly restoring the previously focused app.
-    async fn wait_for_popup_to_release_focus(app: &AppHandle) -> Result<(), String> {
-        let window = app
-            .get_webview_window("main")
-            .ok_or("Main window is not available")?;
-        let start = std::time::Instant::now();
-        let mut stable_samples = 0;
-
-        loop {
-            let last_state = match (window.is_visible(), window.is_focused()) {
-                (Ok(false), Ok(false)) => {
-                    stable_samples += 1;
-                    if stable_samples >= Self::TARGET_STABLE_SAMPLES {
-                        return Ok(());
-                    }
-                    "visible=false, focused=false (settling)".to_string()
-                }
-                (visible, focused) => {
-                    stable_samples = 0;
-                    format!("visible={:?}, focused={:?}", visible, focused)
-                }
-            };
-
-            if start.elapsed() >= Self::TARGET_READY_TIMEOUT {
-                return Err(format!(
-                    "Timed out waiting for the clipboard popup to release focus ({})",
-                    last_state
-                ));
-            }
-            tokio::time::sleep(Self::TARGET_READY_POLL_INTERVAL).await;
-        }
-    }
-}
-
-// --- Window Controller (Visibility & Positioning) ---
-
-struct WindowController;
-
-impl WindowController {
-    pub fn toggle(app: &AppHandle) {
-        Self::toggle_with_tab(app, None);
-    }
-
-    /// Toggle window visibility with optional tab selection
-    /// If tab is Some("emoji"), it will emit an event to switch to the emoji tab
-    pub fn toggle_with_tab(app: &AppHandle, tab: Option<&str>) {
-        // User-initiated toggle - mark that we're now allowing shows
-        // This stops the background enforcer from hiding the window
-        if STARTED_IN_BACKGROUND.load(Ordering::SeqCst) {
-            INITIAL_SHOW_ALLOWED.store(true, Ordering::SeqCst);
-        }
-
-        if let Some(window) = app.get_webview_window("main") {
-            if window.is_visible().unwrap_or(false) {
-                // If window is visible, emit tab switch event if tab is specified
-                // This allows Super+. to switch to emoji tab even when window is open
-                if let Some(tab_name) = tab {
-                    let _ = app.emit("switch-tab", tab_name);
-                } else {
-                    let _ = window.hide();
-                }
-            } else {
-                save_focused_window();
-                // Emit tab switch event before showing window
-                if let Some(tab_name) = tab {
-                    let _ = app.emit("switch-tab", tab_name);
-                }
-
-                // Immediate cleanup of outdated items before showing
-                if let Some(state) = app.try_state::<AppState>() {
-                    let settings = UserSettingsManager::new().load();
-                    let interval_in_minutes = settings.auto_delete_interval_in_minutes();
-
-                    let mut manager = state.clipboard_manager.lock();
-                    if manager.cleanup_old_items(interval_in_minutes) {
-                        // Mirror background cleanup: persist history explicitly, then emit event
-                        manager.save_history();
-                        let _ = app.emit("history-cleared", ());
-                    }
-                }
-
-                Self::position_and_show(&window, app);
-            }
-        }
-    }
-
-    pub fn hide(app: &AppHandle) {
-        if let Some(window) = app.get_webview_window("main") {
-            // FLUSH CONFIG TO DISK ON HIDE
-            if let Some(state) = app.try_state::<AppState>() {
-                if is_wayland() {
-                    state.config_manager.lock().sync_to_disk();
-                }
-            }
-            let _ = window.hide();
-        }
-    }
-
-    fn position_and_show(window: &WebviewWindow, app: &AppHandle) {
-        let state = app.state::<AppState>();
-
-        if is_wayland() {
-            Self::position_for_wayland(window, &state);
-        } else {
-            Self::position_for_non_wayland(window);
-        }
-
-        let is_wayland_session = is_wayland();
-
-        if is_wayland_session {
-            // Wayland needs to be born "On Top" to be visible
-            let _ = window.show();
-            let _ = window.set_always_on_top(true);
-            let _ = window.set_focus();
-        } else {
-            // X11 born as normal window.
-            // We do NOT activate always_on_top to avoid focus blocking and glitch.
-            let _ = window.show();
-        }
-
-        let window_clone = window.clone();
-        let app_clone = app.clone();
-
-        std::thread::spawn(move || {
-            // For Wayland, we still need a small delay for the compositor
-            // For X11, we use polling-based wait instead of fixed sleep
-            if is_wayland_session {
-                std::thread::sleep(std::time::Duration::from_millis(100));
-                let _ = window_clone.set_always_on_top(false);
-                let _ = window_clone.set_focus();
-            } else {
-                // Use EWMH _NET_ACTIVE_WINDOW protocol with polling instead of fixed sleep.
-                // This waits for the window to actually appear in X11's client list
-                // before attempting activation, solving the race condition.
-                if let Err(e) = x11_robust_activate("Clipboard History") {
-                    eprintln!("[WindowController] X11 activation failed: {}", e);
-                    // Fallback: try xdotool as last resort
-                    let _ = Self::x11_activate_window_xdotool();
-                }
-            }
-
-            let _ = app_clone.emit("window-shown", ());
-        });
-    }
-
-    /// Activate window on X11 using xdotool (fallback method)
-    fn x11_activate_window_xdotool() -> Result<(), String> {
-        use std::process::Command;
-
-        let output = Command::new("xdotool")
-            .args(["search", "--name", "Clipboard History"])
-            .output()
-            .map_err(|e| format!("xdotool search failed: {}", e))?;
-
-        let window_ids = String::from_utf8_lossy(&output.stdout);
-        if let Some(window_id) = window_ids.lines().next() {
-            Command::new("xdotool")
-                .args(["windowactivate", "--sync", window_id])
-                .output()
-                .map_err(|e| format!("windowactivate failed: {}", e))?;
-            Ok(())
-        } else {
-            Err("Window not found".to_string())
-        }
-    }
-
-    fn position_for_wayland(window: &WebviewWindow, state: &State<AppState>) {
-        let config = state.config_manager.lock();
-
-        if let Ok(monitors) = window.available_monitors() {
-            if !monitors.is_empty() {
-                let win_size = window.outer_size().unwrap_or(PhysicalSize::new(360, 480));
-
-                let window_state = config.get_state();
-                let pos = resolve_window_position(&window_state, &monitors, win_size);
-
-                let _ = window.set_position(pos);
-            }
-        }
-    }
-
-    fn position_for_non_wayland(window: &WebviewWindow) {
-        let (cursor_x, cursor_y) = match Self::get_cursor_position(window) {
-            Some(pos) => pos,
-            None => {
-                // Fallback: center the window if we can't get cursor position
-                let _ = window.center();
-                return;
-            }
-        };
-
-        let target_monitor = Self::find_monitor_containing(window, cursor_x, cursor_y)
-            .or_else(|| window.current_monitor().ok().flatten())
-            .or_else(|| window.primary_monitor().ok().flatten());
-
-        if let Some(monitor) = target_monitor {
-            let pos = Self::clamp_window_to_monitor(window, &monitor, cursor_x, cursor_y);
-            let _ = window.set_position(pos);
-        }
-    }
-
-    fn find_monitor_containing(window: &WebviewWindow, x: i32, y: i32) -> Option<Monitor> {
-        window.available_monitors().ok()?.into_iter().find(|m| {
-            let p = m.position();
-            let s = m.size();
-            x >= p.x && x < (p.x + s.width as i32) && y >= p.y && y < (p.y + s.height as i32)
-        })
-    }
-
-    fn clamp_window_to_monitor(
-        window: &WebviewWindow,
-        monitor: &Monitor,
-        x: i32,
-        y: i32,
-    ) -> PhysicalPosition<i32> {
-        let win_size = window.outer_size().unwrap_or(PhysicalSize::new(360, 480));
-        let m_pos = monitor.position();
-        let m_size = monitor.size();
-
-        let max_x = m_pos.x + m_size.width as i32 - win_size.width as i32;
-        let max_y = m_pos.y + m_size.height as i32 - win_size.height as i32;
-
-        // Clamp with 10px padding
-        let safe_x = x.clamp(m_pos.x + 10, max_x - 10);
-        let safe_y = y.clamp(m_pos.y + 10, max_y - 10);
-
-        PhysicalPosition::new(safe_x, safe_y)
-    }
-
-    fn get_cursor_position(window: &WebviewWindow) -> Option<(i32, i32)> {
-        if let Ok(pos) = window.cursor_position() {
-            return Some((pos.x as i32, pos.y as i32));
-        }
-
-        {
-            if let Some(p) = Self::get_cursor_xdotool() {
-                return Some(p);
-            }
-            if let Some(p) = Self::get_cursor_x11() {
-                return Some(p);
-            }
-        }
-
-        None
-    }
-
-    fn get_cursor_xdotool() -> Option<(i32, i32)> {
-        let output = std::process::Command::new("xdotool")
-            .args(["getmouselocation", "--shell"])
-            .output()
-            .ok()?;
-
-        if !output.status.success() {
-            return None;
-        }
-
-        let s = String::from_utf8_lossy(&output.stdout);
-        let (mut x, mut y) = (None, None);
-        for line in s.lines() {
-            if let Some(v) = line.strip_prefix("X=") {
-                x = v.parse().ok();
-            }
-            if let Some(v) = line.strip_prefix("Y=") {
-                y = v.parse().ok();
-            }
-        }
-        x.zip(y)
-    }
-
-    fn get_cursor_x11() -> Option<(i32, i32)> {
-        use x11rb::connection::Connection;
-        use x11rb::protocol::xproto::ConnectionExt;
-        let (conn, n) = x11rb::connect(None).ok()?;
-        let root = conn.setup().roots.get(n)?.root;
-        let r = conn.query_pointer(root).ok()?.reply().ok()?;
-        Some((r.root_x as i32, r.root_y as i32))
-    }
-}
-
-// --- Settings Window Controller ---
-
-struct SettingsController;
-
-impl SettingsController {
-    /// Shows the settings window, recreating it if somehow destroyed
-    pub fn show(app: &AppHandle) {
-        use tauri::{WebviewUrl, WebviewWindowBuilder};
-
-        match app.get_webview_window("settings") {
-            Some(window) => {
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
-            None => {
-                // Fallback: recreate the window if it was somehow destroyed
-                eprintln!(
-                    "[SettingsController] Settings window missing, recreating as fallback..."
-                );
-
-                match WebviewWindowBuilder::new(
-                    app,
-                    "settings",
-                    WebviewUrl::App("index.html".into()),
-                )
-                .title("Settings - Clipboard History")
-                .inner_size(480.0, 520.0)
-                .resizable(false)
-                .decorations(true)
-                .transparent(false)
-                .visible(true)
-                .skip_taskbar(false)
-                .always_on_top(false)
-                .center()
-                .focused(true)
-                .build()
-                {
-                    Ok(_) => {
-                        println!("[SettingsController] Settings window recreated successfully")
-                    }
-                    Err(e) => eprintln!("[SettingsController] Failed to recreate window: {}", e),
-                }
-            }
-        }
-    }
-}
-
-// --- Window Event Helper ---
-
-fn handle_window_moved_for_wayland(
-    window: &WebviewWindow,
-    state: &State<AppState>,
-    _pos: &PhysicalPosition<i32>,
-) {
-    if !is_wayland() || !window.is_visible().unwrap_or(false) {
-        return;
-    }
-
-    let _monitor_name = window
-        .current_monitor()
-        .ok()
-        .flatten()
-        .and_then(|m| m.name().map(|n| n.to_string()));
-
-    let _config = state.config_manager.lock();
-    // UPDATE MEMORY ONLY (No Disk I/O here)
-    // config.update_state(monitor_name, pos.x, pos.y);
-}
-
-// --- Background Listeners ---
-
-fn start_clipboard_watcher(app: AppHandle, clipboard_manager: Arc<Mutex<ClipboardManager>>) {
-    std::thread::spawn(move || {
-        let mut last_text_hash: Option<u64> = None;
-        let mut last_image_hash: Option<u64> = None;
-        let mut cleanup_counter = 0;
-
-        loop {
-            std::thread::sleep(Duration::from_millis(500));
-            cleanup_counter += 1;
-
-            let mut manager = clipboard_manager.lock();
-
-            // Background cleanup every ~30 seconds (60 * 500ms)
-            if cleanup_counter >= 60 {
-                cleanup_counter = 0;
-                let settings = UserSettingsManager::new().load();
-                let interval_in_minutes = settings.auto_delete_interval_in_minutes();
-
-                if interval_in_minutes > 0 && manager.cleanup_old_items(interval_in_minutes) {
-                    println!("[Watcher] Background cleanup triggered sync");
-                    let _ = app.emit("history-cleared", ());
-                }
-            }
-
-            // Text
-            if let Ok(text) = manager.get_current_text() {
-                if !text.is_empty() {
-                    let text_hash =
-                        win11_clipboard_history_lib::clipboard_manager::calculate_hash(&text);
-
-                    if Some(text_hash) != last_text_hash {
-                        last_text_hash = Some(text_hash);
-                        last_image_hash = None;
-
-                        // Try to get HTML content for rich text support
-                        let html = manager.get_current_html();
-
-                        if let Some(item) = manager.add_text(text, html) {
-                            let _ = app.emit("clipboard-changed", &item);
-                        }
-                    }
-                }
-            }
-
-            // Image
-            if let Ok(Some((image_data, hash))) = manager.get_current_image() {
-                if Some(hash) != last_image_hash {
-                    last_image_hash = Some(hash);
-                    last_text_hash = None;
-                    if let Some(item) = manager.add_image(image_data, hash) {
-                        let _ = app.emit("clipboard-changed", &item);
-                    }
-                }
-            }
-        }
-    });
-}
-
-// --- Main ---
+use windows_11_style_clipboard_history_manager::autostart_manager;
+use windows_11_style_clipboard_history_manager::clipboard_manager::ClipboardManager;
+use windows_11_style_clipboard_history_manager::commands;
+use windows_11_style_clipboard_history_manager::config_manager::ConfigManager;
+use windows_11_style_clipboard_history_manager::emoji_manager::EmojiManager;
+use windows_11_style_clipboard_history_manager::permission_checker;
+use windows_11_style_clipboard_history_manager::rendering_env;
+use windows_11_style_clipboard_history_manager::session;
+use windows_11_style_clipboard_history_manager::shortcut_setup;
+
+use windows_11_style_clipboard_history_manager::user_settings::UserSettingsManager;
+use windows_11_style_clipboard_history_manager::window_controller::{
+    SettingsController, WindowController, STARTED_IN_BACKGROUND,
+};
+use windows_11_style_clipboard_history_manager::AppState;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
+    windows_11_style_clipboard_history_manager::init_tracing();
+
     let args: Vec<String> = std::env::args().collect();
 
     // Handle --version / -v
     if args.iter().any(|arg| arg == "--version" || arg == "-v") {
-        println!("win11-clipboard-history {}", VERSION);
+        println!("windows-11-style-clipboard-history-manager {VERSION}");
         return;
     }
 
     // Handle --help / -h
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
-        println!("win11-clipboard-history {}", VERSION);
-        println!();
-        println!("USAGE:");
-        println!("    win11-clipboard-history [OPTIONS]");
-        println!();
-        println!("OPTIONS:");
-        println!("    -h, --help       Show this help message");
-        println!("    -v, --version    Show version information");
-        println!("        --background Start minimized to system tray (for autostart)");
-        println!("        --settings   Open settings window on startup");
-        println!("        --emoji      Open with emoji picker tab selected");
-        println!();
-        println!("SHORTCUTS:");
-        println!("    Super+V          Open clipboard history");
-        println!("    Super+.          Open emoji picker");
-        println!("    Ctrl+Alt+V       Alternative shortcut");
+        print_help();
         return;
     }
 
-    // MUST run before Tauri / WebKit init – detects NVIDIA & AppImage and
-    // sets WEBKIT_DISABLE_DMABUF_RENDERER=1 when needed.
+    // MUST run before Tauri / WebKit init
     rendering_env::init();
 
-    // Check if --background flag is present (start minimized to tray)
     let start_in_background = args.iter().any(|arg| arg == "--background");
     if start_in_background {
-        println!("[Startup] Starting in background mode (system tray only)");
+        tracing::info!("[Startup] Starting in background mode (system tray only)");
         STARTED_IN_BACKGROUND.store(true, Ordering::SeqCst);
     }
 
-    // Check if --settings flag is present (for first instance startup)
     let open_settings_on_start = args.iter().any(|arg| arg == "--settings");
-
-    // Check if --emoji flag is present (open with emoji tab)
     let open_emoji_on_start = args.iter().any(|arg| arg == "--emoji");
 
-    // Clone for use in setup closure
-    let start_in_background_clone = start_in_background;
-    let open_emoji_on_start_clone = open_emoji_on_start;
-
-    win11_clipboard_history_lib::session::init();
+    windows_11_style_clipboard_history_manager::session::init();
 
     let is_mouse_inside = Arc::new(AtomicBool::new(false));
-    let base_dir = dirs::data_local_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("win11-clipboard-history");
+    let base_dir = windows_11_style_clipboard_history_manager::clipboard_manager::data_dir();
 
-    // Ensure base directory exists
     if let Err(e) = std::fs::create_dir_all(&base_dir) {
-        eprintln!("Failed to create base directory: {}", e);
+        tracing::error!("Failed to create base directory: {e}");
     }
 
-    let history_path = base_dir.join("history.json");
-
-    // Load user settings to get max_history_size
     let user_settings = UserSettingsManager::new().load();
-    let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new(
-        history_path,
+
+    // Construct the manager with the user's preferred encryption-key
+    // backend (file | Secret Service). See ADR-0006.
+    // ساخت مدیر با بک‌اند کلید ترجیحی کاربر (فایل | Secret Service). ADR-0006.
+    let key_backend = windows_11_style_clipboard_history_manager::history_crypto::KeyBackend::from_setting(
+        &user_settings.history_key_backend,
+    );
+    tracing::info!(
+        "[Startup] History key backend: requested '{}'",
+        key_backend.as_str()
+    );
+    let clipboard_manager = Arc::new(Mutex::new(ClipboardManager::new_with_key_backend(
+        base_dir.clone(),
         user_settings.max_history_size,
+        key_backend,
     )));
+    {
+        let mut manager = clipboard_manager.lock();
+        manager.set_privacy_policy(user_settings.privacy_policy());
+        manager.set_auto_delete_interval_minutes(user_settings.auto_delete_interval_in_minutes());
+    }
+    windows_11_style_clipboard_history_manager::linux_shortcut_manager::set_allow_wm_config_rewrite(
+        user_settings.allow_wm_config_rewrite,
+    );
 
     let emoji_manager = Arc::new(Mutex::new(EmojiManager::new(base_dir.clone())));
-
     let config_manager = Arc::new(Mutex::new(ConfigManager::new(base_dir)));
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
-        // Global shortcut plugin for cross-platform hotkeys
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        // Single Instance Plugin: When user triggers shortcut and app is already running,
-        // the OS launches a new instance which signals the existing one to toggle
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-            // Check if --settings flag is present
             if argv.iter().any(|arg| arg == "--settings") {
-                println!(
-                    "[SingleInstance] Secondary instance with --settings flag, opening settings..."
-                );
+                tracing::info!("[SingleInstance] Opening settings...");
                 SettingsController::show(app);
             } else if argv.iter().any(|arg| arg == "--emoji") {
-                println!(
-                    "[SingleInstance] Secondary instance with --emoji flag, opening emoji picker..."
-                );
+                tracing::info!("[SingleInstance] Opening emoji picker...");
                 WindowController::toggle_with_tab(app, Some("emoji"));
             } else {
-                println!("[SingleInstance] Secondary instance detected, toggling window...");
+                tracing::info!("[SingleInstance] Toggling window...");
                 WindowController::toggle(app);
             }
         }))
@@ -860,16 +125,14 @@ fn main() {
             config_manager: config_manager.clone(),
             is_mouse_inside: is_mouse_inside.clone(),
             paste_gate: tokio::sync::Mutex::new(()),
+            paste_ticket: Mutex::new(None),
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Destroyed = event {
                 if window.label() == "setup" {
-                    // Check if setup was effectively finished.
-                    // If the user clicked "Start Using", `finish_setup` would have been called.
-                    // `finish_setup` calls `mark_first_run_complete`.
-                    if win11_clipboard_history_lib::permission_checker::is_first_run() {
-                         println!("[Setup] Setup window closed without completion. Exiting app.");
-                         window.app_handle().exit(0);
+                    if windows_11_style_clipboard_history_manager::permission_checker::first_run_pending() {
+                        tracing::info!("[Setup] Setup window closed without completion. Exiting.");
+                        window.app_handle().exit(0);
                     }
                 }
             }
@@ -877,239 +140,221 @@ fn main() {
         .setup(move |app| {
             let app_handle = app.handle().clone();
 
-            // This runs only for the primary instance, after the
-            // single-instance plugin has rejected shortcut helper processes.
-            // Starting it earlier would hotplug a temporary keyboard every
-            // time the desktop launches the shortcut command.
-            win11_clipboard_history_lib::input_simulator::init();
-            win11_clipboard_history_lib::paste_sync::init();
+            windows_11_style_clipboard_history_manager::input_simulator::init();
+            windows_11_style_clipboard_history_manager::paste_sync::init();
 
-            // FIRST THING: If started in background mode, immediately hide the main window
-            // This runs before anything else to prevent the window from appearing
-            if start_in_background_clone {
+            // Background mode: immediately hide the main window
+            if start_in_background {
                 if let Some(main_window) = app.get_webview_window("main") {
                     let _ = main_window.hide();
-                    println!("[Setup] Immediately hiding main window for background mode");
+                    tracing::debug!("[Setup] Immediately hiding main window for background mode");
                 }
             }
 
-            // Auto-migrate old autostart entries to use the wrapper script
-            // This fixes existing installations where autostart points to the binary directly
-            match autostart_manager::autostart_migrate() {
-                Ok(true) => println!("[Setup] Migrated autostart entry to use wrapper script"),
-                Ok(false) => {} // No migration needed
-                Err(e) => eprintln!("[Setup] Failed to migrate autostart: {}", e),
+            // Auto-migrate old autostart entries
+            match autostart_manager::migrate_native() {
+                Ok(true) => tracing::info!("[Setup] Migrated autostart entry to use wrapper script"),
+                Ok(false) => {}
+                Err(e) => tracing::warn!("[Setup] Failed to migrate autostart: {e}"),
             }
 
-            let show = MenuItem::with_id(app, "show", "Show Clipboard", true, None::<&str>)?;
-            let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &settings, &quit])?;
+            // Build system tray
+            build_tray(app, &app_handle)?;
 
-
-
-            // Get temp directory for tray icon (avoids permission issues with XDG_RUNTIME_DIR)
-            let temp_dir = std::env::temp_dir().join("win11-clipboard-history");
-            std::fs::create_dir_all(&temp_dir).ok();
-
-            // Initial Dynamic Icon Setup
-            let settings_manager = UserSettingsManager::new();
-            let settings = settings_manager.load();
-
-            // Initialize atomic flag for the listener loop
-            theme_manager::update_dynamic_tray_flag(settings.enable_dynamic_tray_icon);
-
-            let (icon, use_template_icon) = theme_manager::initial_tray_icon(&settings);
-
-            let _tray = TrayIconBuilder::with_id("main-tray")
-                .icon(icon)
-                .icon_as_template(use_template_icon)
-                .tooltip("Clipboard History")
-                .temp_dir_path(temp_dir)
-                .menu(&menu)
-                .on_menu_event(move |app, event| match event.id.as_ref() {
-                    "quit" => app.exit(0),
-                    "show" => WindowController::toggle(app),
-                    "settings" => SettingsController::show(app),
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        ..
-                    } = event
-                    {
-                        WindowController::toggle(tray.app_handle());
-                    }
-                })
-                .build(app)?;
-
-            // Update icon asynchronously if dynamic is enabled (to fix the initial default icon)
-            if settings.enable_dynamic_tray_icon {
-                 let app_handle_bg = app.handle().clone();
-                 let settings_bg = settings.clone();
-                 tauri::async_runtime::spawn(async move {
-                    theme_manager::refresh_tray_icon(&app_handle_bg, &settings_bg).await;
-                 });
-            }
-
-            // Verify that settings window was created from config
+            // Verify settings window
             if app.get_webview_window("settings").is_none() {
-                eprintln!("[Setup] FATAL: Settings window missing from config");
+                tracing::error!("[Setup] FATAL: Settings window missing from config");
             } else {
-                println!("[Setup] Settings window created successfully from config");
+                tracing::info!("[Setup] Settings window created successfully from config");
             }
 
-            // Window Event Handlers (Focus & Move)
-            let main_window = app.get_webview_window("main").unwrap();
-            let w_clone = main_window.clone();
-            let app_handle_for_event = app_handle.clone();
+            // Register window event handlers
+            if let Some(main_window) = app.get_webview_window("main") {
+                windows_11_style_clipboard_history_manager::window_controller::register_window_events(
+                    &main_window,
+                    &app_handle,
+                );
 
-            main_window.on_window_event(move |event| match event {
-                // Block any window show attempts when started in background mode
-                // This catches cases where GTK/Tauri automatically shows the window
-                WindowEvent::Focused(true) => {
-                    // Load both flags atomically with SeqCst to avoid race conditions
-                    let started_in_background = STARTED_IN_BACKGROUND.load(Ordering::SeqCst);
-                    let initial_show_allowed = INITIAL_SHOW_ALLOWED.load(Ordering::SeqCst);
+                // Start clipboard watcher
+                windows_11_style_clipboard_history_manager::clipboard_watcher::start(
+                    app_handle.clone(),
+                    clipboard_manager.clone(),
+                );
 
-                    // If started in background and initial show hasn't been allowed yet,
-                    // immediately hide the window
-                    if started_in_background && !initial_show_allowed {
-                        println!("[WindowController] Background mode: intercepted focus, hiding window");
-                        let _ = w_clone.hide();
-                    }
-                }
-                WindowEvent::Focused(false) => {
-                    let state = w_clone.state::<AppState>();
-                    if state.is_mouse_inside.load(Ordering::Relaxed) {
-                        return;
-                    }
-
-                    // Don't hide if settings window is visible (for live preview)
-                    if let Some(settings_window) =
-                        app_handle_for_event.get_webview_window("settings")
-                    {
-                        if settings_window.is_visible().unwrap_or(false) {
-                            return;
-                        }
-                    }
-
-                    if is_wayland() {
-                        state.config_manager.lock().sync_to_disk();
-                    }
-
-                    let _ = w_clone.hide();
-                }
-
-                WindowEvent::Moved(pos) => {
-                    let state = w_clone.state::<AppState>();
-                    handle_window_moved_for_wayland(&w_clone, &state, pos);
-                }
-                _ => {}
-            });
-
-            start_clipboard_watcher(app_handle.clone(), clipboard_manager.clone());
-
-            // Start theme change listener (D-Bus event-based, more efficient than polling)
-            {
+                // Start theme change listener
                 let app_handle_for_theme = app_handle.clone();
                 tauri::async_runtime::spawn(async move {
                     if let Err(e) =
-                        theme_manager::start_theme_listener(app_handle_for_theme).await
+                        windows_11_style_clipboard_history_manager::theme_manager::start_theme_listener(
+                            app_handle_for_theme,
+                        )
+                        .await
                     {
-                        eprintln!("[ThemeManager] Failed to start theme listener: {}", e);
+                        tracing::error!("[ThemeManager] Failed to start theme listener: {e}");
                     }
                 });
-            }
 
-            // If --settings flag was passed on first startup, open the settings window
-            if open_settings_on_start {
-                SettingsController::show(&app_handle);
-            }
+                // Handle --settings flag
+                if open_settings_on_start {
+                    SettingsController::show(&app_handle);
+                }
 
-            // If --emoji flag was passed on first startup, emit switch-tab event
-            // This needs a small delay to ensure the frontend is ready
-            if open_emoji_on_start_clone {
-                let app_handle_for_emoji = app_handle.clone();
-                std::thread::spawn(move || {
-                    // Wait for frontend to be ready
-                    std::thread::sleep(std::time::Duration::from_millis(300));
-                    let _ = app_handle_for_emoji.emit("switch-tab", "emoji");
-                });
-            }
-
-            // If --background flag was passed, ensure the main window stays hidden
-            // This is the primary mechanism for starting minimized to tray
-            // Background mode: spawn enforcer thread as fallback
-            // This catches cases where something shows the window after our initial hide
-            if start_in_background_clone {
-                if let Some(main_window) = app.get_webview_window("main") {
-                    // Spawn a background task that keeps checking and hiding the window
-                    // for the first few seconds, in case something shows it after we hide it
-                    let window_clone = main_window.clone();
+                // Handle --emoji flag
+                if open_emoji_on_start {
+                    let app_handle_for_emoji = app_handle.clone();
                     std::thread::spawn(move || {
-                        for i in 0..10 {
-                            std::thread::sleep(std::time::Duration::from_millis(200));
-
-                            // User has already triggered a toggle, stop blocking
-                            if INITIAL_SHOW_ALLOWED.load(Ordering::SeqCst) {
-                                break;
-                            }
-
-                            // Check if window still exists and is visible, then hide it
-                            // Use unwrap_or(false) to safely handle cases where window was destroyed
-                            match window_clone.is_visible() {
-                                Ok(true) => {
-                                    println!("[Startup] Background enforcer #{}: window was visible, hiding again", i + 1);
-                                    let _ = window_clone.hide();
-                                }
-                                Ok(false) => {} // Window exists but is hidden, nothing to do
-                                Err(_) => break, // Window was destroyed, stop the enforcer
-                            }
-                        }
-                        println!("[Startup] Background enforcer finished");
+                        std::thread::sleep(std::time::Duration::from_millis(300));
+                        let _ = app_handle_for_emoji.emit("switch-tab", "emoji");
                     });
+                }
+
+                // Background mode enforcer
+                if start_in_background {
+                    windows_11_style_clipboard_history_manager::window_controller::spawn_background_enforcer(
+                        &main_window,
+                    );
                 }
             }
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            get_history,
-            clear_history,
-            delete_item,
-            toggle_pin,
-            paste_item,
-            paste_text,
-            get_recent_emojis,
-            paste_gif_from_url,
-            finish_paste,
-            finish_setup, // Register the new command
-            set_mouse_state,
-            get_user_settings,
-            set_user_settings,
-            is_settings_window_visible,
-            copy_text_to_clipboard,
-            get_system_theme,
-            refresh_system_theme,
-            is_theme_listener_active,
+            // History
+            commands::get_history_page,
+            commands::get_item,
+            commands::clear_history,
+            commands::delete_item,
+            commands::toggle_pin,
+            // Emoji
+            commands::get_recent_emojis,
+            // Mouse
+            commands::set_mouse_state,
+            // Settings
+            commands::get_user_settings,
+            commands::set_user_settings,
+            commands::is_settings_window_visible,
+            commands::get_default_settings,
+            commands::set_app_language,
+            // Theme
+            commands::get_system_theme,
+            commands::refresh_system_theme,
+            commands::is_theme_listener_active,
+            // Paste
+            commands::paste_item,
+            commands::paste_text,
+            commands::paste_gif_from_url,
+            commands::finish_paste,
+            commands::copy_text_to_clipboard,
+            commands::open_safe_url,
+            commands::search_tenor,
+            // Encryption key backend
+            commands::get_history_key_backend_status,
+            commands::migrate_history_key_to_secret_service,
+            commands::migrate_history_key_to_file,
+            // Setup
+            commands::finish_setup,
+            // Permissions
             permission_checker::check_permissions,
             permission_checker::fix_permissions_now,
             permission_checker::is_first_run,
-            permission_checker::mark_first_run_complete,
             permission_checker::reset_first_run,
+            // Shortcuts
             shortcut_setup::get_desktop_environment,
             shortcut_setup::register_de_shortcut,
             shortcut_setup::check_shortcut_tools,
             shortcut_setup::detect_conflicts,
             shortcut_setup::resolve_conflicts,
+            // Autostart
             autostart_manager::autostart_enable,
             autostart_manager::autostart_disable,
             autostart_manager::autostart_is_enabled,
             autostart_manager::autostart_migrate,
+            // Rendering
             rendering_env::get_rendering_environment,
+            session::get_session_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Build the system tray icon and menu
+fn build_tray(app: &tauri::App, app_handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let settings_manager = UserSettingsManager::new();
+    let settings = settings_manager.load();
+    // The native tray belongs to the always-English main surface. Language
+    // selection is intentionally scoped to Settings and first-run Setup.
+    // سینی native متعلق به سطح اصلی همیشه‌انگلیسی است؛ انتخاب زبان عمداً
+    // فقط به تنظیمات و راه‌اندازی نخست محدود شده است.
+    let show = MenuItem::with_id(app, "show", "Show Clipboard", true, None::<&str>)?;
+    let settings_item = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &settings_item, &quit])?;
+
+    let temp_dir = std::env::temp_dir().join("windows-11-style-clipboard-history-manager");
+    std::fs::create_dir_all(&temp_dir).ok();
+
+    windows_11_style_clipboard_history_manager::theme_manager::update_dynamic_tray_flag(
+        settings.enable_dynamic_tray_icon,
+    );
+
+    let (icon, use_template_icon) =
+        windows_11_style_clipboard_history_manager::theme_manager::initial_tray_icon(&settings);
+
+    let _tray = TrayIconBuilder::with_id("main-tray")
+        .icon(icon)
+        .icon_as_template(use_template_icon)
+        .tooltip("Clipboard History")
+        .temp_dir_path(temp_dir)
+        .menu(&menu)
+        .on_menu_event(move |app, event| match event.id.as_ref() {
+            "quit" => app.exit(0),
+            "show" => WindowController::toggle(app),
+            "settings" => SettingsController::show(app),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                ..
+            } = event
+            {
+                WindowController::toggle(tray.app_handle());
+            }
+        })
+        .build(app)?;
+
+    // Update icon asynchronously if dynamic is enabled
+    if settings.enable_dynamic_tray_icon {
+        let app_handle_bg = app_handle.clone();
+        let settings_bg = settings.clone();
+        tauri::async_runtime::spawn(async move {
+            windows_11_style_clipboard_history_manager::theme_manager::refresh_tray_icon(
+                &app_handle_bg,
+                &settings_bg,
+            )
+            .await;
+        });
+    }
+
+    Ok(())
+}
+
+/// Print help message
+fn print_help() {
+    println!("windows-11-style-clipboard-history-manager {VERSION}");
+    println!();
+    println!("USAGE:");
+    println!("    windows-11-style-clipboard-history-manager [OPTIONS]");
+    println!();
+    println!("OPTIONS:");
+    println!("    -h, --help       Show this help message");
+    println!("    -v, --version    Show version information");
+    println!("        --background Start minimized to system tray (for autostart)");
+    println!("        --settings   Open settings window on startup");
+    println!("        --emoji      Open with emoji picker tab selected");
+    println!();
+    println!("SHORTCUTS:");
+    println!("    Super+V          Open clipboard history");
+    println!("    Super+.          Open emoji picker");
+    println!("    Ctrl+Alt+V       Alternative shortcut");
 }

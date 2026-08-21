@@ -31,7 +31,7 @@ export const SYMBOL_CATEGORIES = [
 export type SymbolCategory = (typeof SYMBOL_CATEGORIES)[number]
 
 // prettier-ignore
-export const SYMBOLS: SymbolItem[] = symbolsData as SymbolItem[];
+export const SYMBOLS: SymbolItem[] = symbolsData
 
 export function getSymbols(category?: string | null, searchQuery?: string): SymbolItem[] {
   let filtered = SYMBOLS

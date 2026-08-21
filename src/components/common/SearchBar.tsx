@@ -1,5 +1,6 @@
 import { forwardRef, memo, type ReactNode } from 'react'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
 import { Search, X, Regex } from 'lucide-react'
 import { getTertiaryBackgroundStyle } from '../../utils/themeUtils'
 
@@ -32,6 +33,7 @@ export const SearchBar = memo(
     },
     ref
   ) {
+    const { t } = useTranslation()
     const backgroundColor = getTertiaryBackgroundStyle(isDark, opacity).backgroundColor
 
     const handleClear = () => {
@@ -82,8 +84,8 @@ export const SearchBar = memo(
                 'hover:dark:bg-win11-bg-card-hover hover:bg-win11Light-bg-card-hover',
                 'transition-colors duration-150'
               )}
-              title="Clear search"
-              aria-label="Clear search"
+              title={t('common.clear_search')}
+              aria-label={t('common.clear_search')}
             >
               <X size={14} />
             </button>
@@ -100,8 +102,8 @@ export const SearchBar = memo(
                   ? 'text-win11-bg-accent bg-win11-bg-accent/10'
                   : 'dark:text-win11-text-secondary text-win11Light-text-secondary hover:dark:bg-win11-bg-card-hover hover:bg-win11Light-bg-card-hover'
               )}
-              title="Toggle Regex search"
-              aria-label="Toggle Regex search"
+              title={t('common.toggle_regex')}
+              aria-label={t('common.toggle_regex')}
             >
               <Regex size={14} />
             </button>

@@ -1,14 +1,15 @@
 #!/bin/bash
-# Wrapper for win11-clipboard-history
-# Purpose: Clean environment to avoid Snap/Flatpak library conflicts
-#          and force X11/XWayland for window positioning on Wayland
+# Wrapper for Windows 11 Style Clipboard History Manager / راه‌انداز تاریخچهٔ کلیپ‌بورد
+# Cleans inherited sandbox variables before launching the host-linked binary.
+# متغیرهای به‌ارث‌رسیدهٔ sandbox را پیش از اجرای باینری میزبان پاک می‌کند.
 
 set -e
 
 BINARY_LOCATIONS=(
-    "/usr/bin/win11-clipboard-history-bin"
-    "/usr/lib/win11-clipboard-history/win11-clipboard-history-bin"
-    "/usr/local/lib/win11-clipboard-history/win11-clipboard-history-bin"
+    "/app/lib/windows-11-style-clipboard-history-manager/windows-11-style-clipboard-history-manager-bin"
+    "/usr/lib/windows-11-style-clipboard-history-manager/windows-11-style-clipboard-history-manager-bin"
+    "/usr/local/lib/windows-11-style-clipboard-history-manager/windows-11-style-clipboard-history-manager-bin"
+    "/usr/bin/windows-11-style-clipboard-history-manager-bin"
 )
 
 # Find the binary
@@ -22,7 +23,7 @@ done
 
 # Verify binary was found
 if [ -z "$BINARY" ]; then
-    echo "Error: win11-clipboard-history binary not found." >&2
+    echo "Error: windows-11-style-clipboard-history-manager-bin was not found." >&2
     echo "The wrapper searched for an executable in the following locations (in order):" >&2
     for loc in "${BINARY_LOCATIONS[@]}"; do
         echo "  - $loc" >&2

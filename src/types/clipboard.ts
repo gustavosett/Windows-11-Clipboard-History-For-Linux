@@ -68,6 +68,7 @@ export interface UserSettings {
   theme_mode: ThemeMode
   dark_background_opacity: number
   light_background_opacity: number
+  language: string
   enable_smart_actions: boolean
   enable_ui_polish: boolean
   enable_dynamic_tray_icon: boolean
@@ -76,12 +77,42 @@ export interface UserSettings {
   auto_delete_unit: 'minutes' | 'hours' | 'days' | 'weeks'
   custom_kaomojis: CustomKaomoji[]
   ui_scale: number
+  filter_secrets: boolean
+  save_images: boolean
+  exclude_sensitive_apps: boolean
+  extra_excluded_apps: string[]
+  allow_wm_config_rewrite: boolean
+  /** Where the history encryption key lives ("file" | "secret-service").
+   *  محل ذخیرهٔ کلید رمزنگاری تاریخچه ("file" | "secret-service"). */
+  history_key_backend: 'file' | 'secret-service'
 }
 
 /** Helper type for boolean settings keys */
 export type BooleanSettingKey = {
   [K in keyof UserSettings]: UserSettings[K] extends boolean ? K : never
 }[keyof UserSettings]
+
+/** Bounded history window returned by `get_history_page` (ADR-0007).
+ *  پنجرهٔ محدود تاریخچه که `get_history_page` برمی‌گرداند (ADR-0007). */
+export interface HistoryPage {
+  items: ClipboardItem[]
+  total: number
+  limit: number
+  offset: number
+}
+
+/** Snapshot of the encryption-key backend for the Settings UI (ADR-0006).
+ *  وضعیت لحظه‌ای بک‌اند کلید رمزنگاری برای رابط تنظیمات (ADR-0006). */
+export interface KeyBackendStatus {
+  /** Backend requested by the persisted user setting. */
+  setting: 'file' | 'secret-service'
+  /** Backend actually in use by this process. */
+  active: 'file' | 'secret-service'
+  /** True when `secret-tool` (Secret Service) is usable on this machine. */
+  secret_service_available: boolean
+  /** True when the active backend differs from the setting (restart needed). */
+  restart_required: boolean
+}
 
 /** Rendering environment flags from the backend (NVIDIA / AppImage detection) */
 export interface RenderingEnv {

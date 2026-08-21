@@ -1,6 +1,7 @@
 import { useCallback, forwardRef, useRef } from 'react'
 import { clsx } from 'clsx'
 import { Pin, X, Image as ImageIcon, Type } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { ClipboardItem } from '../../types/clipboard'
 import { getCardBackgroundStyle, getTertiaryBackgroundStyle } from '../../utils/themeUtils'
 import { useSmartActions } from '../../hooks/useSmartActions'
@@ -41,6 +42,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
   },
   ref
 ) {
+  const { t } = useTranslation()
   const internalRef = useRef<HTMLDivElement | null>(null)
 
   // Normalize forwarded ref and keep a local ref so we can safely call focus()
@@ -55,7 +57,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
           console.warn('Error in HistoryItem callback ref:', err)
         }
       } else {
-        ;(ref as React.MutableRefObject<HTMLDivElement | null>).current = el
+        ;(ref).current = el
       }
     },
     [ref]
@@ -196,13 +198,15 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
             linkAction={linkAction}
             emailAction={emailAction}
             isDark={isDark}
-            onActionClick={handleSmartAction}
+            onActionClick={(e, action) => void handleSmartAction(e, action)}
           />
 
           {/* Pin button */}
           <button
             onPointerDown={handlePointerDownPreventDefault}
             onClick={handleTogglePin}
+            aria-label={item.pinned ? t('common.unpin') : t('common.pin')}
+            aria-pressed={item.pinned}
             className={clsx(
               'p-1.5 rounded-md transition-colors',
               isDark ? 'hover:bg-win11-bg-tertiary' : 'hover:bg-win11Light-bg-tertiary',
@@ -212,7 +216,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
                   ? 'text-win11-text-tertiary'
                   : 'text-win11Light-text-secondary'
             )}
-            title={item.pinned ? 'Unpin' : 'Pin'}
+            title={item.pinned ? t('common.unpin') : t('common.pin')}
             tabIndex={-1}
           >
             <Pin className="w-4 h-4" fill={item.pinned ? 'currentColor' : 'none'} />
@@ -222,6 +226,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
           <button
             onPointerDown={handlePointerDownPreventDefault}
             onClick={handleDelete}
+            aria-label={t('common.delete')}
             className={clsx(
               'p-1.5 rounded-md transition-colors',
               isDark
@@ -229,7 +234,7 @@ export const HistoryItem = forwardRef<HTMLDivElement, HistoryItemProps>(function
                 : 'text-win11Light-text-secondary hover:bg-win11Light-bg-tertiary',
               'hover:text-win11-error'
             )}
-            title="Delete"
+            title={t('common.delete')}
             tabIndex={-1}
           >
             <X className="w-4 h-4" />

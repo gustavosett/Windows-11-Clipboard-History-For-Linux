@@ -1,0 +1,9 @@
+# Shared by local builds and CI (`dtolnay/rust-toolchain` reads this file).
+# / این فایل toolchain را برای CI و ماشین محلی یکسان می‌کند.
+#
+# `channel = "stable"` tracks current stable; bump only after CI is green.
+# قفل نسخه‌های crate در Cargo.lock است.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

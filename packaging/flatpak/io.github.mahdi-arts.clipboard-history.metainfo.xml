@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Metainfo XML for Flatpak/AppStream
+  فایل متادیتا برای Flatpak/AppStream
+  
+  This file provides metadata about the application for
+  Flatpak, AppStream, and software centers.
+  این فایل متادیتای برنامه را برای Flatpak، AppStream و مراکز نرم‌افزاری فراهم می‌کند.
+-->
+<component type="desktop-application">
+    <id>io.github.mahdi-arts.clipboard-history</id>
+    
+    <metadata_license>CC0-1.0</metadata_license>
+    <project_license>MIT</project_license>
+    
+    <name>Clipboard History Manager</name>
+    <name xml:lang="fa">مدیر تاریخچه کلیپ‌بورد</name>
+    
+    <summary>Windows 11-style clipboard history for Linux</summary>
+    <summary xml:lang="fa">تاریخچه کلیپ‌بورد به سبک ویندوز ۱۱ برای لینوکس</summary>
+    
+    <developer_name>Mahdi Arts</developer_name>
+    
+    <description>
+        <p>
+            A fast, beautiful clipboard history manager for Linux that mimics
+            the Windows 11 Win+V clipboard experience. It works on both
+            Wayland and X11 environments.
+        </p>
+        <p xml:lang="fa">
+            مدیر سریع و زیبای تاریخچه کلیپ‌بورد برای لینوکس که تجربه کلیپ‌بورد
+            Win+V ویندوز ۱۱ را بازسازی می‌کند. هم روی Wayland و هم X11 کار می‌کند.
+        </p>
+        
+        <p>Key features include:</p>
+        <ul>
+            <li>Wayland and X11 clipboard monitoring</li>
+            <li>Global shortcuts: Super+V and Ctrl+Alt+V</li>
+            <li>Bilingual interface: Persian and English</li>
+            <li>Encrypted local history storage</li>
+            <li>Emoji, kaomoji, and symbol pickers</li>
+            <li>Fully offline — bundled fonts</li>
+            <li>Privacy filters for sensitive data</li>
+        </ul>
+        <ul xml:lang="fa">
+            <li>مانیتورینگ کلیپ‌بورد Wayland و X11</li>
+            <li>میانبرهای سراسری: Super+V و Ctrl+Alt+V</li>
+            <li>رابط کاربری دوزبانه: فارسی و انگلیسی</li>
+            <li>ذخیره‌سازی تاریخچه رمزنگاری‌شده محلی</li>
+            <li>انتخاب‌گر ایموجی، کائوموجی و نماد</li>
+            <li>کاملاً آفلاین — فونت‌های همراه</li>
+            <li>فیلترهای حریم خصوصی برای داده‌های حساس</li>
+        </ul>
+    </description>
+    
+    <launchable type="desktop-id">io.github.mahdi-arts.clipboard-history.desktop</launchable>
+    
+    <categories>
+        <category>Utility</category>
+        <category>System</category>
+    </categories>
+    
+    <keywords>
+        <keyword>clipboard</keyword>
+        <keyword>history</keyword>
+        <keyword>copy</keyword>
+        <keyword>paste</keyword>
+        <keyword>emoji</keyword>
+        <keyword xml:lang="fa">کلیپ‌بورد</keyword>
+        <keyword xml:lang="fa">تاریخچه</keyword>
+        <keyword xml:lang="fa">کپی</keyword>
+        <keyword xml:lang="fa">ایموجی</keyword>
+    </keywords>
+    
+    <url type="homepage">https://www.MahdiArts.ir</url>
+    <url type="bugtracker">https://github.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager/issues</url>
+    
+    <provides>
+        <binary>windows-11-style-clipboard-history-manager</binary>
+    </provides>
+    
+    <content_rating type="oars-1.1" />
+    
+    <releases>
+        <release version="2.5.0" date="2026-08-21">
+            <description>
+                <p>
+                    Stable release: SQLite persistence with ChaCha20-Poly1305
+                    at-rest encryption, Secret Service key storage, paged IPC,
+                    setup wizard with permission and shortcut auto-configuration,
+                    and canonical .deb / .rpm / AppImage release artifacts with
+                    SBOM and provenance attestations.
+                </p>
+                <p xml:lang="fa">
+                    نسخهٔ پایدار: ذخیره‌سازی SQLite با رمزنگاری ChaCha20-Poly1305،
+                    نگهداری کلید در Secret Service، IPC صفحه‌بندی‌شده، جادوگر
+                    راه‌اندازی با پیکربندی خودکار مجوزها و میانبر، و آرتیفکت‌های
+                    رسمی deb/rpm/AppImage همراه SBOM و گواهی provenance.
+                </p>
+            </description>
+        </release>
+    </releases>
+    
+    <screenshots>
+        <screenshot type="default">
+            <caption>Main clipboard history window</caption>
+            <caption xml:lang="fa">پنجره اصلی تاریخچه کلیپ‌بورد</caption>
+            <image>https://raw.githubusercontent.com/Mahdi-Arts/Windows-11-Style-Clipboard-History-Manager/master/docs/img/windows-11-style-clipboard-history-manager.png</image>
+        </screenshot>
+    </screenshots>
+    
+    <branding>
+        <color type="primary" alpha="1.0">#0078D4</color>
+        <color type="secondary" alpha="1.0">#005A9E</color>
+    </branding>
+    
+    <metadata>
+        <value key="x-flatpak/ref">io.github.mahdi-arts.clipboard-history</value>
+    </metadata>
+</component>

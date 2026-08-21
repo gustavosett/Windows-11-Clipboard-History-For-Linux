@@ -1,0 +1,137 @@
+#!/bin/bash
+# Post-installation script for Debian/Ubuntu
+# اسکریپت پس از نصب برای Debian/Ubuntu
+#
+# This script handles:
+# - Reloading udev rules
+# - Setting up ACL permissions for /dev/uinput
+# - Enabling the AppArmor profile (optional)
+# 
+# این اسکریپت موارد زیر را انجام می‌دهد:
+# - بارگذاری مجدد قوانین udev
+# - تنظیم مجوزهای ACL برای /dev/uinput
+# - فعال‌سازی پروفایل AppArmor (اختیاری)
+
+set -e
+
+APP_NAME="windows-11-style-clipboard-history-manager"
+APP_BINARY="/usr/lib/${APP_NAME}/${APP_NAME}-bin"
+UDEV_RULES="/etc/udev/rules.d/99-windows-11-style-clipboard-history-input.rules"
+APPARMOR_PROFILE="/etc/apparmor.d/${APP_NAME}"
+
+# Function to reload udev rules
+# تابع برای بارگذاری مجدد قوانین udev
+reload_udev() {
+    echo "[postinst] Reloading udev rules..."
+    if [ -f "${UDEV_RULES}" ]; then
+        udevadm control --reload-rules 2>/dev/null || true
+        udevadm trigger --subsystem-match=input 2>/dev/null || true
+        echo "[postinst] udev rules reloaded successfully"
+    fi
+}
+
+# Function to set ACL for uinput
+# تابع برای تنظیم ACL برای uinput
+setup_uinput_acl() {
+    echo "[postinst] Setting up ACL for /dev/uinput..."
+    
+    if [ -e /dev/uinput ]; then
+        # Get the current user
+        if [ -n "$SUDO_USER" ]; then
+            TARGET_USER="$SUDO_USER"
+        elif [ -n "$PKEXEC_USER" ]; then
+            TARGET_USER="$PKEXEC_USER"
+        else
+            TARGET_USER=$(whoami)
+        fi
+        
+        # Set ACL for the user (persistent)
+        setfacl -m u:"$TARGET_USER":rw /dev/uinput 2>/dev/null || {
+            echo "[postinst] Warning: Could not set ACL on /dev/uinput"
+            echo "[postinst] Users may need to run: sudo setfacl -m u:\$USER:rw /dev/uinput"
+        }
+        
+        echo "[postinst] ACL set for user: $TARGET_USER"
+    else
+        echo "[postinst] Warning: /dev/uinput not found"
+    fi
+}
+
+# Function to enable AppArmor profile
+# تابع برای فعال‌سازی پروفایل AppArmor
+enable_apparmor() {
+    if [ -f "${APPARMOR_PROFILE}" ]; then
+        echo "[postinst] AppArmor profile found at ${APPARMOR_PROFILE}"
+        echo "[postinst] To enforce AppArmor protection, run:"
+        echo "           sudo aa-enforce ${APPARMOR_PROFILE}"
+        echo "[postinst] To run in complain mode (default):"
+        echo "           sudo aa-complain ${APPARMOR_PROFILE}"
+    fi
+}
+
+# Function to register desktop file
+# تابع برای ثبت فایل desktop
+register_desktop_file() {
+    echo "[postinst] Updating desktop database..."
+    update-desktop-database /usr/share/applications 2>/dev/null || true
+}
+
+# Function to check for desktop session
+# تابع برای بررسی جلسه دسکتاپ
+check_desktop_session() {
+    if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
+        echo "[postinst] Warning: No display detected. Some features may require GUI session."
+    fi
+}
+
+# Main post-installation tasks
+# وظایف اصلی پس از نصب
+case "$1" in
+    configure)
+        echo "========================================"
+        echo "Post-installation for ${APP_NAME}"
+        echo "========================================"
+        
+        # Step 1: Reload udev rules
+        reload_udev
+        
+        # Step 2: Setup uinput ACL
+        setup_uinput_acl
+        
+        # Step 3: AppArmor information
+        enable_apparmor
+        
+        # Step 4: Register desktop file
+        register_desktop_file
+        
+        # Step 5: Check desktop session
+        check_desktop_session
+        
+        echo ""
+        echo "========================================"
+        echo "${APP_NAME} installed successfully!"
+        echo "========================================"
+        echo ""
+        echo "To start the application:"
+        echo "  1. Log out and log back in (to apply /dev/uinput permissions)"
+        echo "  2. Launch '${APP_NAME}' from your application menu"
+        echo "  3. Press Super+V to open clipboard history"
+        echo ""
+        echo "For troubleshooting, see:"
+        echo "  /usr/share/doc/${APP_NAME}/README.md"
+        echo ""
+        ;;
+    
+    abort-upgrade|abort-remove|abort-deconfigure)
+        echo "[postinst] Aborting configuration"
+        ;;
+    
+    *)
+        echo "[postinst] Called with unknown argument: $1"
+        exit 0
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
