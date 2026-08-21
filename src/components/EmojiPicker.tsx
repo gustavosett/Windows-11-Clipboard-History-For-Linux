@@ -307,6 +307,29 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
     [searchQuery, handleSearchChange]
   )
 
+  // Keyboard behavior while focus is in the search input:
+  // Enter/Space inserts the highlighted emoji, ArrowDown/ArrowUp move
+  // focus into the grid at the current highlighted cell.
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (filteredEmojis.length === 0) return
+        e.preventDefault()
+        setActiveGrid('main')
+        // Wait a tick so the input unmounts nothing / grid is stable
+        setTimeout(() => focusEmojiAt(mainFocusedIndex), 0)
+        return
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        if (filteredEmojis.length === 0) return
+        e.preventDefault()
+        const emoji = filteredEmojis[mainFocusedIndex]
+        if (emoji) handleSelect(emoji)
+      }
+    },
+    [filteredEmojis, mainFocusedIndex, focusEmojiAt, handleSelect]
+  )
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -323,6 +346,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
             ref={searchInputRef}
             value={searchQuery}
             onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
             placeholder="Search emojis..."
             aria-label="Search emojis"
             isDark={isDark}
