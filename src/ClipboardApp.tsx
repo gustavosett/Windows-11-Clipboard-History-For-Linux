@@ -175,21 +175,46 @@ function ClipboardApp() {
     applyThemeClass(isDark)
   }, [isDark])
 
-  // Handle ESC key to close/hide window
+  // Handle ESC key to close/hide window.
+  // Hide on key *release* (with a fallback timer) so the Escape key-release
+  // event is consumed by this window. Hiding on keydown returns X11 focus to
+  // the app behind us while the key is still held, letting the release leak
+  // into that app (e.g. closing its dialogs).
   useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        try {
-          await getCurrentWindow().hide()
-        } catch (err) {
-          console.error('Failed to hide window:', err)
-        }
+    let armed = false
+    let fallbackTimer: number | null = null
+
+    const hideWindow = () => {
+      armed = false
+      if (fallbackTimer !== null) {
+        window.clearTimeout(fallbackTimer)
+        fallbackTimer = null
       }
+      getCurrentWindow()
+        .hide()
+        .catch((err) => console.error('Failed to hide window:', err))
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || armed) return
+      e.preventDefault()
+      armed = true
+      // Fallback in case the keyup never reaches us (focus lost mid-press)
+      fallbackTimer = window.setTimeout(hideWindow, 400)
+    }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || !armed) return
+      hideWindow()
     }
 
     globalThis.addEventListener('keydown', handleKeyDown)
-    return () => globalThis.removeEventListener('keydown', handleKeyDown)
+    globalThis.addEventListener('keyup', handleKeyUp)
+    return () => {
+      globalThis.removeEventListener('keydown', handleKeyDown)
+      globalThis.removeEventListener('keyup', handleKeyUp)
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer)
+    }
   }, [])
 
   // Use refs to store current values for the focus handler (to avoid re-registering listener)

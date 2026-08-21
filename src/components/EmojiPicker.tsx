@@ -252,10 +252,20 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
   useEffect(() => {
     if (isLoading || filteredEmojis.length === 0) return
     if (dimensions.width <= 0 || dimensions.height <= 0) return
+    // While searching, the search input owns focus — don't steal it back
+    // (e.g. every backspace would otherwise re-focus the grid).
+    if (searchQuery) return
     // Defer so we don't sync-set state during render/effect (roving index starts at 0)
     const t = setTimeout(() => focusEmojiAt(0), 0)
     return () => clearTimeout(t)
-  }, [isLoading, filteredEmojis.length, dimensions.width, dimensions.height, focusEmojiAt])
+  }, [
+    isLoading,
+    filteredEmojis.length,
+    dimensions.width,
+    dimensions.height,
+    searchQuery,
+    focusEmojiAt,
+  ])
 
   // Re-focus grid when the window is shown again (e.g. Super+. or after multi-insert)
   useEffect(() => {
@@ -269,13 +279,24 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
     }
   }, [focusEmojiAt])
 
-  // Type-ahead: typing a printable char anywhere (except inputs) jumps to search
+  // Type-ahead: typing a printable char anywhere (except inputs) jumps to search.
+  // Backspace likewise edits the query when focus is outside the input.
   const handleTypeAhead = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return
-      if (e.key.length !== 1 || e.key === ' ') return
       const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      const inInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+
+      if (e.key === 'Backspace') {
+        if (inInput || !searchQuery) return
+        e.preventDefault()
+        handleSearchChange(searchQuery.slice(0, -1))
+        searchInputRef.current?.focus()
+        return
+      }
+
+      if (e.key.length !== 1 || e.key === ' ') return
+      if (inInput) return
 
       // Prevent the char from landing elsewhere; add it to the query and
       // move focus to the search input so subsequent typing works natively.
