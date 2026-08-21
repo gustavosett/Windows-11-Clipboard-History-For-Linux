@@ -206,9 +206,15 @@ function ClipboardApp() {
       setTimeout(() => {
         const currentTab = activeTabRef.current
 
-        if (currentTab !== 'clipboard') {
-          // Focus the first tab button if on other tabs
-          // Clipboard tab focus is handled inside ClipboardTab component
+        // Picker tabs focus their own grids (emoji/symbols/kaomoji).
+        // Clipboard tab focus is handled inside ClipboardTab.
+        // Only fall back to the tab bar for unknown tabs.
+        if (
+          currentTab !== 'clipboard' &&
+          currentTab !== 'emoji' &&
+          currentTab !== 'symbols' &&
+          currentTab !== 'kaomoji'
+        ) {
           tabBarRef.current?.focusFirstTab()
         }
       }, 100)

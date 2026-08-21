@@ -1,7 +1,8 @@
-import { useState, useCallback, memo, useRef } from 'react'
+import { useState, useCallback, memo, useRef, useEffect } from 'react'
 import { Grid, useGridRef } from 'react-window'
 import { clsx } from 'clsx'
 import { Clock } from 'lucide-react'
+import { listen } from '@tauri-apps/api/event'
 import { useEmojiPicker } from '../hooks/useEmojiPicker'
 import { SearchBar } from './common/SearchBar'
 import { SectionHeader } from './common/SectionHeader'
@@ -214,6 +215,44 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
     containerRef: recentGridRef,
     dataAttributeName: 'data-recent-index',
   })
+
+  // Focus an emoji cell in the main grid (DOM only; roving tabindex already tracks index)
+  const focusEmojiAt = useCallback((index: number) => {
+    if (filteredEmojis.length === 0) return
+
+    const focusCell = () => {
+      const cell = mainGridContainerRef.current?.querySelector(
+        `[data-main-index="${index}"]`
+      ) as HTMLElement | null
+      cell?.focus()
+    }
+
+    // Wait for virtualized grid cells to mount
+    requestAnimationFrame(() => {
+      focusCell()
+      setTimeout(focusCell, 50)
+    })
+  }, [filteredEmojis.length])
+
+  // Initial mount / after load — focus first emoji so arrows work immediately
+  useEffect(() => {
+    if (isLoading || filteredEmojis.length === 0) return
+    if (dimensions.width <= 0 || dimensions.height <= 0) return
+    // Defer so we don't sync-set state during render/effect (roving index starts at 0)
+    const t = setTimeout(() => focusEmojiAt(0), 0)
+    return () => clearTimeout(t)
+  }, [isLoading, filteredEmojis.length, dimensions.width, dimensions.height, focusEmojiAt])
+
+  // Re-focus grid when the window is shown again (e.g. Super+. or after multi-insert)
+  useEffect(() => {
+    const unlisten = listen('window-shown', () => {
+      setMainFocusedIndex(0)
+      setTimeout(() => focusEmojiAt(0), 80)
+    })
+    return () => {
+      unlisten.then((fn) => fn())
+    }
+  }, [focusEmojiAt])
 
   if (isLoading) {
     return (
