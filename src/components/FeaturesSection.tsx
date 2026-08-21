@@ -13,6 +13,11 @@ const FEATURES = [
     label: 'UI Polish',
     desc: 'Enable animations and compact mode support.',
   },
+  {
+    key: 'keep_picker_open_after_insert',
+    label: 'Keep Picker Open After Insert',
+    desc: 'Keep the emoji/kaomoji/symbol picker open after inserting, so you can insert multiple in a row.',
+  },
 ] as const
 
 export function FeaturesSection({
@@ -39,10 +44,12 @@ export function FeaturesSection({
       </div>
       <div className="p-6 space-y-6">
         {FEATURES.map((feature) => (
-          <div key={feature.key} className="flex items-center justify-between">
-            <div>
+          <div key={feature.key} className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
               <div className="text-sm font-medium">{feature.label}</div>
-              <div className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              <div
+                className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}
+              >
                 {feature.desc}
               </div>
             </div>

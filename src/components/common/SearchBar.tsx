@@ -14,6 +14,7 @@ export interface SearchBarProps {
   opacity: number
   isRegex?: boolean
   onToggleRegex?: () => void
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
 }
 
 export const SearchBar = memo(
@@ -29,6 +30,7 @@ export const SearchBar = memo(
       opacity,
       isRegex = false,
       onToggleRegex,
+      onKeyDown,
     },
     ref
   ) {
@@ -51,6 +53,7 @@ export const SearchBar = memo(
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
           placeholder={placeholder}
           aria-label={ariaLabel ?? placeholder}
           className={clsx(
