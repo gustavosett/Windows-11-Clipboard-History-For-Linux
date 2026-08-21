@@ -27,6 +27,7 @@ interface EmojiCellProps {
   'data-recent-index'?: number
   onKeyDown?: (e: React.KeyboardEvent) => void
   onItemFocus?: () => void
+  isFocused?: boolean
 }
 
 /** Individual emoji cell - memoized for performance */
@@ -39,6 +40,7 @@ const EmojiCell = memo(function EmojiCell({
   'data-recent-index': recentIndex,
   onKeyDown,
   onItemFocus,
+  isFocused = false,
 }: EmojiCellProps) {
   return (
     <button
@@ -60,7 +62,11 @@ const EmojiCell = memo(function EmojiCell({
         'rounded-md transition-transform duration-100',
         'hover:bg-win11Light-bg-tertiary dark:hover:bg-win11-bg-card-hover',
         'hover:scale-110 transform-gpu hover:will-change-transform',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-win11-bg-accent'
+        'focus:outline-none',
+        // Roving-focus indicator is state-driven (not :focus-visible) so it
+        // persists after programmatic focus (e.g. re-focus after paste).
+        isFocused &&
+          'ring-2 ring-win11-bg-accent bg-win11Light-bg-tertiary dark:bg-win11-bg-card-hover'
       )}
       title={emoji.name}
       aria-label={emoji.name}
@@ -75,6 +81,8 @@ interface EmojiGridData {
   onSelect: (emoji: Emoji) => void
   onHover: (emoji: Emoji | null) => void
   focusedIndex: number
+  /** Whether the main grid currently owns the visible roving-focus ring */
+  ringActive: boolean
   onKeyDown: (e: React.KeyboardEvent, index: number) => void
   onItemFocus: (index: number) => void
   columnCount: number
@@ -89,6 +97,7 @@ function EmojiGridCell({
   onSelect,
   onHover,
   focusedIndex,
+  ringActive,
   onKeyDown,
   onItemFocus,
   columnCount,
@@ -125,6 +134,7 @@ function EmojiGridCell({
         onSelect={onSelect}
         onHover={onHover}
         tabIndex={isFocused ? 0 : -1}
+        isFocused={ringActive && isFocused}
         data-main-index={index}
         onKeyDown={(e) => onKeyDown(e, index)}
         onItemFocus={() => onItemFocus(index)}
@@ -163,6 +173,10 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
   const [recentFocusedIndex, setRecentFocusedIndex] = useState(0)
   const [mainFocusedIndex, setMainFocusedIndex] = useState(0)
   const [categoryFocusedIndex, setCategoryFocusedIndex] = useState(0)
+  // Which grid owns the visible roving-focus indicator
+  const [activeGrid, setActiveGrid] = useState<'main' | 'recent'>('main')
+
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const handleSearchChange = useCallback(
     (val: string) => {
@@ -247,12 +261,30 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
   useEffect(() => {
     const unlisten = listen('window-shown', () => {
       setMainFocusedIndex(0)
+      setActiveGrid('main')
       setTimeout(() => focusEmojiAt(0), 80)
     })
     return () => {
       unlisten.then((fn) => fn())
     }
   }, [focusEmojiAt])
+
+  // Type-ahead: typing a printable char anywhere (except inputs) jumps to search
+  const handleTypeAhead = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      if (e.key.length !== 1 || e.key === ' ') return
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
+      // Prevent the char from landing elsewhere; add it to the query and
+      // move focus to the search input so subsequent typing works natively.
+      e.preventDefault()
+      handleSearchChange(searchQuery + e.key)
+      searchInputRef.current?.focus()
+    },
+    [searchQuery, handleSearchChange]
+  )
 
   if (isLoading) {
     return (
@@ -263,17 +295,19 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
   }
 
   return (
-    <PickerLayout
-      header={
-        <SearchBar
-          value={searchQuery}
-          onChange={handleSearchChange}
-          placeholder="Search emojis..."
-          aria-label="Search emojis"
-          isDark={isDark}
-          opacity={opacity}
-        />
-      }
+    <div className="h-full" onKeyDown={handleTypeAhead}>
+      <PickerLayout
+        header={
+          <SearchBar
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search emojis..."
+            aria-label="Search emojis"
+            isDark={isDark}
+            opacity={opacity}
+          />
+        }
       subHeader={
         <>
           {/* Recent emojis (only show when not searching) */}
@@ -295,9 +329,13 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
                       onSelect={handleSelect}
                       onHover={setHoveredEmoji}
                       tabIndex={index === recentFocusedIndex ? 0 : -1}
+                      isFocused={activeGrid === 'recent' && index === recentFocusedIndex}
                       data-recent-index={index}
                       onKeyDown={(e) => handleRecentKeyDown(e, index)}
-                      onItemFocus={() => setRecentFocusedIndex(index)}
+                      onItemFocus={() => {
+                        setActiveGrid('recent')
+                        setRecentFocusedIndex(index)
+                      }}
                     />
                   </div>
                 ))}
@@ -366,8 +404,12 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
                   onSelect: handleSelect,
                   onHover: setHoveredEmoji,
                   focusedIndex: mainFocusedIndex,
+                  ringActive: activeGrid === 'main',
                   onKeyDown: handleMainGridKeyDown,
-                  onItemFocus: setMainFocusedIndex,
+                  onItemFocus: (index: number) => {
+                    setActiveGrid('main')
+                    setMainFocusedIndex(index)
+                  },
                   columnCount,
                   columnWidth,
                 }}
@@ -376,7 +418,8 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
             </div>
           )
         )}
-      </div>
-    </PickerLayout>
+        </div>
+      </PickerLayout>
+    </div>
   )
 }
