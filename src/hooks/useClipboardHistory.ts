@@ -87,11 +87,11 @@ export function useClipboardHistory() {
   const pasteItem = useCallback(
     async (id: string) => {
       try {
-        await invoke('paste_item', { id })
+        await invoke('paste_item', { id, keepOpen: true })
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err)
         console.warn('[useClipboardHistory] Paste failed, refreshing history:', errorMessage)
-        // If paste failed due to item not found, refresh history
+        // If paste failed because the item was not found, refresh history
         // The backend already emits history-sync event, but we fetch as backup
         await fetchHistory()
         setError(errorMessage)

@@ -74,7 +74,7 @@ export function useEmojiPicker() {
   // Paste an emoji
   const pasteEmoji = useCallback(async (emoji: Emoji) => {
     try {
-      await invoke('paste_text', { text: emoji.char, itemType: 'emoji' })
+      await invoke('paste_text', { text: emoji.char, itemType: 'emoji', keepOpen: true })
       // Refresh recent emojis after paste
       const recent: RecentEmoji[] = await invoke('get_recent_emojis')
       const emojiMap = new Map(loadEmojis().map((e) => [e.char, e]))

@@ -31,6 +31,10 @@ pub struct UserSettings {
     #[serde(default = "default_true")]
     pub enable_ui_polish: bool,
 
+    /// Reopen the clipboard popup after pasting a selected item
+    #[serde(default)]
+    pub reopen_after_paste: bool,
+
     // --- History Settings ---
     /// Maximum number of clipboard history items to keep (1 to 100000)
     #[serde(default = "default_max_history_size")]
@@ -92,6 +96,7 @@ impl Default for UserSettings {
             enable_dynamic_tray_icon: true,
             enable_smart_actions: true,
             enable_ui_polish: true,
+            reopen_after_paste: false,
             max_history_size: default_max_history_size(),
             auto_delete_interval: 0,
             auto_delete_unit: "hours".to_string(),
@@ -233,6 +238,16 @@ mod tests {
         assert_eq!(settings.theme_mode, "system");
         assert!((settings.dark_background_opacity - 0.70).abs() < f32::EPSILON);
         assert!((settings.light_background_opacity - 0.70).abs() < f32::EPSILON);
+        assert!(!settings.reopen_after_paste);
+    }
+
+    #[test]
+    fn test_reopen_after_paste_defaults_off_when_missing() {
+        let settings =
+            serde_json::from_str::<UserSettings>(r#"{"theme_mode":"system","dark_background_opacity":0.7,"light_background_opacity":0.7}"#)
+                .unwrap();
+
+        assert!(!settings.reopen_after_paste);
     }
 
     #[test]

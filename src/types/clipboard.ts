@@ -71,6 +71,7 @@ export interface UserSettings {
   enable_smart_actions: boolean
   enable_ui_polish: boolean
   enable_dynamic_tray_icon: boolean
+  reopen_after_paste: boolean
   max_history_size: number
   auto_delete_interval: number
   auto_delete_unit: 'minutes' | 'hours' | 'days' | 'weeks'
