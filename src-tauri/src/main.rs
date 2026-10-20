@@ -437,7 +437,9 @@ impl WindowController {
                     state.config_manager.lock().sync_to_disk();
                 }
             }
-            let _ = window.hide();
+            if let Err(e) = window.hide() {
+                eprintln!("[WindowController] Failed to hide window: {}", e);
+            }
         }
     }
 
