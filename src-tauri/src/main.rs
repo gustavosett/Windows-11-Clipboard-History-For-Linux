@@ -1006,6 +1006,15 @@ fn main() {
                     let state = w_clone.state::<AppState>();
                     handle_window_moved_for_wayland(&w_clone, &state, pos);
                 }
+                // A close requested by the window manager (Super+Q, Alt+F4, ...)
+                // must hide the window instead of destroying it: a destroyed
+                // "main" window can never be shown again, because
+                // WindowController::toggle silently does nothing when
+                // get_webview_window("main") returns None.
+                WindowEvent::CloseRequested { api, .. } => {
+                    api.prevent_close();
+                    WindowController::hide(&app_handle_for_event);
+                }
                 _ => {}
             });
 
