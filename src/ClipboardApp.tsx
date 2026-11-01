@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   light_background_opacity: 0.7,
   enable_smart_actions: true,
   enable_ui_polish: true,
+  keep_picker_open_after_insert: false,
   enable_dynamic_tray_icon: true,
   max_history_size: 50,
   auto_delete_interval: 0,
@@ -174,21 +175,46 @@ function ClipboardApp() {
     applyThemeClass(isDark)
   }, [isDark])
 
-  // Handle ESC key to close/hide window
+  // Handle ESC key to close/hide window.
+  // Hide on key *release* (with a fallback timer) so the Escape key-release
+  // event is consumed by this window. Hiding on keydown returns X11 focus to
+  // the app behind us while the key is still held, letting the release leak
+  // into that app (e.g. closing its dialogs).
   useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        try {
-          await getCurrentWindow().hide()
-        } catch (err) {
-          console.error('Failed to hide window:', err)
-        }
+    let armed = false
+    let fallbackTimer: number | null = null
+
+    const hideWindow = () => {
+      armed = false
+      if (fallbackTimer !== null) {
+        window.clearTimeout(fallbackTimer)
+        fallbackTimer = null
       }
+      getCurrentWindow()
+        .hide()
+        .catch((err) => console.error('Failed to hide window:', err))
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || armed) return
+      e.preventDefault()
+      armed = true
+      // Fallback in case the keyup never reaches us (focus lost mid-press)
+      fallbackTimer = window.setTimeout(hideWindow, 400)
+    }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || !armed) return
+      hideWindow()
     }
 
     globalThis.addEventListener('keydown', handleKeyDown)
-    return () => globalThis.removeEventListener('keydown', handleKeyDown)
+    globalThis.addEventListener('keyup', handleKeyUp)
+    return () => {
+      globalThis.removeEventListener('keydown', handleKeyDown)
+      globalThis.removeEventListener('keyup', handleKeyUp)
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer)
+    }
   }, [])
 
   // Use refs to store current values for the focus handler (to avoid re-registering listener)
@@ -206,9 +232,15 @@ function ClipboardApp() {
       setTimeout(() => {
         const currentTab = activeTabRef.current
 
-        if (currentTab !== 'clipboard') {
-          // Focus the first tab button if on other tabs
-          // Clipboard tab focus is handled inside ClipboardTab component
+        // Picker tabs focus their own grids (emoji/symbols/kaomoji).
+        // Clipboard tab focus is handled inside ClipboardTab.
+        // Only fall back to the tab bar for unknown tabs.
+        if (
+          currentTab !== 'clipboard' &&
+          currentTab !== 'emoji' &&
+          currentTab !== 'symbols' &&
+          currentTab !== 'kaomoji'
+        ) {
           tabBarRef.current?.focusFirstTab()
         }
       }, 100)

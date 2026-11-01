@@ -31,6 +31,12 @@ pub struct UserSettings {
     #[serde(default = "default_true")]
     pub enable_ui_polish: bool,
 
+    /// Keep the emoji/kaomoji/symbol picker open after inserting a character
+    /// so multiple can be inserted in a row. Off by default (classic behavior:
+    /// the window closes after each paste).
+    #[serde(default)]
+    pub keep_picker_open_after_insert: bool,
+
     // --- History Settings ---
     /// Maximum number of clipboard history items to keep (1 to 100000)
     #[serde(default = "default_max_history_size")]
@@ -92,6 +98,7 @@ impl Default for UserSettings {
             enable_dynamic_tray_icon: true,
             enable_smart_actions: true,
             enable_ui_polish: true,
+            keep_picker_open_after_insert: false,
             max_history_size: default_max_history_size(),
             auto_delete_interval: 0,
             auto_delete_unit: "hours".to_string(),

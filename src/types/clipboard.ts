@@ -71,6 +71,8 @@ export interface UserSettings {
   enable_smart_actions: boolean
   enable_ui_polish: boolean
   enable_dynamic_tray_icon: boolean
+  /** Keep the emoji/kaomoji/symbol picker open after insert (multi-insert) */
+  keep_picker_open_after_insert: boolean
   max_history_size: number
   auto_delete_interval: number
   auto_delete_unit: 'minutes' | 'hours' | 'days' | 'weeks'

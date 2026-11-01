@@ -36,7 +36,7 @@ export function useSymbolPicker() {
   const pasteSymbol = useCallback(async (symbol: SymbolItem) => {
     try {
       // Use the generic paste_text command
-      await invoke('paste_text', { text: symbol.char })
+      await invoke('paste_text', { text: symbol.char, itemType: 'symbol' })
 
       // Update recent
       setRecentSymbols((prev) => {

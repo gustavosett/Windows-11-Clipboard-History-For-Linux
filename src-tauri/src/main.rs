@@ -200,11 +200,26 @@ async fn paste_text(
     let _paste_guard = state.paste_gate.lock().await;
 
     // 0. Record usage if applicable
-    if let Some(t) = item_type.as_deref() {
-        if t == "emoji" {
-            state.emoji_manager.lock().record_usage(&text);
+    let keep_open_tab = if UserSettingsManager::new().load().keep_picker_open_after_insert {
+        match item_type.as_deref() {
+            Some("emoji") => {
+                state.emoji_manager.lock().record_usage(&text);
+                // Keep the emoji picker open so multiple emojis can be inserted
+                Some("emoji")
+            }
+            Some("kaomoji") => Some("kaomoji"),
+            Some("symbol") => Some("symbols"),
+            _ => None,
         }
-    }
+    } else {
+        // Classic behavior: still record emoji usage, but close after paste.
+        if let Some(t) = item_type.as_deref() {
+            if t == "emoji" {
+                state.emoji_manager.lock().record_usage(&text);
+            }
+        }
+        None
+    };
 
     // 1. Prepare Environment
     WindowController::hide(&app);
@@ -219,6 +234,14 @@ async fn paste_text(
 
     // 3. Simulate Paste
     simulate_paste_keystroke().map_err(|e| e.to_string())?;
+
+    // 4. Re-open picker for multi-insert (emoji / kaomoji / symbols)
+    if let Some(tab) = keep_open_tab {
+        // Brief pause so the target app can consume the paste keystroke
+        // before we steal focus back to the picker.
+        tokio::time::sleep(Duration::from_millis(80)).await;
+        WindowController::show_with_tab(&app, tab);
+    }
 
     Ok(())
 }
@@ -438,6 +461,28 @@ impl WindowController {
                 }
             }
             let _ = window.hide();
+        }
+    }
+
+    /// Show the window (always) and switch to the given tab.
+    /// Used after multi-insert paste so the picker stays available.
+    pub fn show_with_tab(app: &AppHandle, tab: &str) {
+        if STARTED_IN_BACKGROUND.load(Ordering::SeqCst) {
+            INITIAL_SHOW_ALLOWED.store(true, Ordering::SeqCst);
+        }
+
+        if let Some(window) = app.get_webview_window("main") {
+            // Capture the window that just received the paste so the next
+            // paste can restore focus there again.
+            save_focused_window();
+            let _ = app.emit("switch-tab", tab);
+
+            if !window.is_visible().unwrap_or(false) {
+                Self::position_and_show(&window, app);
+            } else {
+                let _ = window.set_focus();
+                let _ = app.emit("window-shown", ());
+            }
         }
     }
 
