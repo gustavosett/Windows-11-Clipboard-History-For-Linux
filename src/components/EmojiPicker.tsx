@@ -231,22 +231,43 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
   })
 
   // Focus an emoji cell in the main grid (DOM only; roving tabindex already tracks index)
-  const focusEmojiAt = useCallback((index: number) => {
-    if (filteredEmojis.length === 0) return
+  const focusEmojiAt = useCallback(
+    (index: number) => {
+      if (filteredEmojis.length === 0) return
+      const target = Math.min(index, filteredEmojis.length - 1)
 
-    const focusCell = () => {
-      const cell = mainGridContainerRef.current?.querySelector(
-        `[data-main-index="${index}"]`
-      ) as HTMLElement | null
-      cell?.focus()
-    }
+      // The grid is virtualized: a cell scrolled out of view is not in the DOM,
+      // so scroll its row into view first or focus is silently lost.
+      try {
+        gridRef.current?.scrollToCell({
+          rowIndex: Math.floor(target / columnCount),
+          columnIndex: target % columnCount,
+          rowAlign: 'smart',
+          columnAlign: 'smart',
+        })
+      } catch {
+        // Grid not laid out yet; the cell lookup below falls back to search.
+      }
 
-    // Wait for virtualized grid cells to mount
-    requestAnimationFrame(() => {
-      focusCell()
-      setTimeout(focusCell, 50)
-    })
-  }, [filteredEmojis.length])
+      const focusCell = () => {
+        const cell = mainGridContainerRef.current?.querySelector(
+          `[data-main-index="${target}"]`
+        ) as HTMLElement | null
+        cell?.focus()
+        return cell !== null && cell !== undefined
+      }
+
+      // Wait for virtualized grid cells to mount; if the cell never shows up,
+      // keep keyboard focus inside the picker via the search input.
+      requestAnimationFrame(() => {
+        focusCell()
+        setTimeout(() => {
+          if (!focusCell()) searchInputRef.current?.focus()
+        }, 50)
+      })
+    },
+    [filteredEmojis.length, columnCount, gridRef]
+  )
 
   // Initial mount / after load — focus first emoji so arrows work immediately
   useEffect(() => {
@@ -308,8 +329,9 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
   )
 
   // Keyboard behavior while focus is in the search input:
-  // Enter/Space inserts the highlighted emoji, ArrowDown/ArrowUp move
-  // focus into the grid at the current highlighted cell.
+  // Enter inserts the highlighted emoji (Space types a space, since queries
+  // like "thumbs up" contain them), ArrowDown/ArrowUp move focus into the
+  // grid at the current highlighted cell.
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -320,7 +342,7 @@ export function EmojiPicker({ isDark, opacity }: EmojiPickerProps) {
         setTimeout(() => focusEmojiAt(mainFocusedIndex), 0)
         return
       }
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (e.key === 'Enter') {
         if (filteredEmojis.length === 0) return
         e.preventDefault()
         const emoji = filteredEmojis[mainFocusedIndex]
