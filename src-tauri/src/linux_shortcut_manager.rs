@@ -578,6 +578,348 @@ impl KdeHandler {
             ],
         );
     }
+
+    /// Plasma 6 removed KHotkeys, so `khotkeysrc` entries are never read there.
+    /// Custom command shortcuts are instead `.desktop` services registered with
+    /// kglobalaccel (what System Settings → Shortcuts → "Add Command" does).
+    fn is_plasma6() -> bool {
+        match env_var("KDE_SESSION_VERSION").trim().parse::<u32>() {
+            Ok(version) => version >= 6,
+            Err(_) => {
+                Utils::command_exists("kwriteconfig6") && !Utils::command_exists("kwriteconfig5")
+            }
+        }
+    }
+
+    fn register_plasma6(s: &ShortcutConfig) -> Result<()> {
+        let key = kde_key_code(s.kde_binding).ok_or_else(|| {
+            ShortcutError::ParseError(format!("Unsupported KDE key: {}", s.kde_binding))
+        })?;
+        let desktop_id = kde_desktop_id(s);
+
+        Self::write_shortcut_desktop_file(s, &desktop_id)?;
+        Self::rebuild_service_cache();
+
+        let action = [desktop_id.as_str(), "_launch", s.name, s.name];
+        let key_str = key.to_string();
+
+        // kglobalacceld reloads KSycoca asynchronously, so right after writing a
+        // new .desktop file it may not know the service yet and silently assigns
+        // nothing. Retry while the key is still free; stop on a real conflict.
+        for attempt in 0..10 {
+            kglobalaccel_call("doRegister", &[&["as", "4"], &action[..]].concat())?;
+
+            // SetPresent | NoAutoloading: make the shortcut active now and use exactly
+            // the keys we pass. kglobalaccel returns the keys it actually assigned and
+            // never takes a key that another action already owns.
+            let assigned = kglobalaccel_call(
+                "setShortcut",
+                &[&["asaiu", "4"], &action[..], &["1", key_str.as_str(), "6"]].concat(),
+            )?;
+            if assigned.split_whitespace().any(|k| k == key_str) {
+                return Ok(());
+            }
+
+            let available = kglobalaccel_call(
+                "isGlobalShortcutAvailable",
+                &["is", key_str.as_str(), desktop_id.as_str()],
+            )
+            .map(|out| out.trim() == "b true")
+            .unwrap_or(false);
+            if !available {
+                break;
+            }
+            if attempt == 0 {
+                println!(
+                    "[ShortcutManager] Waiting for KDE to pick up {} ...",
+                    desktop_id
+                );
+            }
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+
+        Err(ShortcutError::CommandFailed {
+            cmd: "kglobalaccel setShortcut".into(),
+            stderr: format!(
+                "{} is already used by another shortcut; assign it in System Settings → Shortcuts",
+                s.kde_binding
+            ),
+        })
+    }
+
+    fn unregister_plasma6(s: &ShortcutConfig) -> Result<()> {
+        let desktop_id = kde_desktop_id(s);
+        let action = [desktop_id.as_str(), "_launch", s.name, s.name];
+
+        let _ = kglobalaccel_call(
+            "setShortcut",
+            &[&["asaiu", "4"], &action[..], &["0", "6"]].concat(),
+        );
+        let _ = kglobalaccel_call("unRegister", &[&["as", "4"], &action[..]].concat());
+
+        let path = Self::applications_dir()?.join(&desktop_id);
+        if path.exists() {
+            fs::remove_file(path)?;
+        }
+        Self::rebuild_service_cache();
+        Ok(())
+    }
+
+    fn applications_dir() -> Result<PathBuf> {
+        if let Ok(data_home) = env::var("XDG_DATA_HOME") {
+            if !data_home.trim().is_empty() {
+                return Ok(PathBuf::from(data_home).join("applications"));
+            }
+        }
+        let home = env::var("HOME")
+            .map_err(|_| ShortcutError::UnsupportedEnvironment("HOME not set".into()))?;
+        Ok(PathBuf::from(home).join(".local/share/applications"))
+    }
+
+    fn write_shortcut_desktop_file(s: &ShortcutConfig, desktop_id: &str) -> Result<()> {
+        let dir = Self::applications_dir()?;
+        fs::create_dir_all(&dir)?;
+
+        let exec = if s.command.contains(char::is_whitespace) {
+            format!(
+                "\"{}\"",
+                s.command.replace('\\', "\\\\").replace('"', "\\\"")
+            )
+        } else {
+            s.command.to_string()
+        };
+        let exec = if s.args.is_empty() {
+            exec
+        } else {
+            format!("{} {}", exec, s.args)
+        };
+
+        // StartupNotify=false: the running instance shows its existing window, so a
+        // launch-feedback entry would linger in the task manager until it times out.
+        let content = format!(
+            "[Desktop Entry]\nType=Application\nName={}\nExec={}\nIcon=win11-clipboard-history\nNoDisplay=true\nStartupNotify=false\nX-KDE-Generated-By=win11-clipboard-history\n",
+            s.name, exec
+        );
+        fs::write(dir.join(desktop_id), content)?;
+        Ok(())
+    }
+
+    fn rebuild_service_cache() {
+        // kglobalaccel resolves service shortcuts through KSycoca.
+        if Utils::command_exists("kbuildsycoca6") {
+            let _ = Utils::run("kbuildsycoca6", &[]);
+        }
+    }
+
+    /// Wayland clients cannot ask KWin to keep a window out of the task manager
+    /// (GTK's skip-taskbar hint only works on X11), so the popup would show up as
+    /// a task-bar entry while open. A KWin window rule does it on both sessions.
+    fn ensure_popup_window_rule() -> Result<()> {
+        let (write, read) = match Self::kconfig_tools() {
+            Some(tools) => tools,
+            None => return Err(ShortcutError::DependencyMissing("kwriteconfig".into())),
+        };
+
+        let set = |key: &str, value: &str| {
+            Utils::run(
+                write,
+                &[
+                    "--file",
+                    "kwinrulesrc",
+                    "--group",
+                    KWIN_POPUP_RULE,
+                    "--key",
+                    key,
+                    value,
+                ],
+            )
+        };
+        set("Description", "Clipboard History popup")?;
+        set("title", "Clipboard History")?;
+        set("titlematch", "1")?; // exact
+        set("wmclass", "win11-clipboard-history")?;
+        set("wmclassmatch", "2")?; // substring: covers the -bin binary and AppImage
+        for key in ["skiptaskbar", "skippager", "skipswitcher"] {
+            set(key, "true")?;
+            set(&format!("{}rule", key), "2")?; // force
+        }
+
+        let mut rules = Self::kwin_rule_ids(read);
+        if !rules.iter().any(|r| r == KWIN_POPUP_RULE) {
+            rules.push(KWIN_POPUP_RULE.to_string());
+            Self::write_kwin_rule_ids(write, &rules)?;
+        }
+        Self::reconfigure_kwin();
+        Ok(())
+    }
+
+    fn remove_popup_window_rule() -> Result<()> {
+        let Some((write, read)) = Self::kconfig_tools() else {
+            return Ok(());
+        };
+        let mut rules = Self::kwin_rule_ids(read);
+        let before = rules.len();
+        rules.retain(|r| r != KWIN_POPUP_RULE);
+        if rules.len() != before {
+            Self::write_kwin_rule_ids(write, &rules)?;
+        }
+        for key in KWIN_POPUP_RULE_KEYS {
+            let _ = Utils::run(
+                write,
+                &[
+                    "--file",
+                    "kwinrulesrc",
+                    "--group",
+                    KWIN_POPUP_RULE,
+                    "--key",
+                    key,
+                    "--delete",
+                ],
+            );
+        }
+        Self::reconfigure_kwin();
+        Ok(())
+    }
+
+    fn kconfig_tools() -> Option<(&'static str, &'static str)> {
+        if Utils::command_exists("kwriteconfig6") && Utils::command_exists("kreadconfig6") {
+            Some(("kwriteconfig6", "kreadconfig6"))
+        } else if Utils::command_exists("kwriteconfig5") && Utils::command_exists("kreadconfig5") {
+            Some(("kwriteconfig5", "kreadconfig5"))
+        } else {
+            None
+        }
+    }
+
+    fn kwin_rule_ids(read: &str) -> Vec<String> {
+        Utils::run(
+            read,
+            &[
+                "--file",
+                "kwinrulesrc",
+                "--group",
+                "General",
+                "--key",
+                "rules",
+            ],
+        )
+        .map(|out| parse_rule_ids(&out))
+        .unwrap_or_default()
+    }
+
+    fn write_kwin_rule_ids(write: &str, rules: &[String]) -> Result<()> {
+        let count = rules.len().to_string();
+        let list = rules.join(",");
+        for (key, value) in [("count", count.as_str()), ("rules", list.as_str())] {
+            Utils::run(
+                write,
+                &[
+                    "--file",
+                    "kwinrulesrc",
+                    "--group",
+                    "General",
+                    "--key",
+                    key,
+                    value,
+                ],
+            )?;
+        }
+        Ok(())
+    }
+
+    fn reconfigure_kwin() {
+        let _ = Utils::run(
+            "busctl",
+            &[
+                "--user",
+                "call",
+                "org.kde.KWin",
+                "/KWin",
+                "org.kde.KWin",
+                "reconfigure",
+            ],
+        );
+    }
+}
+
+/// Group name of the KWin window rule that keeps the popup out of the task bar.
+const KWIN_POPUP_RULE: &str = "win11-clipboard-history-popup";
+
+/// Every key `ensure_popup_window_rule` writes, so removal leaves no residue.
+const KWIN_POPUP_RULE_KEYS: &[&str] = &[
+    "Description",
+    "title",
+    "titlematch",
+    "wmclass",
+    "wmclassmatch",
+    "skiptaskbar",
+    "skiptaskbarrule",
+    "skippager",
+    "skippagerrule",
+    "skipswitcher",
+    "skipswitcherrule",
+];
+
+fn parse_rule_ids(raw: &str) -> Vec<String> {
+    raw.split(',')
+        .map(str::trim)
+        .filter(|r| !r.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// `.desktop` id used as the kglobalaccel component for a shortcut. Kept distinct
+/// from the packaged `win11-clipboard-history.desktop` so it never shadows it.
+fn kde_desktop_id(s: &ShortcutConfig) -> String {
+    format!("{}-shortcut.desktop", s.id)
+}
+
+/// Calls a method on kglobalaccel via `busctl` (the arguments include the D-Bus
+/// signature) and returns its stdout, e.g. `ai 1 268435542`.
+fn kglobalaccel_call(method: &str, args: &[&str]) -> Result<String> {
+    if !Utils::command_exists("busctl") {
+        return Err(ShortcutError::DependencyMissing("busctl".into()));
+    }
+    let mut full: Vec<&str> = vec![
+        "--user",
+        "call",
+        "org.kde.kglobalaccel",
+        "/kglobalaccel",
+        "org.kde.KGlobalAccel",
+        method,
+    ];
+    full.extend_from_slice(args);
+    Utils::run("busctl", &full)
+}
+
+/// Converts a KDE key sequence such as `Meta+V` or `Ctrl+Alt+V` into the Qt
+/// key code (`Qt::KeyboardModifiers | Qt::Key`) that kglobalaccel expects.
+fn kde_key_code(binding: &str) -> Option<i32> {
+    const SHIFT: i32 = 0x0200_0000;
+    const CTRL: i32 = 0x0400_0000;
+    const ALT: i32 = 0x0800_0000;
+    const META: i32 = 0x1000_0000;
+
+    let mut code = 0;
+    let mut key = None;
+    for part in binding.split('+') {
+        match part.trim().to_ascii_lowercase().as_str() {
+            "meta" | "super" => code |= META,
+            "ctrl" | "control" => code |= CTRL,
+            "alt" => code |= ALT,
+            "shift" => code |= SHIFT,
+            "." | "period" => key = Some(0x2e),
+            other if other.len() == 1 => {
+                let c = other.chars().next()?.to_ascii_uppercase();
+                if !c.is_ascii_alphanumeric() {
+                    return None;
+                }
+                key = Some(c as i32);
+            }
+            _ => return None,
+        }
+    }
+    key.map(|k| code | k)
 }
 
 impl ShortcutHandler for KdeHandler {
@@ -586,6 +928,17 @@ impl ShortcutHandler for KdeHandler {
     }
 
     fn register(&self, s: &ShortcutConfig) -> Result<()> {
+        // Window rule is per app, not per shortcut: set it up with the main one.
+        if s.id == SHORTCUTS[0].id {
+            if let Err(e) = Self::ensure_popup_window_rule() {
+                eprintln!("[ShortcutManager] Could not add KWin popup rule: {}", e);
+            }
+        }
+
+        if Self::is_plasma6() {
+            return Self::register_plasma6(s);
+        }
+
         let path = Self::get_config_path()?;
         let section_name = format!("Data_{}", s.id.replace('-', "_"));
 
@@ -645,6 +998,16 @@ impl ShortcutHandler for KdeHandler {
     }
 
     fn unregister(&self, s: &ShortcutConfig) -> Result<()> {
+        if s.id == SHORTCUTS[0].id {
+            if let Err(e) = Self::remove_popup_window_rule() {
+                eprintln!("[ShortcutManager] Could not remove KWin popup rule: {}", e);
+            }
+        }
+
+        if Self::is_plasma6() {
+            return Self::unregister_plasma6(s);
+        }
+
         let path = Self::get_config_path()?;
         let section_name = format!("Data_{}", s.id.replace('-', "_"));
 
@@ -1579,5 +1942,46 @@ impl ShortcutHandler for HyprlandHandler {
             Ok(Some(new_lines.join("\n")))
         })?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kde_key_codes_match_qt() {
+        // Qt::META | Qt::Key_V
+        assert_eq!(kde_key_code("Meta+V"), Some(0x1000_0056));
+        // Qt::CTRL | Qt::ALT | Qt::Key_V
+        assert_eq!(kde_key_code("Ctrl+Alt+V"), Some(0x0C00_0056));
+        // Qt::META | Qt::Key_Period
+        assert_eq!(kde_key_code("Meta+."), Some(0x1000_002E));
+    }
+
+    #[test]
+    fn kde_key_code_rejects_unknown_keys() {
+        assert_eq!(kde_key_code("Meta+F13"), None);
+        assert_eq!(kde_key_code("Meta"), None);
+    }
+
+    #[test]
+    fn every_shortcut_has_a_valid_kde_key() {
+        for s in SHORTCUTS {
+            assert!(kde_key_code(s.kde_binding).is_some(), "{}", s.kde_binding);
+        }
+    }
+
+    #[test]
+    fn parses_kwin_rule_ids() {
+        assert_eq!(parse_rule_ids(""), Vec::<String>::new());
+        assert_eq!(parse_rule_ids("a, b,,c\n"), vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn plasma6_desktop_id_does_not_shadow_packaged_entry() {
+        for s in SHORTCUTS {
+            assert_ne!(kde_desktop_id(s), "win11-clipboard-history.desktop");
+        }
     }
 }

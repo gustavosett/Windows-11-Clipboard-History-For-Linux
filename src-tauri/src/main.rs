@@ -24,6 +24,7 @@ use win11_clipboard_history_lib::session::is_wayland;
 use win11_clipboard_history_lib::shortcut_setup;
 use win11_clipboard_history_lib::theme_manager::{self, ThemeInfo};
 use win11_clipboard_history_lib::user_settings::{UserSettings, UserSettingsManager};
+use win11_clipboard_history_lib::wayland_activation;
 
 /// Global flag to track if we started in background mode
 /// This is used to block the initial window show
@@ -402,6 +403,9 @@ impl WindowController {
                 if let Some(tab_name) = tab {
                     let _ = app.emit("switch-tab", tab_name);
                 } else {
+                    // A token that arrives with a "hide" toggle is never used; drop it
+                    // so a later show does not present an expired token.
+                    let _ = wayland_activation::take_token();
                     let _ = window.hide();
                 }
             } else {
@@ -436,6 +440,9 @@ impl WindowController {
                 if is_wayland() {
                     state.config_manager.lock().sync_to_disk();
                 }
+                // The webview gets no mouseleave once hidden; a stale "inside"
+                // flag would make the next focus-out keep the popup open.
+                state.is_mouse_inside.store(false, Ordering::Relaxed);
             }
             let _ = window.hide();
         }
@@ -452,11 +459,28 @@ impl WindowController {
 
         let is_wayland_session = is_wayland();
 
+        // Start every show with a clean hover state (see `hide`).
+        state.is_mouse_inside.store(false, Ordering::Relaxed);
+
         if is_wayland_session {
             // Wayland needs to be born "On Top" to be visible
             let _ = window.show();
             let _ = window.set_always_on_top(true);
             let _ = window.set_focus();
+
+            // Present with the launcher's xdg-activation token so compositors
+            // with focus stealing prevention (e.g. KWin) actually focus the popup.
+            if let Some(token) = wayland_activation::take_token() {
+                let w = window.clone();
+                let _ = app.run_on_main_thread(move || {
+                    if wayland_activation::apply_token_to_gdk(&token) {
+                        if let Ok(gtk_window) = w.gtk_window() {
+                            use gtk::prelude::GtkWindowExt;
+                            gtk_window.present();
+                        }
+                    }
+                });
+            }
         } else {
             // X11 born as normal window.
             // We do NOT activate always_on_top to avoid focus blocking and glitch.
@@ -838,6 +862,9 @@ fn main() {
         // Single Instance Plugin: When user triggers shortcut and app is already running,
         // the OS launches a new instance which signals the existing one to toggle
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // Wayland: keep the launcher's xdg-activation token for the next show
+            wayland_activation::store_token(wayland_activation::token_from_args(&argv));
+
             // Check if --settings flag is present
             if argv.iter().any(|arg| arg == "--settings") {
                 println!(
