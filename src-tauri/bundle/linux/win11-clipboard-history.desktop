@@ -9,5 +9,5 @@ Icon=win11-clipboard-history
 Terminal=false
 Categories=Utility;GTK;
 Keywords=clipboard;history;paste;copy;emoji;gif;
-StartupWMClass=win11-clipboard-history
-StartupNotify=true
+StartupWMClass=win11-clipboard-history-bin
+StartupNotify=false

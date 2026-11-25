@@ -34,6 +34,77 @@ if [ -z "$BINARY" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Fast path: forward to the running instance over D-Bus
+# ---------------------------------------------------------------------------
+# Global shortcuts launch this wrapper on every key press. Starting the full
+# binary just to hand the request to the running instance (via the
+# single-instance plugin) costs a few hundred milliseconds, plus the GPU
+# detection below. Talk to the running instance directly instead.
+#
+# On Wayland the compositor passes an xdg-activation token in
+# XDG_ACTIVATION_TOKEN; forward it so the running instance may take focus.
+FORWARD_ARGS=("$@")
+if [[ -n "${XDG_ACTIVATION_TOKEN:-}" ]]; then
+    FORWARD_ARGS+=("--activation-token=${XDG_ACTIVATION_TOKEN}")
+fi
+
+SINGLE_INSTANCE_DEST="dev.gustavosett.clipboard-history.SingleInstance"
+SINGLE_INSTANCE_PATH="/dev/gustavosett/clipboard_history/SingleInstance"
+
+forward_to_running_instance() {
+    # Only plain toggles are forwarded; anything else (--help, --version, ...)
+    # must run the binary itself.
+    local arg
+    for arg in "$@"; do
+        case "$arg" in
+            --emoji|--settings) ;;
+            *) return 1 ;;
+        esac
+    done
+
+    local argv=("win11-clipboard-history" "${FORWARD_ARGS[@]}")
+
+    # The toggle is not idempotent, so it is sent at most once: probe with a
+    # harmless Ping first and only fall back to starting the binary when no
+    # instance answers. After the toggle has been sent we never retry it.
+    # `--` keeps busctl from parsing forwarded flags such as --activation-token.
+    if command -v busctl &>/dev/null; then
+        busctl --user --timeout=2 call "$SINGLE_INSTANCE_DEST" "$SINGLE_INSTANCE_PATH" \
+            org.freedesktop.DBus.Peer Ping &>/dev/null || return 1
+        busctl --user --timeout=5 -- call "$SINGLE_INSTANCE_DEST" "$SINGLE_INSTANCE_PATH" \
+            org.SingleInstance.DBus ExecuteCallback ass \
+            "${#argv[@]}" "${argv[@]}" "$PWD" &>/dev/null
+        return 0
+    fi
+
+    if command -v gdbus &>/dev/null; then
+        gdbus call --session --timeout 2 --dest "$SINGLE_INSTANCE_DEST" \
+            --object-path "$SINGLE_INSTANCE_PATH" \
+            --method org.freedesktop.DBus.Peer.Ping &>/dev/null || return 1
+
+        local list="" item
+        for item in "${argv[@]}"; do
+            item=${item//\\/\\\\}
+            item=${item//\'/\\\'}
+            list+="${list:+, }'${item}'"
+        done
+        local cwd=${PWD//\\/\\\\}
+        cwd=${cwd//\'/\\\'}
+        gdbus call --session --timeout 5 --dest "$SINGLE_INSTANCE_DEST" \
+            --object-path "$SINGLE_INSTANCE_PATH" \
+            --method org.SingleInstance.DBus.ExecuteCallback \
+            "[${list}]" "'${cwd}'" &>/dev/null
+        return 0
+    fi
+
+    return 1
+}
+
+if forward_to_running_instance "$@"; then
+    exit 0
+fi
+
+# ---------------------------------------------------------------------------
 # Runtime environment sanitization
 # ---------------------------------------------------------------------------
 # When launched from a Snap terminal (e.g. VS Code Snap) or a Flatpak host,
@@ -150,4 +221,4 @@ if systemd-detect-virt -q 2>/dev/null; then
     export LIBGL_ALWAYS_SOFTWARE=1
 fi
 
-exec "$BINARY" "$@"
+exec "$BINARY" "${FORWARD_ARGS[@]}"

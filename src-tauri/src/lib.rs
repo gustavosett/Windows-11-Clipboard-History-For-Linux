@@ -16,6 +16,7 @@ pub mod shortcut_conflict_detector;
 pub mod shortcut_setup;
 pub mod theme_manager;
 pub mod user_settings;
+pub mod wayland_activation;
 
 pub mod linux_shortcut_manager;
 
