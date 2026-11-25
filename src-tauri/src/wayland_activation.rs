@@ -27,11 +27,12 @@ pub fn token_from_args(args: &[String]) -> Option<String> {
         .map(str::to_string)
 }
 
-/// Stores the activation token for the next popup show (replaces any older token).
+/// Stores the activation token of the latest launch for the next popup show.
+///
+/// Every launch replaces the pending token, including launches without one, so
+/// an older (by now expired) token is never presented later.
 pub fn store_token(token: Option<String>) {
-    if token.is_some() {
-        *PENDING_TOKEN.lock() = token;
-    }
+    *PENDING_TOKEN.lock() = token;
 }
 
 /// Takes the pending activation token. Tokens are single-use.
@@ -99,17 +100,27 @@ mod tests {
     }
 
     #[test]
-    fn keeps_other_flags_working() {
-        let a = args(&["x", "--emoji", "--activation-token=abc"]);
-        assert!(a.iter().any(|s| s == "--emoji"));
+    fn finds_token_among_other_flags() {
+        let a = args(&["x", "--emoji", "--activation-token=abc", "--settings"]);
         assert_eq!(token_from_args(&a).as_deref(), Some("abc"));
     }
 
+    // One test for the shared global, so parallel tests cannot interleave.
     #[test]
-    fn token_is_single_use() {
+    fn pending_token_lifecycle() {
+        // single use
         store_token(Some("t1".into()));
-        store_token(None); // must not clear a pending token
         assert_eq!(take_token().as_deref(), Some("t1"));
+        assert_eq!(take_token(), None);
+
+        // a newer launch replaces an older token
+        store_token(Some("old".into()));
+        store_token(Some("new".into()));
+        assert_eq!(take_token().as_deref(), Some("new"));
+
+        // a launch without a token clears a stale one
+        store_token(Some("stale".into()));
+        store_token(None);
         assert_eq!(take_token(), None);
     }
 }

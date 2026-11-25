@@ -64,13 +64,24 @@ forward_to_running_instance() {
 
     local argv=("win11-clipboard-history" "${FORWARD_ARGS[@]}")
 
+    # The toggle is not idempotent, so it is sent at most once: probe with a
+    # harmless Ping first and only fall back to starting the binary when no
+    # instance answers. After the toggle has been sent we never retry it.
+    # `--` keeps busctl from parsing forwarded flags such as --activation-token.
     if command -v busctl &>/dev/null; then
-        busctl --user call "$SINGLE_INSTANCE_DEST" "$SINGLE_INSTANCE_PATH" \
+        busctl --user --timeout=2 call "$SINGLE_INSTANCE_DEST" "$SINGLE_INSTANCE_PATH" \
+            org.freedesktop.DBus.Peer Ping &>/dev/null || return 1
+        busctl --user --timeout=5 -- call "$SINGLE_INSTANCE_DEST" "$SINGLE_INSTANCE_PATH" \
             org.SingleInstance.DBus ExecuteCallback ass \
-            "${#argv[@]}" "${argv[@]}" "$PWD" &>/dev/null && return 0
+            "${#argv[@]}" "${argv[@]}" "$PWD" &>/dev/null
+        return 0
     fi
 
     if command -v gdbus &>/dev/null; then
+        gdbus call --session --timeout 2 --dest "$SINGLE_INSTANCE_DEST" \
+            --object-path "$SINGLE_INSTANCE_PATH" \
+            --method org.freedesktop.DBus.Peer.Ping &>/dev/null || return 1
+
         local list="" item
         for item in "${argv[@]}"; do
             item=${item//\\/\\\\}
@@ -79,10 +90,11 @@ forward_to_running_instance() {
         done
         local cwd=${PWD//\\/\\\\}
         cwd=${cwd//\'/\\\'}
-        gdbus call --session --dest "$SINGLE_INSTANCE_DEST" \
+        gdbus call --session --timeout 5 --dest "$SINGLE_INSTANCE_DEST" \
             --object-path "$SINGLE_INSTANCE_PATH" \
             --method org.SingleInstance.DBus.ExecuteCallback \
-            "[${list}]" "'${cwd}'" &>/dev/null && return 0
+            "[${list}]" "'${cwd}'" &>/dev/null
+        return 0
     fi
 
     return 1

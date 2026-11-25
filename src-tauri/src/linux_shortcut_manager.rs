@@ -744,7 +744,9 @@ impl KdeHandler {
             set(&format!("{}rule", key), "2")?; // force
         }
 
-        let mut rules = Self::kwin_rule_ids(read);
+        // Read right before writing, and never write a list we could not read:
+        // that would drop the user's own rules from the active set.
+        let mut rules = Self::kwin_rule_ids(read)?;
         if !rules.iter().any(|r| r == KWIN_POPUP_RULE) {
             rules.push(KWIN_POPUP_RULE.to_string());
             Self::write_kwin_rule_ids(write, &rules)?;
@@ -757,7 +759,7 @@ impl KdeHandler {
         let Some((write, read)) = Self::kconfig_tools() else {
             return Ok(());
         };
-        let mut rules = Self::kwin_rule_ids(read);
+        let mut rules = Self::kwin_rule_ids(read)?;
         let before = rules.len();
         rules.retain(|r| r != KWIN_POPUP_RULE);
         if rules.len() != before {
@@ -791,20 +793,26 @@ impl KdeHandler {
         }
     }
 
-    fn kwin_rule_ids(read: &str) -> Vec<String> {
-        Utils::run(
-            read,
-            &[
-                "--file",
-                "kwinrulesrc",
-                "--group",
-                "General",
-                "--key",
-                "rules",
-            ],
-        )
-        .map(|out| parse_rule_ids(&out))
-        .unwrap_or_default()
+    /// Current rule ids from `[General] rules`. Errors (instead of returning an
+    /// empty list) when the value cannot be read or disagrees with `count`, so
+    /// callers never overwrite rules they could not see.
+    fn kwin_rule_ids(read: &str) -> Result<Vec<String>> {
+        let get = |key: &str| {
+            Utils::run(
+                read,
+                &["--file", "kwinrulesrc", "--group", "General", "--key", key],
+            )
+        };
+        let rules = parse_rule_ids(&get("rules")?);
+        let count = get("count")?.trim().parse::<usize>().unwrap_or(0);
+        if count > rules.len() {
+            return Err(ShortcutError::ParseError(format!(
+                "kwinrulesrc lists {} rule ids but count={}; not modifying it",
+                rules.len(),
+                count
+            )));
+        }
+        Ok(rules)
     }
 
     fn write_kwin_rule_ids(write: &str, rules: &[String]) -> Result<()> {
@@ -832,6 +840,7 @@ impl KdeHandler {
             "busctl",
             &[
                 "--user",
+                DBUS_CALL_TIMEOUT,
                 "call",
                 "org.kde.KWin",
                 "/KWin",
@@ -874,6 +883,10 @@ fn kde_desktop_id(s: &ShortcutConfig) -> String {
     format!("{}-shortcut.desktop", s.id)
 }
 
+/// Upper bound for each `busctl` call, so an unresponsive service cannot block
+/// shortcut registration (and the setup wizard waiting on it) indefinitely.
+const DBUS_CALL_TIMEOUT: &str = "--timeout=5";
+
 /// Calls a method on kglobalaccel via `busctl` (the arguments include the D-Bus
 /// signature) and returns its stdout, e.g. `ai 1 268435542`.
 fn kglobalaccel_call(method: &str, args: &[&str]) -> Result<String> {
@@ -882,6 +895,7 @@ fn kglobalaccel_call(method: &str, args: &[&str]) -> Result<String> {
     }
     let mut full: Vec<&str> = vec![
         "--user",
+        DBUS_CALL_TIMEOUT,
         "call",
         "org.kde.kglobalaccel",
         "/kglobalaccel",

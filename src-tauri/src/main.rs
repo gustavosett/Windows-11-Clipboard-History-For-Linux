@@ -400,12 +400,12 @@ impl WindowController {
             if window.is_visible().unwrap_or(false) {
                 // If window is visible, emit tab switch event if tab is specified
                 // This allows Super+. to switch to emoji tab even when window is open
+                // The popup is already shown, so a token from this launch is never
+                // used; drop it so a later show does not present an expired token.
+                let _ = wayland_activation::take_token();
                 if let Some(tab_name) = tab {
                     let _ = app.emit("switch-tab", tab_name);
                 } else {
-                    // A token that arrives with a "hide" toggle is never used; drop it
-                    // so a later show does not present an expired token.
-                    let _ = wayland_activation::take_token();
                     let _ = window.hide();
                 }
             } else {
@@ -473,6 +473,11 @@ impl WindowController {
             if let Some(token) = wayland_activation::take_token() {
                 let w = window.clone();
                 let _ = app.run_on_main_thread(move || {
+                    // A hide toggle may have run before this closure: never
+                    // re-open a popup that is meant to be hidden.
+                    if !w.is_visible().unwrap_or(false) {
+                        return;
+                    }
                     if wayland_activation::apply_token_to_gdk(&token) {
                         if let Ok(gtk_window) = w.gtk_window() {
                             use gtk::prelude::GtkWindowExt;
@@ -870,6 +875,8 @@ fn main() {
                 println!(
                     "[SingleInstance] Secondary instance with --settings flag, opening settings..."
                 );
+                // The popup is not shown on this route; don't keep its token.
+                let _ = wayland_activation::take_token();
                 SettingsController::show(app);
             } else if argv.iter().any(|arg| arg == "--emoji") {
                 println!(
